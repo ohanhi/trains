@@ -12,6 +12,7 @@ import RemoteData exposing (RemoteData(..))
 import Style exposing (..)
 import Style.Color as Color
 import Style.Font as Font
+import Style.Shadow as Shadow
 
 
 rem : Float -> Float
@@ -33,26 +34,54 @@ type Styles
     | TimetableRow
     | TimetableRowCurrent
     | Heading
+    | StationTime
+    | StationName
+    | StationDifference
+    | StatusInfo
 
 
-stylesheet : StyleSheet Styles variation
+type Variations
+    = OnTime
+    | SlightlyOffSchedule
+    | OffSchedule
+    | Moving
+
+
+stylesheet : StyleSheet Styles Variations
 stylesheet =
+    let
+        colors =
+            { online = Color.rgb 0 205 0
+            , onTime = Color.darkGreen
+            , slightlyOffSchedule = Color.orange
+            , offSchedule = Color.darkRed
+            }
+    in
     Style.stylesheet
         [ style None []
         , style Main
             [ Color.background Color.lightGray
-            ]
-        , style Trains
-            [ Font.typeface [ "Monoid" ]
+            , Font.typeface [ "Roboto", "sans-serif" ]
             , Font.lineHeight 1.5
-            , Font.size (ts 1)
+            , Font.size (ts 0)
             ]
+        , style Trains []
         , style TrainRow
             [ Color.background Color.white
             , Font.pre
+            , Style.shadows
+                [ Shadow.box
+                    { offset = ( 1, 5 ), blur = 10, color = Color.rgba 0 0 0 0.1, size = 0 }
+                ]
             ]
         , style TrainLineId
-            [ Font.weight 600
+            [ Font.size (ts 3)
+            , Font.weight 600
+            , Font.center
+            , Font.lineHeight 1
+            , Color.text Color.darkGray
+            , variation Moving
+                [ Color.text Color.black ]
             ]
         , style TimetableRow
             [ Font.pre
@@ -66,34 +95,54 @@ stylesheet =
             [ Font.size (ts 2)
             , Font.lineHeight 2
             ]
+        , style StationTime
+            [ Font.center
+            , Font.weight 600
+            , variation OnTime
+                [ Color.text colors.onTime ]
+            , variation SlightlyOffSchedule
+                [ Color.text colors.slightlyOffSchedule ]
+            , variation OffSchedule
+                [ Color.text colors.offSchedule ]
+            ]
+        , style StationName []
+        , style StationDifference []
+        , style StatusInfo
+            [ Font.size (ts -1)
+            ]
         ]
 
 
 view : Model -> Html msg
 view model =
-    Element.root stylesheet <|
+    Element.viewport stylesheet <|
         column Main
             [ center
             , width (percent 100)
             , padding (rem 2)
             ]
-            [ row None [ spacing (rem 2) ] <|
+            [ wrappedRow None
+                [ spacing (rem 2)
+                , width (percent 100)
+                , center
+                ]
+              <|
                 case model.trains of
                     Success trains ->
                         trainsView model.stations trains
 
                     Failure err ->
-                        [ el TrainRow [] (text (toString err)) ]
+                        [ el Heading [] <| text (toString err) ]
 
                     Loading ->
-                        [ el TrainRow [] (text "Loading") ]
+                        [ el Heading [] <| text "Loading" ]
 
                     _ ->
                         []
             ]
 
 
-trainsView : Stations -> Trains -> List (Element Styles variation msg)
+trainsView : Stations -> Trains -> List (Element Styles Variations msg)
 trainsView stations trains =
     let
         ( toHelsinki, fromHelsinki ) =
@@ -102,7 +151,12 @@ trainsView stations trains =
                 |> List.partition (\a -> a.direction == ToHelsinki)
 
         trainColumn name trainRows =
-            column Trains [] <|
+            column Trains
+                [ spacing (rem 1)
+                , width (percent 50)
+                , minWidth (px (rem 20))
+                ]
+            <|
                 [ el Heading [] (text name) ]
                     ++ trainRows
     in
@@ -111,76 +165,111 @@ trainsView stations trains =
     ]
 
 
-trainRow : Stations -> Train -> Element Styles variation msg
+trainRow : Stations -> Train -> Element Styles Variations msg
 trainRow stations train =
     let
         currentStation =
             train.timetableRows
-                |> List.reverse
                 |> List.filter (.actualTime >> (/=) Nothing)
+                |> List.reverse
+                |> List.head
+
+        isMoving =
+            currentStation /= Nothing
+
+        homeStation =
+            train.timetableRows
+                |> List.filter (.stationShortCode >> (==) "KIL")
                 |> List.head
 
         currentDifference =
-            currentStation
+            homeStation
                 |> Maybe.map .differenceInMinutes
-                |> Maybe.map formatDifference
-                |> Maybe.withDefault "  "
+                |> Maybe.andThen identity
+
+        endStationData =
+            train.timetableRows
+                |> List.reverse
+                |> List.head
+                |> Maybe.map
+                    (\station ->
+                        ( station.liveEstimateTime
+                            |> Maybe.withDefault station.scheduledTime
+                        , stationName stations station
+                        , station.differenceInMinutes
+                        )
+                    )
+
+        statusInfo station =
+            whenJust station.differenceInMinutes (statusInfoBadge station)
+
+        statusInfoBadge station n =
+            row StatusInfo
+                [ spacing (rem 0.5) ]
+                [ el StationTime
+                    [ width (px (rem 4))
+                    , vary OnTime (abs n <= 1)
+                    , vary SlightlyOffSchedule (abs n > 1 && abs n <= 5)
+                    , vary OffSchedule (abs n > 5)
+                    ]
+                    (text (formatDifference "On time" station.differenceInMinutes))
+                , el StationName [] (text (stationName stations station))
+                ]
     in
     row TrainRow
-        [ padding (rem 1)
+        [ paddingXY (rem 1) (rem 0.5)
         , spacing (rem 1)
+        , verticalCenter
         , width (percent 100)
         ]
-        [ el TrainLineId [] (text train.lineId)
-        , el None [] (text <| prettyTime train.departingFromStation ++ " " ++ currentDifference)
-        , column None [] <| timetableRows stations currentStation train.timetableRows
+        [ el TrainLineId
+            [ width (percent 20)
+            , vary Moving isMoving
+            ]
+            (text train.lineId)
+        , column None
+            [ width (percent 80) ]
+            [ whenJust currentStation statusInfo
+            , stationRow (prettyTime train.departingFromStation) "Kilo" currentDifference
+            , el StationTime [ width (px (rem 4)) ] (text "︙")
+            , whenJust endStationData <|
+                \( date, name, diff ) ->
+                    stationRow (prettyTime date) name diff
+            ]
         ]
 
 
-timetableRows : Stations -> Maybe TimetableRow -> List TimetableRow -> List (Element Styles variation msg)
-timetableRows stations currentStation rows =
+stationRow : String -> String -> Maybe Int -> Element Styles Variations msg
+stationRow date name differenceInMinutes =
+    row None
+        [ spacing (rem 0.5) ]
+        [ el StationTime [ width (px (rem 4)) ] (text date)
+        , el StationName [] (text name)
+        , el StationDifference [] (text <| formatDifference "" differenceInMinutes)
+        ]
+
+
+stationName : Stations -> TimetableRow -> String
+stationName stations row =
+    stations
+        |> Dict.get row.stationUICCode
+        |> Maybe.withDefault row.stationShortCode
+
+
+formatDifference : String -> Maybe Int -> String
+formatDifference default differenceInMinutes =
     let
-        prettyPrint row =
-            prettyTime row.scheduledTime
-                ++ " "
-                ++ formatDifference row.differenceInMinutes
-                ++ " "
-                ++ (case Dict.get row.stationUICCode stations of
-                        Just name ->
-                            name
-
-                        Nothing ->
-                            row.stationShortCode
-                   )
-
-        style row =
-            if Maybe.map .stationUICCode currentStation == Just row.stationUICCode then
-                TimetableRowCurrent
+        stringify n =
+            if n == 0 then
+                Nothing
+            else if n < 0 then
+                Just (toString (abs n) ++ " min early")
             else
-                TimetableRow
-    in
-    rows
-        -- |> List.dropWhile (.stationShortCode >> (/=) "KIL")
-        -- |> List.drop 2
-        |> List.filter (\a -> a.trainStopping && (a.rowType == Arrival))
-        |> List.map
-            (\timetableRow ->
-                el (style timetableRow) [] (text (prettyPrint timetableRow))
-            )
-
-
-formatDifference : Maybe Int -> String
-formatDifference differenceInMinutes =
-    let
-        plusify n =
-            if n < 0 then
-                toString n
-            else
-                "+" ++ toString n
+                Just (toString n ++ " min late")
     in
     differenceInMinutes
-        |> Maybe.map (plusify >> String.padLeft 2 ' ')
-        |> Maybe.withDefault "  "
+        |> Maybe.andThen stringify
+        |> Maybe.withDefault default
 
 
 prettyTime : Date -> String
