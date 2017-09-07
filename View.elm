@@ -34,6 +34,7 @@ type Styles
     | TimetableRow
     | TimetableRowCurrent
     | Heading
+    | HeadingBack
     | StationTime
     | StationName
     | StationDifference
@@ -56,6 +57,12 @@ stylesheet =
             , slightlyOffSchedule = Color.orange
             , offSchedule = Color.darkRed
             }
+
+        shadow =
+            Style.shadows
+                [ Shadow.box
+                    { offset = ( 1, 5 ), blur = 10, color = Color.rgba 0 0 0 0.1, size = 0 }
+                ]
     in
     Style.stylesheet
         [ style None []
@@ -69,10 +76,7 @@ stylesheet =
         , style TrainRow
             [ Color.background Color.white
             , Font.pre
-            , Style.shadows
-                [ Shadow.box
-                    { offset = ( 1, 5 ), blur = 10, color = Color.rgba 0 0 0 0.1, size = 0 }
-                ]
+            , shadow
             ]
         , style TrainLineId
             [ Font.size (ts 3)
@@ -94,6 +98,11 @@ stylesheet =
         , style Heading
             [ Font.size (ts 2)
             , Font.lineHeight 2
+            , Color.text Color.black
+            ]
+        , style HeadingBack
+            [ Color.text Color.black
+            , Font.center
             ]
         , style StationTime
             [ Font.center
@@ -129,7 +138,7 @@ view model =
               <|
                 case model.trains of
                     Success trains ->
-                        trainsView model.stations trains
+                        trainsView model.route model.stations trains
 
                     Failure err ->
                         [ el Heading [] <| text (toString err) ]
@@ -142,26 +151,42 @@ view model =
             ]
 
 
-trainsView : Stations -> Trains -> List (Element Styles Variations msg)
-trainsView stations trains =
+trainsView : Route -> Stations -> Trains -> List (Element Styles Variations msg)
+trainsView route stations trains =
     let
         ( toHelsinki, fromHelsinki ) =
             trains
                 |> Model.sortedTrainList
                 |> List.partition (\a -> a.direction == ToHelsinki)
 
-        trainColumn name trainRows =
+        isSingleDirection =
+            route /= BothRoute
+
+        trainColumn ( name, hash ) trainRows =
             column Trains
                 [ spacing (rem 1)
-                , width (percent 50)
+                , width <|
+                    if isSingleDirection then
+                        percent 100
+                    else
+                        percent 50
                 , minWidth (px (rem 20))
                 ]
             <|
-                [ el Heading [] (text name) ]
+                [ row Heading
+                    [ spacing (rem 1) ]
+                    [ when isSingleDirection <|
+                        link "#" <|
+                            el HeadingBack [ width (px (rem 2)) ] (text "‹")
+                    , link ("#" ++ hash) <| el Heading [] (text name)
+                    ]
+                ]
                     ++ trainRows
     in
-    [ trainColumn "To Helsinki" (List.map (trainRow stations) toHelsinki)
-    , trainColumn "From Helsinki" (List.map (trainRow stations) fromHelsinki)
+    [ when (route == BothRoute || route == ToHelsinkiRoute) <|
+        trainColumn ( "To Helsinki", "to-helsinki" ) (List.map (trainRow stations) toHelsinki)
+    , when (route == BothRoute || route == FromHelsinkiRoute) <|
+        trainColumn ( "From Helsinki", "from-helsinki" ) (List.map (trainRow stations) fromHelsinki)
     ]
 
 

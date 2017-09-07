@@ -14,11 +14,18 @@ import Time exposing (Time)
     (,)
 
 
+type Route
+    = BothRoute
+    | ToHelsinkiRoute
+    | FromHelsinkiRoute
+
+
 type alias Model =
     { trains : WebData Trains
     , stations : Stations
     , currentTime : Time
     , lastRequestTime : Maybe Time
+    , route : Route
     }
 
 

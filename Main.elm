@@ -1,12 +1,13 @@
 module Main exposing (..)
 
 import Dict
-import Html exposing (Html)
 import Json.Decode exposing (Decoder)
 import Model exposing (..)
+import Navigation exposing (Location)
 import RemoteData exposing (..)
 import RemoteData.Http as Http
 import Time exposing (Time)
+import UrlParser as Url exposing ((</>))
 import View exposing (view)
 
 
@@ -14,14 +15,16 @@ type Msg
     = UpdateTime Time
     | TrainsResponse (WebData Trains)
     | StationsResponse (WebData Stations)
+    | UrlChange Location
 
 
-init : Time -> ( Model, Cmd Msg )
-init time =
+init : Time -> Location -> ( Model, Cmd Msg )
+init time location =
     { trains = Loading
     , stations = Dict.empty
     , currentTime = time
     , lastRequestTime = Nothing
+    , route = parseLocation location
     }
         ! [ getStations
           , getTrains
@@ -31,6 +34,9 @@ init time =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        UrlChange location ->
+            { model | route = parseLocation location } ! []
+
         UpdateTime time ->
             let
                 ( lastRequestTime, cmds ) =
@@ -58,6 +64,24 @@ update msg model =
 
         StationsResponse _ ->
             model ! []
+
+
+parseLocation : Location -> Route
+parseLocation location =
+    let
+        routeParser =
+            Url.oneOf
+                [ Url.top
+                    |> Url.map BothRoute
+                , Url.s "to-helsinki"
+                    |> Url.map ToHelsinkiRoute
+                , Url.s "from-helsinki"
+                    |> Url.map FromHelsinkiRoute
+                ]
+    in
+    location
+        |> Url.parseHash routeParser
+        |> Maybe.withDefault BothRoute
 
 
 getStations : Cmd Msg
@@ -101,7 +125,7 @@ get =
 
 main : Program Float Model Msg
 main =
-    Html.programWithFlags
+    Navigation.programWithFlags UrlChange
         { init = init
         , view = view
         , update = update
