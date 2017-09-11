@@ -13,6 +13,8 @@ import Style exposing (..)
 import Style.Color as Color
 import Style.Font as Font
 import Style.Shadow as Shadow
+import Time exposing (Time)
+import Time.Format
 
 
 rem : Float -> Float
@@ -31,6 +33,7 @@ type Styles
     | Trains
     | TrainRow
     | TrainLineId
+    | TrainArrivingIn
     | TimetableRow
     | TimetableRowCurrent
     | Heading
@@ -87,6 +90,12 @@ stylesheet =
             , variation Moving
                 [ Color.text Color.black ]
             ]
+        , style TrainArrivingIn
+            [ Font.size (ts 0)
+            , Font.center
+            , Font.weight 600
+            , Color.text Color.darkGray
+            ]
         , style TimetableRow
             [ Font.pre
             , Color.text Color.gray
@@ -138,7 +147,7 @@ view model =
               <|
                 case model.trains of
                     Success trains ->
-                        trainsView model.route model.stations trains
+                        trainsView model trains
 
                     Failure err ->
                         [ el Heading [] <| text (toString err) ]
@@ -151,8 +160,11 @@ view model =
             ]
 
 
-trainsView : Route -> Stations -> Trains -> List (Element Styles Variations msg)
-trainsView route stations trains =
+trainsView :
+    { a | route : Route, stations : Stations, currentTime : Time }
+    -> Trains
+    -> List (Element Styles Variations msg)
+trainsView ({ route, stations, currentTime } as viewModel) trains =
     let
         ( toHelsinki, fromHelsinki ) =
             trains
@@ -181,17 +193,20 @@ trainsView route stations trains =
                     , link ("#" ++ hash) <| el Heading [] (text name)
                     ]
                 ]
-                    ++ trainRows
+                    ++ List.map (trainRow viewModel) trainRows
     in
     [ when (route == BothRoute || route == ToHelsinkiRoute) <|
-        trainColumn ( "To Helsinki", "to-helsinki" ) (List.map (trainRow stations) toHelsinki)
+        trainColumn ( "To Helsinki", "to-helsinki" ) toHelsinki
     , when (route == BothRoute || route == FromHelsinkiRoute) <|
-        trainColumn ( "From Helsinki", "from-helsinki" ) (List.map (trainRow stations) fromHelsinki)
+        trainColumn ( "From Helsinki", "from-helsinki" ) fromHelsinki
     ]
 
 
-trainRow : Stations -> Train -> Element Styles Variations msg
-trainRow stations train =
+trainRow :
+    { a | stations : Stations, currentTime : Time }
+    -> Train
+    -> Element Styles Variations msg
+trainRow { stations, currentTime } train =
     let
         currentStation =
             train.timetableRows
@@ -202,13 +217,30 @@ trainRow stations train =
         isMoving =
             currentStation /= Nothing
 
-        homeStation =
+        ( homeStationArrival, homeStationDeparture ) =
             train.timetableRows
                 |> List.filter (.stationShortCode >> (==) "KIL")
-                |> List.head
+                |> (\homeStationRows ->
+                        ( homeStationRows |> List.filter (.rowType >> (==) Arrival) |> List.head
+                        , homeStationRows |> List.filter (.rowType >> (==) Departure) |> List.head
+                        )
+                   )
+
+        homeStationArrivingIn =
+            homeStationArrival
+                |> Maybe.map .liveEstimateTime
+                |> Maybe.withDefault (Maybe.map .scheduledTime homeStationArrival)
+                |> Maybe.map (\date -> Date.toTime date - currentTime)
+                |> Maybe.andThen
+                    (\timeDiff ->
+                        if timeDiff > 0 then
+                            Just (Time.Format.format "%M:%S" timeDiff)
+                        else
+                            Nothing
+                    )
 
         currentDifference =
-            homeStation
+            homeStationDeparture
                 |> Maybe.map .differenceInMinutes
                 |> Maybe.andThen identity
 
@@ -247,13 +279,12 @@ trainRow stations train =
         , verticalCenter
         , width (percent 100)
         ]
-        [ el TrainLineId
-            [ width (percent 20)
-            , vary Moving isMoving
+        [ column None
+            [ width (percent 20) ]
+            [ el TrainLineId [ vary Moving isMoving ] (text train.lineId)
             ]
-            (text train.lineId)
         , column None
-            [ width (percent 80) ]
+            [ width (percent 60) ]
             [ whenJust currentStation statusInfo
             , stationRow (prettyTime train.departingFromStation) "Kilo" currentDifference
             , el StationTime [ width (px (rem 4)) ] (text "︙")
@@ -261,6 +292,13 @@ trainRow stations train =
                 \( date, name, diff ) ->
                     stationRow (prettyTime date) name diff
             ]
+        , whenJust homeStationArrivingIn <|
+            \time ->
+                column None
+                    [ width (percent 20) ]
+                    [ el TrainArrivingIn [] (text "Arrives in ")
+                    , el TrainLineId [] (text time)
+                    ]
         ]
 
 
@@ -270,7 +308,8 @@ stationRow date name differenceInMinutes =
         [ spacing (rem 0.5) ]
         [ el StationTime [ width (px (rem 4)) ] (text date)
         , el StationName [] (text name)
-        , el StationDifference [] (text <| formatDifference "" differenceInMinutes)
+
+        -- , el StationDifference [] (text <| formatDifference "" differenceInMinutes)
         ]
 
 
@@ -299,4 +338,4 @@ formatDifference default differenceInMinutes =
 
 prettyTime : Date -> String
 prettyTime =
-    Date.Format.format "%H:%M"
+    Date.Format.format "%H.%M"
