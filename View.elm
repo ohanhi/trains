@@ -294,7 +294,7 @@ trainRow { stations, currentTime } train =
             , whenJust endStation (stationRow stations)
             ]
         , column None
-            [ width (percent 20) ]
+            []
             [ whenJust homeStationArrivingIn <|
                 \time -> el TrainArrivingIn [] (text "Arrives in")
             , whenJust homeStationArrivingIn <|
