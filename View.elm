@@ -34,11 +34,13 @@ type Styles
     | TrainRow
     | TrainLineId
     | TrainArrivingIn
+    | TrainArrivingTime
     | TimetableRow
     | TimetableRowCurrent
     | Heading
     | HeadingBack
     | StationTime
+    | StationTimeShouldBe
     | StationName
     | StationDifference
     | StatusInfo
@@ -91,9 +93,15 @@ stylesheet =
                 [ Color.text Color.black ]
             ]
         , style TrainArrivingIn
-            [ Font.size (ts 0)
+            [ Font.size (ts -1)
             , Font.center
             , Font.weight 600
+            , Color.text Color.darkGray
+            ]
+        , style TrainArrivingTime
+            [ Font.size (ts 2)
+            , Font.center
+            , Font.lineHeight 1
             , Color.text Color.darkGray
             ]
         , style TimetableRow
@@ -123,10 +131,16 @@ stylesheet =
             , variation OffSchedule
                 [ Color.text colors.offSchedule ]
             ]
+        , style StationTimeShouldBe
+            [ Color.text Color.darkGray
+            , Font.strike
+            , Font.size (ts -1)
+            ]
         , style StationName []
         , style StationDifference []
         , style StatusInfo
             [ Font.size (ts -1)
+            , Font.center
             ]
         ]
 
@@ -239,38 +253,28 @@ trainRow { stations, currentTime } train =
                             Nothing
                     )
 
-        currentDifference =
+        homeStationLiveEstimate =
             homeStationDeparture
-                |> Maybe.map .differenceInMinutes
+                |> Maybe.map .liveEstimateTime
                 |> Maybe.andThen identity
 
-        endStationData =
+        endStation =
             train.timetableRows
                 |> List.reverse
                 |> List.head
-                |> Maybe.map
-                    (\station ->
-                        ( station.liveEstimateTime
-                            |> Maybe.withDefault station.scheduledTime
-                        , stationName stations station
-                        , station.differenceInMinutes
-                        )
-                    )
 
         statusInfo station =
             whenJust station.differenceInMinutes (statusInfoBadge station)
 
         statusInfoBadge station n =
-            row StatusInfo
-                [ spacing (rem 0.5) ]
+            wrappedRow StatusInfo
+                [ center ]
                 [ el StationTime
-                    [ width (px (rem 4))
-                    , vary OnTime (abs n <= 1)
+                    [ vary OnTime (abs n <= 1)
                     , vary SlightlyOffSchedule (abs n > 1 && abs n <= 5)
                     , vary OffSchedule (abs n > 5)
                     ]
                     (text (formatDifference "On time" station.differenceInMinutes))
-                , el StationName [] (text (stationName stations station))
                 ]
     in
     row TrainRow
@@ -280,37 +284,56 @@ trainRow { stations, currentTime } train =
         , width (percent 100)
         ]
         [ column None
-            [ width (percent 20) ]
+            [ width (px (rem 2)) ]
             [ el TrainLineId [ vary Moving isMoving ] (text train.lineId)
             ]
         , column None
-            [ width (percent 60) ]
-            [ whenJust currentStation statusInfo
-            , stationRow (prettyTime train.departingFromStation) "Kilo" currentDifference
-            , el StationTime [ width (px (rem 4)) ] (text "︙")
-            , whenJust endStationData <|
-                \( date, name, diff ) ->
-                    stationRow (prettyTime date) name diff
+            [ width (fill 1) ]
+            [ whenJust homeStationDeparture (stationRow stations)
+            , el StationTime [ width (px timeWidth) ] (text "︙")
+            , whenJust endStation (stationRow stations)
             ]
-        , whenJust homeStationArrivingIn <|
-            \time ->
-                column None
-                    [ width (percent 20) ]
-                    [ el TrainArrivingIn [] (text "Arrives in ")
-                    , el TrainLineId [] (text time)
-                    ]
+        , column None
+            [ width (percent 20) ]
+            [ whenJust homeStationArrivingIn <|
+                \time -> el TrainArrivingIn [] (text "Arrives in")
+            , whenJust homeStationArrivingIn <|
+                \time -> el TrainArrivingTime [] (text time)
+            , whenJust currentStation statusInfo
+            ]
         ]
 
 
-stationRow : String -> String -> Maybe Int -> Element Styles Variations msg
-stationRow date name differenceInMinutes =
+stationRow : Stations -> TimetableRow -> Element Styles Variations msg
+stationRow stations station =
+    let
+        name =
+            stationName stations station
+    in
     row None
         [ spacing (rem 0.5) ]
-        [ el StationTime [ width (px (rem 4)) ] (text date)
-        , el StationName [] (text name)
+        [ case ( station.liveEstimateTime, station.differenceInMinutes ) of
+            ( Just estimate, Just n ) ->
+                column StationTime
+                    [ width (px timeWidth)
+                    , vary OnTime (abs n <= 1)
+                    , vary SlightlyOffSchedule (abs n > 1 && abs n <= 5)
+                    , vary OffSchedule (abs n > 5)
+                    ]
+                    [ text <| prettyTime estimate
+                    , when (n /= 0) <|
+                        el StationTimeShouldBe [] (text <| prettyTime station.scheduledTime)
+                    ]
 
-        -- , el StationDifference [] (text <| formatDifference "" differenceInMinutes)
+            _ ->
+                el StationTime [ width (px timeWidth) ] (text <| prettyTime station.scheduledTime)
+        , el StationName [] (text name)
         ]
+
+
+timeWidth : Float
+timeWidth =
+    rem 3
 
 
 stationName : Stations -> TimetableRow -> String
