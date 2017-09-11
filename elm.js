@@ -21049,55 +21049,23 @@ var _user$project$View$ts = function (scale) {
 		1.33,
 		_elm_lang$core$Basics$toFloat(scale)) * _user$project$View$rem(1);
 };
+var _user$project$View$timeWidth = _user$project$View$rem(3);
 var _user$project$View$StatusInfo = {ctor: 'StatusInfo'};
 var _user$project$View$StationDifference = {ctor: 'StationDifference'};
 var _user$project$View$StationName = {ctor: 'StationName'};
+var _user$project$View$StationTimeShouldBe = {ctor: 'StationTimeShouldBe'};
 var _user$project$View$StationTime = {ctor: 'StationTime'};
 var _user$project$View$HeadingBack = {ctor: 'HeadingBack'};
 var _user$project$View$Heading = {ctor: 'Heading'};
 var _user$project$View$TimetableRowCurrent = {ctor: 'TimetableRowCurrent'};
 var _user$project$View$TimetableRow = {ctor: 'TimetableRow'};
+var _user$project$View$TrainArrivingTime = {ctor: 'TrainArrivingTime'};
 var _user$project$View$TrainArrivingIn = {ctor: 'TrainArrivingIn'};
 var _user$project$View$TrainLineId = {ctor: 'TrainLineId'};
 var _user$project$View$TrainRow = {ctor: 'TrainRow'};
 var _user$project$View$Trains = {ctor: 'Trains'};
 var _user$project$View$Main = {ctor: 'Main'};
 var _user$project$View$None = {ctor: 'None'};
-var _user$project$View$stationRow = F3(
-	function (date, name, differenceInMinutes) {
-		return A3(
-			_mdgriffith$style_elements$Element$row,
-			_user$project$View$None,
-			{
-				ctor: '::',
-				_0: _mdgriffith$style_elements$Element_Attributes$spacing(
-					_user$project$View$rem(0.5)),
-				_1: {ctor: '[]'}
-			},
-			{
-				ctor: '::',
-				_0: A3(
-					_mdgriffith$style_elements$Element$el,
-					_user$project$View$StationTime,
-					{
-						ctor: '::',
-						_0: _mdgriffith$style_elements$Element_Attributes$width(
-							_mdgriffith$style_elements$Element_Attributes$px(
-								_user$project$View$rem(4))),
-						_1: {ctor: '[]'}
-					},
-					_mdgriffith$style_elements$Element$text(date)),
-				_1: {
-					ctor: '::',
-					_0: A3(
-						_mdgriffith$style_elements$Element$el,
-						_user$project$View$StationName,
-						{ctor: '[]'},
-						_mdgriffith$style_elements$Element$text(name)),
-					_1: {ctor: '[]'}
-				}
-			});
-	});
 var _user$project$View$Moving = {ctor: 'Moving'};
 var _user$project$View$OffSchedule = {ctor: 'OffSchedule'};
 var _user$project$View$SlightlyOffSchedule = {ctor: 'SlightlyOffSchedule'};
@@ -21230,7 +21198,7 @@ var _user$project$View$stylesheet = function () {
 									{
 										ctor: '::',
 										_0: _mdgriffith$style_elements$Style_Font$size(
-											_user$project$View$ts(0)),
+											_user$project$View$ts(-1)),
 										_1: {
 											ctor: '::',
 											_0: _mdgriffith$style_elements$Style_Font$center,
@@ -21249,27 +21217,36 @@ var _user$project$View$stylesheet = function () {
 									ctor: '::',
 									_0: A2(
 										_mdgriffith$style_elements$Style$style,
-										_user$project$View$TimetableRow,
+										_user$project$View$TrainArrivingTime,
 										{
 											ctor: '::',
-											_0: _mdgriffith$style_elements$Style_Font$pre,
+											_0: _mdgriffith$style_elements$Style_Font$size(
+												_user$project$View$ts(2)),
 											_1: {
 												ctor: '::',
-												_0: _mdgriffith$style_elements$Style_Color$text(_elm_lang$core$Color$gray),
-												_1: {ctor: '[]'}
+												_0: _mdgriffith$style_elements$Style_Font$center,
+												_1: {
+													ctor: '::',
+													_0: _mdgriffith$style_elements$Style_Font$lineHeight(1),
+													_1: {
+														ctor: '::',
+														_0: _mdgriffith$style_elements$Style_Color$text(_elm_lang$core$Color$darkGray),
+														_1: {ctor: '[]'}
+													}
+												}
 											}
 										}),
 									_1: {
 										ctor: '::',
 										_0: A2(
 											_mdgriffith$style_elements$Style$style,
-											_user$project$View$TimetableRowCurrent,
+											_user$project$View$TimetableRow,
 											{
 												ctor: '::',
 												_0: _mdgriffith$style_elements$Style_Font$pre,
 												_1: {
 													ctor: '::',
-													_0: _mdgriffith$style_elements$Style_Color$text(_elm_lang$core$Color$black),
+													_0: _mdgriffith$style_elements$Style_Color$text(_elm_lang$core$Color$gray),
 													_1: {ctor: '[]'}
 												}
 											}),
@@ -21277,106 +21254,145 @@ var _user$project$View$stylesheet = function () {
 											ctor: '::',
 											_0: A2(
 												_mdgriffith$style_elements$Style$style,
-												_user$project$View$Heading,
+												_user$project$View$TimetableRowCurrent,
 												{
 													ctor: '::',
-													_0: _mdgriffith$style_elements$Style_Font$size(
-														_user$project$View$ts(2)),
+													_0: _mdgriffith$style_elements$Style_Font$pre,
 													_1: {
 														ctor: '::',
-														_0: _mdgriffith$style_elements$Style_Font$lineHeight(2),
-														_1: {
-															ctor: '::',
-															_0: _mdgriffith$style_elements$Style_Color$text(_elm_lang$core$Color$black),
-															_1: {ctor: '[]'}
-														}
+														_0: _mdgriffith$style_elements$Style_Color$text(_elm_lang$core$Color$black),
+														_1: {ctor: '[]'}
 													}
 												}),
 											_1: {
 												ctor: '::',
 												_0: A2(
 													_mdgriffith$style_elements$Style$style,
-													_user$project$View$HeadingBack,
+													_user$project$View$Heading,
 													{
 														ctor: '::',
-														_0: _mdgriffith$style_elements$Style_Color$text(_elm_lang$core$Color$black),
+														_0: _mdgriffith$style_elements$Style_Font$size(
+															_user$project$View$ts(2)),
 														_1: {
 															ctor: '::',
-															_0: _mdgriffith$style_elements$Style_Font$center,
-															_1: {ctor: '[]'}
+															_0: _mdgriffith$style_elements$Style_Font$lineHeight(2),
+															_1: {
+																ctor: '::',
+																_0: _mdgriffith$style_elements$Style_Color$text(_elm_lang$core$Color$black),
+																_1: {ctor: '[]'}
+															}
 														}
 													}),
 												_1: {
 													ctor: '::',
 													_0: A2(
 														_mdgriffith$style_elements$Style$style,
-														_user$project$View$StationTime,
+														_user$project$View$HeadingBack,
 														{
 															ctor: '::',
-															_0: _mdgriffith$style_elements$Style_Font$center,
+															_0: _mdgriffith$style_elements$Style_Color$text(_elm_lang$core$Color$black),
 															_1: {
 																ctor: '::',
-																_0: _mdgriffith$style_elements$Style_Font$weight(600),
-																_1: {
-																	ctor: '::',
-																	_0: A2(
-																		_mdgriffith$style_elements$Style$variation,
-																		_user$project$View$OnTime,
-																		{
-																			ctor: '::',
-																			_0: _mdgriffith$style_elements$Style_Color$text(colors.onTime),
-																			_1: {ctor: '[]'}
-																		}),
-																	_1: {
-																		ctor: '::',
-																		_0: A2(
-																			_mdgriffith$style_elements$Style$variation,
-																			_user$project$View$SlightlyOffSchedule,
-																			{
-																				ctor: '::',
-																				_0: _mdgriffith$style_elements$Style_Color$text(colors.slightlyOffSchedule),
-																				_1: {ctor: '[]'}
-																			}),
-																		_1: {
-																			ctor: '::',
-																			_0: A2(
-																				_mdgriffith$style_elements$Style$variation,
-																				_user$project$View$OffSchedule,
-																				{
-																					ctor: '::',
-																					_0: _mdgriffith$style_elements$Style_Color$text(colors.offSchedule),
-																					_1: {ctor: '[]'}
-																				}),
-																			_1: {ctor: '[]'}
-																		}
-																	}
-																}
+																_0: _mdgriffith$style_elements$Style_Font$center,
+																_1: {ctor: '[]'}
 															}
 														}),
 													_1: {
 														ctor: '::',
 														_0: A2(
 															_mdgriffith$style_elements$Style$style,
-															_user$project$View$StationName,
-															{ctor: '[]'}),
+															_user$project$View$StationTime,
+															{
+																ctor: '::',
+																_0: _mdgriffith$style_elements$Style_Font$center,
+																_1: {
+																	ctor: '::',
+																	_0: _mdgriffith$style_elements$Style_Font$weight(600),
+																	_1: {
+																		ctor: '::',
+																		_0: A2(
+																			_mdgriffith$style_elements$Style$variation,
+																			_user$project$View$OnTime,
+																			{
+																				ctor: '::',
+																				_0: _mdgriffith$style_elements$Style_Color$text(colors.onTime),
+																				_1: {ctor: '[]'}
+																			}),
+																		_1: {
+																			ctor: '::',
+																			_0: A2(
+																				_mdgriffith$style_elements$Style$variation,
+																				_user$project$View$SlightlyOffSchedule,
+																				{
+																					ctor: '::',
+																					_0: _mdgriffith$style_elements$Style_Color$text(colors.slightlyOffSchedule),
+																					_1: {ctor: '[]'}
+																				}),
+																			_1: {
+																				ctor: '::',
+																				_0: A2(
+																					_mdgriffith$style_elements$Style$variation,
+																					_user$project$View$OffSchedule,
+																					{
+																						ctor: '::',
+																						_0: _mdgriffith$style_elements$Style_Color$text(colors.offSchedule),
+																						_1: {ctor: '[]'}
+																					}),
+																				_1: {ctor: '[]'}
+																			}
+																		}
+																	}
+																}
+															}),
 														_1: {
 															ctor: '::',
 															_0: A2(
 																_mdgriffith$style_elements$Style$style,
-																_user$project$View$StationDifference,
-																{ctor: '[]'}),
+																_user$project$View$StationTimeShouldBe,
+																{
+																	ctor: '::',
+																	_0: _mdgriffith$style_elements$Style_Color$text(_elm_lang$core$Color$darkGray),
+																	_1: {
+																		ctor: '::',
+																		_0: _mdgriffith$style_elements$Style_Font$strike,
+																		_1: {
+																			ctor: '::',
+																			_0: _mdgriffith$style_elements$Style_Font$size(
+																				_user$project$View$ts(-1)),
+																			_1: {ctor: '[]'}
+																		}
+																	}
+																}),
 															_1: {
 																ctor: '::',
 																_0: A2(
 																	_mdgriffith$style_elements$Style$style,
-																	_user$project$View$StatusInfo,
-																	{
+																	_user$project$View$StationName,
+																	{ctor: '[]'}),
+																_1: {
+																	ctor: '::',
+																	_0: A2(
+																		_mdgriffith$style_elements$Style$style,
+																		_user$project$View$StationDifference,
+																		{ctor: '[]'}),
+																	_1: {
 																		ctor: '::',
-																		_0: _mdgriffith$style_elements$Style_Font$size(
-																			_user$project$View$ts(-1)),
+																		_0: A2(
+																			_mdgriffith$style_elements$Style$style,
+																			_user$project$View$StatusInfo,
+																			{
+																				ctor: '::',
+																				_0: _mdgriffith$style_elements$Style_Font$size(
+																					_user$project$View$ts(-1)),
+																				_1: {
+																					ctor: '::',
+																					_0: _mdgriffith$style_elements$Style_Font$center,
+																					_1: {ctor: '[]'}
+																				}
+																			}),
 																		_1: {ctor: '[]'}
-																	}),
-																_1: {ctor: '[]'}
+																	}
+																}
 															}
 														}
 													}
@@ -21392,19 +21408,117 @@ var _user$project$View$stylesheet = function () {
 			}
 		});
 }();
+var _user$project$View$stationRow = F2(
+	function (stations, station) {
+		var name = A2(_user$project$View$stationName, stations, station);
+		return A3(
+			_mdgriffith$style_elements$Element$row,
+			_user$project$View$None,
+			{
+				ctor: '::',
+				_0: _mdgriffith$style_elements$Element_Attributes$spacing(
+					_user$project$View$rem(0.5)),
+				_1: {ctor: '[]'}
+			},
+			{
+				ctor: '::',
+				_0: function () {
+					var _p0 = {ctor: '_Tuple2', _0: station.liveEstimateTime, _1: station.differenceInMinutes};
+					if (((_p0.ctor === '_Tuple2') && (_p0._0.ctor === 'Just')) && (_p0._1.ctor === 'Just')) {
+						var _p1 = _p0._1._0;
+						return A3(
+							_mdgriffith$style_elements$Element$column,
+							_user$project$View$StationTime,
+							{
+								ctor: '::',
+								_0: _mdgriffith$style_elements$Element_Attributes$width(
+									_mdgriffith$style_elements$Element_Attributes$px(_user$project$View$timeWidth)),
+								_1: {
+									ctor: '::',
+									_0: A2(
+										_mdgriffith$style_elements$Element_Attributes$vary,
+										_user$project$View$OnTime,
+										_elm_lang$core$Native_Utils.cmp(
+											_elm_lang$core$Basics$abs(_p1),
+											1) < 1),
+									_1: {
+										ctor: '::',
+										_0: A2(
+											_mdgriffith$style_elements$Element_Attributes$vary,
+											_user$project$View$SlightlyOffSchedule,
+											(_elm_lang$core$Native_Utils.cmp(
+												_elm_lang$core$Basics$abs(_p1),
+												1) > 0) && (_elm_lang$core$Native_Utils.cmp(
+												_elm_lang$core$Basics$abs(_p1),
+												5) < 1)),
+										_1: {
+											ctor: '::',
+											_0: A2(
+												_mdgriffith$style_elements$Element_Attributes$vary,
+												_user$project$View$OffSchedule,
+												_elm_lang$core$Native_Utils.cmp(
+													_elm_lang$core$Basics$abs(_p1),
+													5) > 0),
+											_1: {ctor: '[]'}
+										}
+									}
+								}
+							},
+							{
+								ctor: '::',
+								_0: _mdgriffith$style_elements$Element$text(
+									_user$project$View$prettyTime(_p0._0._0)),
+								_1: {
+									ctor: '::',
+									_0: A2(
+										_mdgriffith$style_elements$Element$when,
+										!_elm_lang$core$Native_Utils.eq(_p1, 0),
+										A3(
+											_mdgriffith$style_elements$Element$el,
+											_user$project$View$StationTimeShouldBe,
+											{ctor: '[]'},
+											_mdgriffith$style_elements$Element$text(
+												_user$project$View$prettyTime(station.scheduledTime)))),
+									_1: {ctor: '[]'}
+								}
+							});
+					} else {
+						return A3(
+							_mdgriffith$style_elements$Element$el,
+							_user$project$View$StationTime,
+							{
+								ctor: '::',
+								_0: _mdgriffith$style_elements$Element_Attributes$width(
+									_mdgriffith$style_elements$Element_Attributes$px(_user$project$View$timeWidth)),
+								_1: {ctor: '[]'}
+							},
+							_mdgriffith$style_elements$Element$text(
+								_user$project$View$prettyTime(station.scheduledTime)));
+					}
+				}(),
+				_1: {
+					ctor: '::',
+					_0: A3(
+						_mdgriffith$style_elements$Element$el,
+						_user$project$View$StationName,
+						{ctor: '[]'},
+						_mdgriffith$style_elements$Element$text(name)),
+					_1: {ctor: '[]'}
+				}
+			});
+	});
 var _user$project$View$trainRow = F2(
-	function (_p0, train) {
-		var _p1 = _p0;
-		var _p9 = _p1.stations;
+	function (_p2, train) {
+		var _p3 = _p2;
+		var _p9 = _p3.stations;
 		var statusInfoBadge = F2(
 			function (station, n) {
 				return A3(
-					_mdgriffith$style_elements$Element$row,
+					_mdgriffith$style_elements$Element$wrappedRow,
 					_user$project$View$StatusInfo,
 					{
 						ctor: '::',
-						_0: _mdgriffith$style_elements$Element_Attributes$spacing(
-							_user$project$View$rem(0.5)),
+						_0: _mdgriffith$style_elements$Element_Attributes$center,
 						_1: {ctor: '[]'}
 					},
 					{
@@ -21414,52 +21528,37 @@ var _user$project$View$trainRow = F2(
 							_user$project$View$StationTime,
 							{
 								ctor: '::',
-								_0: _mdgriffith$style_elements$Element_Attributes$width(
-									_mdgriffith$style_elements$Element_Attributes$px(
-										_user$project$View$rem(4))),
+								_0: A2(
+									_mdgriffith$style_elements$Element_Attributes$vary,
+									_user$project$View$OnTime,
+									_elm_lang$core$Native_Utils.cmp(
+										_elm_lang$core$Basics$abs(n),
+										1) < 1),
 								_1: {
 									ctor: '::',
 									_0: A2(
 										_mdgriffith$style_elements$Element_Attributes$vary,
-										_user$project$View$OnTime,
-										_elm_lang$core$Native_Utils.cmp(
+										_user$project$View$SlightlyOffSchedule,
+										(_elm_lang$core$Native_Utils.cmp(
 											_elm_lang$core$Basics$abs(n),
-											1) < 1),
+											1) > 0) && (_elm_lang$core$Native_Utils.cmp(
+											_elm_lang$core$Basics$abs(n),
+											5) < 1)),
 									_1: {
 										ctor: '::',
 										_0: A2(
 											_mdgriffith$style_elements$Element_Attributes$vary,
-											_user$project$View$SlightlyOffSchedule,
-											(_elm_lang$core$Native_Utils.cmp(
+											_user$project$View$OffSchedule,
+											_elm_lang$core$Native_Utils.cmp(
 												_elm_lang$core$Basics$abs(n),
-												1) > 0) && (_elm_lang$core$Native_Utils.cmp(
-												_elm_lang$core$Basics$abs(n),
-												5) < 1)),
-										_1: {
-											ctor: '::',
-											_0: A2(
-												_mdgriffith$style_elements$Element_Attributes$vary,
-												_user$project$View$OffSchedule,
-												_elm_lang$core$Native_Utils.cmp(
-													_elm_lang$core$Basics$abs(n),
-													5) > 0),
-											_1: {ctor: '[]'}
-										}
+												5) > 0),
+										_1: {ctor: '[]'}
 									}
 								}
 							},
 							_mdgriffith$style_elements$Element$text(
 								A2(_user$project$View$formatDifference, 'On time', station.differenceInMinutes))),
-						_1: {
-							ctor: '::',
-							_0: A3(
-								_mdgriffith$style_elements$Element$el,
-								_user$project$View$StationName,
-								{ctor: '[]'},
-								_mdgriffith$style_elements$Element$text(
-									A2(_user$project$View$stationName, _p9, station))),
-							_1: {ctor: '[]'}
-						}
+						_1: {ctor: '[]'}
 					});
 			});
 		var statusInfo = function (station) {
@@ -21468,25 +21567,15 @@ var _user$project$View$trainRow = F2(
 				station.differenceInMinutes,
 				statusInfoBadge(station));
 		};
-		var endStationData = A2(
-			_elm_lang$core$Maybe$map,
-			function (station) {
-				return {
-					ctor: '_Tuple3',
-					_0: A2(_elm_lang$core$Maybe$withDefault, station.scheduledTime, station.liveEstimateTime),
-					_1: A2(_user$project$View$stationName, _p9, station),
-					_2: station.differenceInMinutes
-				};
-			},
-			_elm_lang$core$List$head(
-				_elm_lang$core$List$reverse(train.timetableRows)));
-		var _p2 = function (homeStationRows) {
+		var endStation = _elm_lang$core$List$head(
+			_elm_lang$core$List$reverse(train.timetableRows));
+		var _p4 = function (homeStationRows) {
 			return {
 				ctor: '_Tuple2',
 				_0: _elm_lang$core$List$head(
 					A2(
 						_elm_lang$core$List$filter,
-						function (_p3) {
+						function (_p5) {
 							return A2(
 								F2(
 									function (x, y) {
@@ -21495,13 +21584,13 @@ var _user$project$View$trainRow = F2(
 								_user$project$Model$Arrival,
 								function (_) {
 									return _.rowType;
-								}(_p3));
+								}(_p5));
 						},
 						homeStationRows)),
 				_1: _elm_lang$core$List$head(
 					A2(
 						_elm_lang$core$List$filter,
-						function (_p4) {
+						function (_p6) {
 							return A2(
 								F2(
 									function (x, y) {
@@ -21510,14 +21599,14 @@ var _user$project$View$trainRow = F2(
 								_user$project$Model$Departure,
 								function (_) {
 									return _.rowType;
-								}(_p4));
+								}(_p6));
 						},
 						homeStationRows))
 			};
 		}(
 			A2(
 				_elm_lang$core$List$filter,
-				function (_p5) {
+				function (_p7) {
 					return A2(
 						F2(
 							function (x, y) {
@@ -21526,11 +21615,11 @@ var _user$project$View$trainRow = F2(
 						'KIL',
 						function (_) {
 							return _.stationShortCode;
-						}(_p5));
+						}(_p7));
 				},
 				train.timetableRows));
-		var homeStationArrival = _p2._0;
-		var homeStationDeparture = _p2._1;
+		var homeStationArrival = _p4._0;
+		var homeStationDeparture = _p4._1;
 		var homeStationArrivingIn = A2(
 			_elm_lang$core$Maybe$andThen,
 			function (timeDiff) {
@@ -21540,7 +21629,7 @@ var _user$project$View$trainRow = F2(
 			A2(
 				_elm_lang$core$Maybe$map,
 				function (date) {
-					return _elm_lang$core$Date$toTime(date) - _p1.currentTime;
+					return _elm_lang$core$Date$toTime(date) - _p3.currentTime;
 				},
 				A2(
 					_elm_lang$core$Maybe$withDefault,
@@ -21556,20 +21645,20 @@ var _user$project$View$trainRow = F2(
 							return _.liveEstimateTime;
 						},
 						homeStationArrival))));
-		var currentDifference = A2(
+		var homeStationLiveEstimate = A2(
 			_elm_lang$core$Maybe$andThen,
 			_elm_lang$core$Basics$identity,
 			A2(
 				_elm_lang$core$Maybe$map,
 				function (_) {
-					return _.differenceInMinutes;
+					return _.liveEstimateTime;
 				},
 				homeStationDeparture));
 		var currentStation = _elm_lang$core$List$head(
 			_elm_lang$core$List$reverse(
 				A2(
 					_elm_lang$core$List$filter,
-					function (_p6) {
+					function (_p8) {
 						return A2(
 							F2(
 								function (x, y) {
@@ -21578,7 +21667,7 @@ var _user$project$View$trainRow = F2(
 							_elm_lang$core$Maybe$Nothing,
 							function (_) {
 								return _.actualTime;
-							}(_p6));
+							}(_p8));
 					},
 					train.timetableRows)));
 		var isMoving = !_elm_lang$core$Native_Utils.eq(currentStation, _elm_lang$core$Maybe$Nothing);
@@ -21615,7 +21704,8 @@ var _user$project$View$trainRow = F2(
 					{
 						ctor: '::',
 						_0: _mdgriffith$style_elements$Element_Attributes$width(
-							_mdgriffith$style_elements$Element_Attributes$percent(20)),
+							_mdgriffith$style_elements$Element_Attributes$px(
+								_user$project$View$rem(2))),
 						_1: {ctor: '[]'}
 					},
 					{
@@ -21639,82 +21729,78 @@ var _user$project$View$trainRow = F2(
 						{
 							ctor: '::',
 							_0: _mdgriffith$style_elements$Element_Attributes$width(
-								_mdgriffith$style_elements$Element_Attributes$percent(60)),
+								_mdgriffith$style_elements$Element_Attributes$fill(1)),
 							_1: {ctor: '[]'}
 						},
 						{
 							ctor: '::',
-							_0: A2(_mdgriffith$style_elements$Element$whenJust, currentStation, statusInfo),
+							_0: A2(
+								_mdgriffith$style_elements$Element$whenJust,
+								homeStationDeparture,
+								_user$project$View$stationRow(_p9)),
 							_1: {
 								ctor: '::',
 								_0: A3(
-									_user$project$View$stationRow,
-									_user$project$View$prettyTime(train.departingFromStation),
-									'Kilo',
-									currentDifference),
+									_mdgriffith$style_elements$Element$el,
+									_user$project$View$StationTime,
+									{
+										ctor: '::',
+										_0: _mdgriffith$style_elements$Element_Attributes$width(
+											_mdgriffith$style_elements$Element_Attributes$px(_user$project$View$timeWidth)),
+										_1: {ctor: '[]'}
+									},
+									_mdgriffith$style_elements$Element$text('︙')),
 								_1: {
 									ctor: '::',
-									_0: A3(
-										_mdgriffith$style_elements$Element$el,
-										_user$project$View$StationTime,
-										{
-											ctor: '::',
-											_0: _mdgriffith$style_elements$Element_Attributes$width(
-												_mdgriffith$style_elements$Element_Attributes$px(
-													_user$project$View$rem(4))),
-											_1: {ctor: '[]'}
-										},
-										_mdgriffith$style_elements$Element$text('︙')),
-									_1: {
-										ctor: '::',
-										_0: A2(
-											_mdgriffith$style_elements$Element$whenJust,
-											endStationData,
-											function (_p7) {
-												var _p8 = _p7;
-												return A3(
-													_user$project$View$stationRow,
-													_user$project$View$prettyTime(_p8._0),
-													_p8._1,
-													_p8._2);
-											}),
-										_1: {ctor: '[]'}
-									}
+									_0: A2(
+										_mdgriffith$style_elements$Element$whenJust,
+										endStation,
+										_user$project$View$stationRow(_p9)),
+									_1: {ctor: '[]'}
 								}
 							}
 						}),
 					_1: {
 						ctor: '::',
-						_0: A2(
-							_mdgriffith$style_elements$Element$whenJust,
-							homeStationArrivingIn,
-							function (time) {
-								return A3(
-									_mdgriffith$style_elements$Element$column,
-									_user$project$View$None,
-									{
-										ctor: '::',
-										_0: _mdgriffith$style_elements$Element_Attributes$width(
-											_mdgriffith$style_elements$Element_Attributes$percent(20)),
-										_1: {ctor: '[]'}
-									},
-									{
-										ctor: '::',
-										_0: A3(
+						_0: A3(
+							_mdgriffith$style_elements$Element$column,
+							_user$project$View$None,
+							{
+								ctor: '::',
+								_0: _mdgriffith$style_elements$Element_Attributes$width(
+									_mdgriffith$style_elements$Element_Attributes$percent(20)),
+								_1: {ctor: '[]'}
+							},
+							{
+								ctor: '::',
+								_0: A2(
+									_mdgriffith$style_elements$Element$whenJust,
+									homeStationArrivingIn,
+									function (time) {
+										return A3(
 											_mdgriffith$style_elements$Element$el,
 											_user$project$View$TrainArrivingIn,
 											{ctor: '[]'},
-											_mdgriffith$style_elements$Element$text('Arrives in ')),
-										_1: {
-											ctor: '::',
-											_0: A3(
+											_mdgriffith$style_elements$Element$text('Arrives in'));
+									}),
+								_1: {
+									ctor: '::',
+									_0: A2(
+										_mdgriffith$style_elements$Element$whenJust,
+										homeStationArrivingIn,
+										function (time) {
+											return A3(
 												_mdgriffith$style_elements$Element$el,
-												_user$project$View$TrainLineId,
+												_user$project$View$TrainArrivingTime,
 												{ctor: '[]'},
-												_mdgriffith$style_elements$Element$text(time)),
-											_1: {ctor: '[]'}
-										}
-									});
+												_mdgriffith$style_elements$Element$text(time));
+										}),
+									_1: {
+										ctor: '::',
+										_0: A2(_mdgriffith$style_elements$Element$whenJust, currentStation, statusInfo),
+										_1: {ctor: '[]'}
+									}
+								}
 							}),
 						_1: {ctor: '[]'}
 					}
