@@ -21765,12 +21765,7 @@ var _user$project$View$trainRow = F2(
 						_0: A3(
 							_mdgriffith$style_elements$Element$column,
 							_user$project$View$None,
-							{
-								ctor: '::',
-								_0: _mdgriffith$style_elements$Element_Attributes$width(
-									_mdgriffith$style_elements$Element_Attributes$percent(20)),
-								_1: {ctor: '[]'}
-							},
+							{ctor: '[]'},
 							{
 								ctor: '::',
 								_0: A2(
