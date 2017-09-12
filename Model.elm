@@ -117,27 +117,33 @@ toTrain ( from, to ) { trainNumber, lineId, timetableRows, cancelled } =
     let
         rightDirection =
             timetableRows
-                |> List.filter
-                    (\row ->
-                        row.trainStopping
-                            && (row.stationShortCode == to || row.stationShortCode == from)
-                    )
+                |> List.filter .trainStopping
                 |> (\rows ->
                         let
-                            departureOkay =
+                            departureTime =
                                 rows
+                                    |> List.filterMap
+                                        (\row ->
+                                            if row.stationShortCode == from && row.rowType == Departure then
+                                                Just (Date.Format.formatISO8601 row.scheduledTime)
+                                            else
+                                                Nothing
+                                        )
                                     |> List.head
-                                    |> Maybe.map (\row -> row.stationShortCode == from)
-                                    |> Maybe.withDefault False
 
-                            arrivalOkay =
+                            arrivalTimes =
                                 rows
-                                    |> List.filter (\row -> row.stationShortCode == to)
-                                    |> List.head
-                                    |> Maybe.map (\_ -> True)
-                                    |> Maybe.withDefault False
+                                    |> List.filterMap
+                                        (\row ->
+                                            if row.stationShortCode == to && row.rowType == Arrival then
+                                                Just (Date.Format.formatISO8601 row.scheduledTime)
+                                            else
+                                                Nothing
+                                        )
                         in
-                        departureOkay && arrivalOkay
+                        departureTime
+                            |> Maybe.map (\dep -> List.any (\arr -> arr > dep) arrivalTimes)
+                            |> Maybe.withDefault False
                    )
 
         departingFromStation =
