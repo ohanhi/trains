@@ -191,7 +191,6 @@ trainsView model ( from, to ) trains =
         rightDirection =
             trains
                 |> Model.sortedTrainList
-                |> List.filter (\a -> a.direction == RightDirection)
 
         heading =
             stationName model.stations from ++ " ⭢ " ++ stationName model.stations to

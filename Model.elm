@@ -33,7 +33,6 @@ type alias Train =
     , lineId : String
     , timetableRows : List TimetableRow
     , cancelled : Bool
-    , direction : Direction
     , departingFromStation : Date
     }
 
@@ -44,11 +43,6 @@ type alias TrainRaw =
     , timetableRows : List TimetableRow
     , cancelled : Bool
     }
-
-
-type Direction
-    = RightDirection
-    | WrongDirection
 
 
 type alias Stations =
@@ -103,7 +97,12 @@ trainsDecoder targets =
         |> required "cancelled" bool
         |> andThen (toTrain targets)
         |> list
-        |> andThen (List.map (\a -> ( a.trainNumber, a )) >> Dict.fromList >> succeed)
+        |> andThen
+            (List.filterMap identity
+                >> List.map (\a -> ( a.trainNumber, a ))
+                >> Dict.fromList
+                >> succeed
+            )
 
 
 sortedTrainList : Trains -> List Train
@@ -113,29 +112,32 @@ sortedTrainList trains =
         |> List.sortBy (.departingFromStation >> Date.Format.formatISO8601)
 
 
-toTrain : ( String, String ) -> TrainRaw -> Decoder Train
+toTrain : ( String, String ) -> TrainRaw -> Decoder (Maybe Train)
 toTrain ( from, to ) { trainNumber, lineId, timetableRows, cancelled } =
     let
-        direction =
+        rightDirection =
             timetableRows
-                |> List.filter (\row -> row.stationShortCode == to || row.stationShortCode == from)
+                |> List.filter
+                    (\row ->
+                        row.trainStopping
+                            && (row.stationShortCode == to || row.stationShortCode == from)
+                    )
                 |> (\rows ->
                         let
-                            first =
+                            departureOkay =
                                 rows
                                     |> List.head
-                                    |> Maybe.map .stationShortCode
+                                    |> Maybe.map (\row -> row.stationShortCode == from)
+                                    |> Maybe.withDefault False
 
-                            last =
+                            arrivalOkay =
                                 rows
-                                    |> List.reverse
+                                    |> List.filter (\row -> row.stationShortCode == to)
                                     |> List.head
-                                    |> Maybe.map .stationShortCode
+                                    |> Maybe.map (\_ -> True)
+                                    |> Maybe.withDefault False
                         in
-                        if first == Just from && last == Just to then
-                            RightDirection
-                        else
-                            WrongDirection
+                        departureOkay && arrivalOkay
                    )
 
         departingFromStation =
@@ -149,10 +151,12 @@ toTrain ( from, to ) { trainNumber, lineId, timetableRows, cancelled } =
                     )
                 |> List.head
     in
-    departingFromStation
-        |> Maybe.map (Train trainNumber lineId timetableRows cancelled direction)
-        |> Maybe.map succeed
-        |> Maybe.withDefault (fail "Couldn't turn raw data into train")
+    if rightDirection then
+        departingFromStation
+            |> Maybe.map (succeed << Just << Train trainNumber lineId timetableRows cancelled)
+            |> Maybe.withDefault (succeed Nothing)
+    else
+        succeed Nothing
 
 
 timetableRowsDecoder : Decoder (List TimetableRow)
