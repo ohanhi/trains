@@ -39,6 +39,7 @@ type Styles
     | TimetableRowCurrent
     | Heading
     | HeadingBack
+    | HeadingSwap
     | StationTime
     | StationTimeShouldBe
     | StationName
@@ -121,6 +122,10 @@ stylesheet =
             [ Color.text Color.black
             , Font.center
             ]
+        , style HeadingSwap
+            [ Color.text Color.darkGray
+            , Font.center
+            ]
         , style StationTime
             [ Font.center
             , Font.weight 600
@@ -162,7 +167,12 @@ view model =
               <|
                 case model.route of
                     SelectRoute ->
-                        el Heading [] (text "Select stations")
+                        column None
+                            [ spacing (rem 1) ]
+                            [ el Heading [] (text "Select stations")
+                            , link "#KIL/HKI" <| el None [] (text "Kilo - Helsinki")
+                            , link "#HKI/KIL" <| el None [] (text "Helsinki - Kilo")
+                            ]
 
                     ScheduleRoute from to ->
                         scheduleView model ( from, to )
@@ -206,6 +216,8 @@ trainsView model ( from, to ) trains =
             [ link "#" <|
                 el HeadingBack [ width (px (rem 2)) ] (text "‹")
             , el Heading [] (text heading)
+            , link ("#" ++ to ++ "/" ++ from) <|
+                el HeadingSwap [ width (px (rem 2)) ] (text "⮃")
             ]
         ]
             ++ List.map (trainRow model ( from, to )) rightDirection
