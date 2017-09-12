@@ -39,6 +39,7 @@ type Styles
     | TimetableRowCurrent
     | Heading
     | HeadingBack
+    | HeadingSwap
     | StationTime
     | StationTimeShouldBe
     | StationName
@@ -121,6 +122,10 @@ stylesheet =
             [ Color.text Color.black
             , Font.center
             ]
+        , style HeadingSwap
+            [ Color.text Color.darkGray
+            , Font.center
+            ]
         , style StationTime
             [ Font.center
             , Font.weight 600
@@ -153,74 +158,77 @@ view model =
             , width (percent 100)
             , padding (rem 2)
             ]
-            [ wrappedRow None
+            [ el None
                 [ spacing (rem 2)
                 , width (percent 100)
+                , maxWidth (px (rem 30))
                 , center
                 ]
               <|
-                case model.trains of
-                    Success trains ->
-                        trainsView model trains
+                case model.route of
+                    SelectRoute ->
+                        column None
+                            [ spacing (rem 1) ]
+                            [ el Heading [] (text "Select stations")
+                            , link "#KIL/HKI" <| el None [] (text "Kilo - Helsinki")
+                            , link "#HKI/KIL" <| el None [] (text "Helsinki - Kilo")
+                            ]
 
-                    Failure err ->
-                        [ el Heading [] <| text (toString err) ]
-
-                    Loading ->
-                        [ el Heading [] <| text "Loading" ]
-
-                    _ ->
-                        []
+                    ScheduleRoute from to ->
+                        scheduleView model ( from, to )
             ]
 
 
-trainsView :
-    { a | route : Route, stations : Stations, currentTime : Time }
-    -> Trains
-    -> List (Element Styles Variations msg)
-trainsView ({ route, stations, currentTime } as viewModel) trains =
+scheduleView : Model -> ( String, String ) -> Element Styles Variations msg
+scheduleView model targets =
+    case model.trains of
+        Success trains ->
+            trainsView model targets trains
+
+        Failure err ->
+            el Heading [] <| text ("Oh noes: \"" ++ toString err ++ "\"")
+
+        Loading ->
+            el Heading [] <| text "Loading"
+
+        _ ->
+            empty
+
+
+trainsView : Model -> ( String, String ) -> Trains -> Element Styles Variations msg
+trainsView model ( from, to ) trains =
     let
-        ( toHelsinki, fromHelsinki ) =
+        rightDirection =
             trains
                 |> Model.sortedTrainList
-                |> List.partition (\a -> a.direction == ToHelsinki)
 
-        isSingleDirection =
-            route /= BothRoute
-
-        trainColumn ( name, hash ) trainRows =
-            column Trains
-                [ spacing (rem 1)
-                , width <|
-                    if isSingleDirection then
-                        percent 100
-                    else
-                        percent 50
-                , minWidth (px (rem 20))
-                ]
-            <|
-                [ row Heading
-                    [ spacing (rem 1) ]
-                    [ when isSingleDirection <|
-                        link "#" <|
-                            el HeadingBack [ width (px (rem 2)) ] (text "‹")
-                    , link ("#" ++ hash) <| el Heading [] (text name)
-                    ]
-                ]
-                    ++ List.map (trainRow viewModel) trainRows
+        heading =
+            stationName model.stations from ++ " ⭢ " ++ stationName model.stations to
     in
-    [ when (route == BothRoute || route == ToHelsinkiRoute) <|
-        trainColumn ( "To Helsinki", "to-helsinki" ) toHelsinki
-    , when (route == BothRoute || route == FromHelsinkiRoute) <|
-        trainColumn ( "From Helsinki", "from-helsinki" ) fromHelsinki
-    ]
+    column Trains
+        [ spacing (rem 1)
+        , width (percent 100)
+        , minWidth (px (rem 20))
+        ]
+    <|
+        [ row Heading
+            [ spacing (rem 1) ]
+            [ link "#" <|
+                el HeadingBack [ width (px (rem 2)) ] (text "‹")
+            , el Heading [] (text heading)
+            , link ("#" ++ to ++ "/" ++ from) <|
+                el HeadingSwap [ width (px (rem 2)) ] (text "⮃")
+            ]
+        ]
+            ++ List.map (trainRow model ( from, to )) rightDirection
 
 
 trainRow :
     { a | stations : Stations, currentTime : Time }
+    -> ( String, String )
     -> Train
     -> Element Styles Variations msg
-trainRow { stations, currentTime } train =
+trainRow { stations, currentTime } ( from, to ) train =
     let
         currentStation =
             train.timetableRows
@@ -233,7 +241,7 @@ trainRow { stations, currentTime } train =
 
         ( homeStationArrival, homeStationDeparture ) =
             train.timetableRows
-                |> List.filter (.stationShortCode >> (==) "KIL")
+                |> List.filter (.stationShortCode >> (==) from)
                 |> (\homeStationRows ->
                         ( homeStationRows |> List.filter (.rowType >> (==) Arrival) |> List.head
                         , homeStationRows |> List.filter (.rowType >> (==) Departure) |> List.head
@@ -260,7 +268,8 @@ trainRow { stations, currentTime } train =
 
         endStation =
             train.timetableRows
-                |> List.reverse
+                |> List.filter
+                    (\row -> row.rowType == Arrival && row.stationShortCode == to)
                 |> List.head
 
         statusInfo station =
@@ -308,7 +317,7 @@ stationRow : Stations -> TimetableRow -> Element Styles Variations msg
 stationRow stations station =
     let
         name =
-            stationName stations station
+            stationName stations station.stationShortCode
     in
     row None
         [ spacing (rem 0.5) ]
@@ -336,11 +345,11 @@ timeWidth =
     rem 3
 
 
-stationName : Stations -> TimetableRow -> String
-stationName stations row =
+stationName : Stations -> String -> String
+stationName stations shortCode =
     stations
-        |> Dict.get row.stationUICCode
-        |> Maybe.withDefault row.stationShortCode
+        |> Dict.get shortCode
+        |> Maybe.withDefault shortCode
 
 
 formatDifference : String -> Maybe Int -> String
