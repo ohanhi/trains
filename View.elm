@@ -8,6 +8,7 @@ import Element exposing (..)
 import Element.Attributes exposing (..)
 import Html exposing (Html)
 import Http
+import Icons
 import Model exposing (..)
 import RemoteData exposing (RemoteData(..))
 import Style exposing (..)
@@ -237,7 +238,9 @@ trainsView model ( from, to ) trains =
                 el HeadingBack [ width (px (rem 2)) ] (text "‹")
             , el Heading [] (text heading)
             , link ("#" ++ to ++ "/" ++ from) <|
-                el HeadingSwap [ width (px (rem 2)) ] (text "⇅")
+                el HeadingSwap
+                    [ width (px (rem 2)), center ]
+                    (html <| Icons.swap (ts 2))
             ]
         ]
             ++ List.map (trainRow model ( from, to )) rightDirection
