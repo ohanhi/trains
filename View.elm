@@ -7,6 +7,7 @@ import Dict
 import Element exposing (..)
 import Element.Attributes exposing (..)
 import Html exposing (Html)
+import Http
 import Model exposing (..)
 import RemoteData exposing (RemoteData(..))
 import Style exposing (..)
@@ -170,8 +171,8 @@ view model =
                         column None
                             [ spacing (rem 1) ]
                             [ el Heading [] (text "Select stations")
-                            , link "#KIL/HKI" <| el None [] (text "Kilo - Helsinki")
-                            , link "#HKI/KIL" <| el None [] (text "Helsinki - Kilo")
+                            , link "#KIL/HKI" <| el None [] (text "Kilo—Helsinki")
+                            , link "#HKI/KIL" <| el None [] (text "Helsinki—Kilo")
                             ]
 
                     ScheduleRoute from to ->
@@ -186,7 +187,26 @@ scheduleView model targets =
             trainsView model targets trains
 
         Failure err ->
-            el Heading [] <| text ("Oh noes: \"" ++ toString err ++ "\"")
+            column None
+                [ spacing (rem 1) ]
+                [ el Heading [] <| text "Oh noes, an error!"
+                , case err of
+                    Http.NetworkError ->
+                        text "It's the network."
+
+                    Http.Timeout ->
+                        text "Helloooo?"
+                            |> below [ text "There was no response." ]
+
+                    Http.BadUrl _ ->
+                        text "It's not you, it's me. I have the server address wrong."
+
+                    Http.BadStatus _ ->
+                        text "Whoops, looks like the server didn't like the request."
+
+                    Http.BadPayload _ _ ->
+                        text "Ouch, the server responded with strange contents."
+                ]
 
         Loading ->
             el Heading [] <| text "Loading"
@@ -203,7 +223,7 @@ trainsView model ( from, to ) trains =
                 |> Model.sortedTrainList
 
         heading =
-            stationName model.stations from ++ " ⭢ " ++ stationName model.stations to
+            stationName model.stations from ++ "—" ++ stationName model.stations to
     in
     column Trains
         [ spacing (rem 1)
@@ -217,7 +237,7 @@ trainsView model ( from, to ) trains =
                 el HeadingBack [ width (px (rem 2)) ] (text "‹")
             , el Heading [] (text heading)
             , link ("#" ++ to ++ "/" ++ from) <|
-                el HeadingSwap [ width (px (rem 2)) ] (text "⮃")
+                el HeadingSwap [ width (px (rem 2)) ] (text "⮁")
             ]
         ]
             ++ List.map (trainRow model ( from, to )) rightDirection
