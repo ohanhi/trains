@@ -21855,7 +21855,7 @@ var _user$project$View$trainsView = F3(
 			A2(_user$project$View$stationName, model.stations, _p14),
 			A2(
 				_elm_lang$core$Basics_ops['++'],
-				' ⭢ ',
+				'—',
 				A2(_user$project$View$stationName, model.stations, _p15)));
 		var rightDirection = _user$project$Model$sortedTrainList(trains);
 		return A3(
@@ -21935,7 +21935,7 @@ var _user$project$View$trainsView = F3(
 														_user$project$View$rem(2))),
 												_1: {ctor: '[]'}
 											},
-											_mdgriffith$style_elements$Element$text('⮃'))),
+											_mdgriffith$style_elements$Element$text('⮁'))),
 									_1: {ctor: '[]'}
 								}
 							}
@@ -21958,17 +21958,48 @@ var _user$project$View$scheduleView = F2(
 				return A3(_user$project$View$trainsView, model, targets, _p16._0);
 			case 'Failure':
 				return A3(
-					_mdgriffith$style_elements$Element$el,
-					_user$project$View$Heading,
-					{ctor: '[]'},
-					_mdgriffith$style_elements$Element$text(
-						A2(
-							_elm_lang$core$Basics_ops['++'],
-							'Oh noes: \"',
-							A2(
-								_elm_lang$core$Basics_ops['++'],
-								_elm_lang$core$Basics$toString(_p16._0),
-								'\"'))));
+					_mdgriffith$style_elements$Element$column,
+					_user$project$View$None,
+					{
+						ctor: '::',
+						_0: _mdgriffith$style_elements$Element_Attributes$spacing(
+							_user$project$View$rem(1)),
+						_1: {ctor: '[]'}
+					},
+					{
+						ctor: '::',
+						_0: A3(
+							_mdgriffith$style_elements$Element$el,
+							_user$project$View$Heading,
+							{ctor: '[]'},
+							_mdgriffith$style_elements$Element$text('Oh noes, an error!')),
+						_1: {
+							ctor: '::',
+							_0: function () {
+								var _p17 = _p16._0;
+								switch (_p17.ctor) {
+									case 'NetworkError':
+										return _mdgriffith$style_elements$Element$text('It\'s the network.');
+									case 'Timeout':
+										return A2(
+											_mdgriffith$style_elements$Element$below,
+											{
+												ctor: '::',
+												_0: _mdgriffith$style_elements$Element$text('There was no response.'),
+												_1: {ctor: '[]'}
+											},
+											_mdgriffith$style_elements$Element$text('Helloooo?'));
+									case 'BadUrl':
+										return _mdgriffith$style_elements$Element$text('It\'s not you, it\'s me. I have the server address wrong.');
+									case 'BadStatus':
+										return _mdgriffith$style_elements$Element$text('Whoops, looks like the server didn\'t like the request.');
+									default:
+										return _mdgriffith$style_elements$Element$text('Ouch, the server responded with strange contents.');
+								}
+							}(),
+							_1: {ctor: '[]'}
+						}
+					});
 			case 'Loading':
 				return A3(
 					_mdgriffith$style_elements$Element$el,
@@ -22028,8 +22059,8 @@ var _user$project$View$view = function (model) {
 						}
 					},
 					function () {
-						var _p17 = model.route;
-						if (_p17.ctor === 'SelectRoute') {
+						var _p18 = model.route;
+						if (_p18.ctor === 'SelectRoute') {
 							return A3(
 								_mdgriffith$style_elements$Element$column,
 								_user$project$View$None,
@@ -22055,7 +22086,7 @@ var _user$project$View$view = function (model) {
 												_mdgriffith$style_elements$Element$el,
 												_user$project$View$None,
 												{ctor: '[]'},
-												_mdgriffith$style_elements$Element$text('Kilo - Helsinki'))),
+												_mdgriffith$style_elements$Element$text('Kilo—Helsinki'))),
 										_1: {
 											ctor: '::',
 											_0: A2(
@@ -22065,7 +22096,7 @@ var _user$project$View$view = function (model) {
 													_mdgriffith$style_elements$Element$el,
 													_user$project$View$None,
 													{ctor: '[]'},
-													_mdgriffith$style_elements$Element$text('Helsinki - Kilo'))),
+													_mdgriffith$style_elements$Element$text('Helsinki—Kilo'))),
 											_1: {ctor: '[]'}
 										}
 									}
@@ -22074,7 +22105,7 @@ var _user$project$View$view = function (model) {
 							return A2(
 								_user$project$View$scheduleView,
 								model,
-								{ctor: '_Tuple2', _0: _p17._0, _1: _p17._1});
+								{ctor: '_Tuple2', _0: _p18._0, _1: _p18._1});
 						}
 					}()),
 				_1: {ctor: '[]'}
