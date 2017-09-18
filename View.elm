@@ -152,7 +152,7 @@ stylesheet =
         ]
 
 
-view : Model -> Html msg
+view : Model -> Html Msg
 view model =
     Element.viewport stylesheet <|
         column Main
@@ -169,16 +169,21 @@ view model =
               <|
                 case model.route of
                     SelectRoute ->
-                        column None
-                            [ spacing (rem 1) ]
-                            [ el Heading [] (text "Select stations")
-                            , link "#KIL/HKI" <| el None [] (text "Kilo—Helsinki")
-                            , link "#HKI/KIL" <| el None [] (text "Helsinki—Kilo")
-                            ]
+                        selectStationsView model
 
                     ScheduleRoute from to ->
                         scheduleView model ( from, to )
             ]
+
+
+selectStationsView : Model -> Element Styles Variations Msg
+selectStationsView model =
+    column None
+        [ spacing (rem 1) ]
+        [ el Heading [] (text "Select stations")
+        , link "#KIL/HKI" <| el None [] (text "Kilo—Helsinki")
+        , link "#HKI/KIL" <| el None [] (text "Helsinki—Kilo")
+        ]
 
 
 scheduleView : Model -> ( String, String ) -> Element Styles Variations msg
