@@ -21251,9 +21251,9 @@ var _user$project$Model$Train = F5(
 	function (a, b, c, d, e) {
 		return {trainNumber: a, lineId: b, timetableRows: c, cancelled: d, departingFromStation: e};
 	});
-var _user$project$Model$TrainRaw = F4(
-	function (a, b, c, d) {
-		return {trainNumber: a, lineId: b, timetableRows: c, cancelled: d};
+var _user$project$Model$TrainRaw = F5(
+	function (a, b, c, d, e) {
+		return {trainNumber: a, lineId: b, trainCategory: c, timetableRows: d, cancelled: e};
 	});
 var _user$project$Model$TimetableRow = F8(
 	function (a, b, c, d, e, f, g, h) {
@@ -21263,7 +21263,10 @@ var _user$project$Model$ScheduleRoute = F2(
 	function (a, b) {
 		return {ctor: 'ScheduleRoute', _0: a, _1: b};
 	});
-var _user$project$Model$SelectRoute = {ctor: 'SelectRoute'};
+var _user$project$Model$SelectDestRoute = function (a) {
+	return {ctor: 'SelectDestRoute', _0: a};
+};
+var _user$project$Model$SelectDepRoute = {ctor: 'SelectDepRoute'};
 var _user$project$Model$Arrival = {ctor: 'Arrival'};
 var _user$project$Model$Departure = {ctor: 'Departure'};
 var _user$project$Model$toTrain = F2(
@@ -21316,7 +21319,7 @@ var _user$project$Model$toTrain = F2(
 					return _.trainStopping;
 				},
 				_p8));
-		return rightDirection ? A2(
+		return (_elm_lang$core$Native_Utils.eq(_p6.trainCategory, 'Commuter') && rightDirection) ? A2(
 			_elm_lang$core$Maybe$withDefault,
 			_elm_lang$core$Json_Decode$succeed(_elm_lang$core$Maybe$Nothing),
 			A2(
@@ -21410,13 +21413,433 @@ var _user$project$Model$trainsDecoder = function (targets) {
 						_user$project$Model$timetableRowsDecoder,
 						A3(
 							_NoRedInk$elm_decode_pipeline$Json_Decode_Pipeline$required,
-							'commuterLineID',
+							'trainCategory',
 							_elm_lang$core$Json_Decode$string,
 							A3(
 								_NoRedInk$elm_decode_pipeline$Json_Decode_Pipeline$required,
-								'trainNumber',
-								_elm_lang$core$Json_Decode$int,
-								_NoRedInk$elm_decode_pipeline$Json_Decode_Pipeline$decode(_user$project$Model$TrainRaw))))))));
+								'commuterLineID',
+								_elm_lang$core$Json_Decode$string,
+								A3(
+									_NoRedInk$elm_decode_pipeline$Json_Decode_Pipeline$required,
+									'trainNumber',
+									_elm_lang$core$Json_Decode$int,
+									_NoRedInk$elm_decode_pipeline$Json_Decode_Pipeline$decode(_user$project$Model$TrainRaw)))))))));
+};
+
+var _user$project$Stations_ops = _user$project$Stations_ops || {};
+_user$project$Stations_ops['=>'] = F2(
+	function (v0, v1) {
+		return {ctor: '_Tuple2', _0: v0, _1: v1};
+	});
+var _user$project$Stations$common = {
+	ctor: '::',
+	_0: A2(_user$project$Stations_ops['=>'], 'HKI', 'Helsinki'),
+	_1: {
+		ctor: '::',
+		_0: A2(_user$project$Stations_ops['=>'], 'PSL', 'Pasila'),
+		_1: {ctor: '[]'}
+	}
+};
+var _user$project$Stations$directionSiuntio = {
+	ctor: '::',
+	_0: A2(_user$project$Stations_ops['=>'], 'ILA', 'Ilmala'),
+	_1: {
+		ctor: '::',
+		_0: A2(_user$project$Stations_ops['=>'], 'HPL', 'Huopalahti'),
+		_1: {
+			ctor: '::',
+			_0: A2(_user$project$Stations_ops['=>'], 'VMO', 'Valimo'),
+			_1: {
+				ctor: '::',
+				_0: A2(_user$project$Stations_ops['=>'], 'PJM', 'Pitäjänmäki'),
+				_1: {
+					ctor: '::',
+					_0: A2(_user$project$Stations_ops['=>'], 'MÄK', 'Mäkkylä'),
+					_1: {
+						ctor: '::',
+						_0: A2(_user$project$Stations_ops['=>'], 'LPV', 'Leppävaara'),
+						_1: {
+							ctor: '::',
+							_0: A2(_user$project$Stations_ops['=>'], 'KIL', 'Kilo'),
+							_1: {
+								ctor: '::',
+								_0: A2(_user$project$Stations_ops['=>'], 'KEA', 'Kera'),
+								_1: {
+									ctor: '::',
+									_0: A2(_user$project$Stations_ops['=>'], 'KNI', 'Kauniainen'),
+									_1: {
+										ctor: '::',
+										_0: A2(_user$project$Stations_ops['=>'], 'KVH', 'Koivuhovi'),
+										_1: {
+											ctor: '::',
+											_0: A2(_user$project$Stations_ops['=>'], 'TRL', 'Tuomarila'),
+											_1: {
+												ctor: '::',
+												_0: A2(_user$project$Stations_ops['=>'], 'EPO', 'Espoo'),
+												_1: {
+													ctor: '::',
+													_0: A2(_user$project$Stations_ops['=>'], 'KLH', 'Kauklahti'),
+													_1: {
+														ctor: '::',
+														_0: A2(_user$project$Stations_ops['=>'], 'MAS', 'Masala'),
+														_1: {
+															ctor: '::',
+															_0: A2(_user$project$Stations_ops['=>'], 'JRS', 'Jorvas'),
+															_1: {
+																ctor: '::',
+																_0: A2(_user$project$Stations_ops['=>'], 'TOL', 'Tolsa'),
+																_1: {
+																	ctor: '::',
+																	_0: A2(_user$project$Stations_ops['=>'], 'KKN', 'Kirkkonummi'),
+																	_1: {
+																		ctor: '::',
+																		_0: A2(_user$project$Stations_ops['=>'], 'STI', 'Siuntio'),
+																		_1: {ctor: '[]'}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+};
+var _user$project$Stations$ringTrackCW = {
+	ctor: '::',
+	_0: A2(_user$project$Stations_ops['=>'], 'ILA', 'Ilmala'),
+	_1: {
+		ctor: '::',
+		_0: A2(_user$project$Stations_ops['=>'], 'HPL', 'Huopalahti'),
+		_1: {
+			ctor: '::',
+			_0: A2(_user$project$Stations_ops['=>'], 'POH', 'Pohjois-Haaga'),
+			_1: {
+				ctor: '::',
+				_0: A2(_user$project$Stations_ops['=>'], 'KAN', 'Kannelmäki'),
+				_1: {
+					ctor: '::',
+					_0: A2(_user$project$Stations_ops['=>'], 'MLO', 'Malminkartano'),
+					_1: {
+						ctor: '::',
+						_0: A2(_user$project$Stations_ops['=>'], 'MYR', 'Myyrmäki'),
+						_1: {
+							ctor: '::',
+							_0: A2(_user$project$Stations_ops['=>'], 'LOH', 'Louhela'),
+							_1: {
+								ctor: '::',
+								_0: A2(_user$project$Stations_ops['=>'], 'MRL', 'Martinlaakso'),
+								_1: {
+									ctor: '::',
+									_0: A2(_user$project$Stations_ops['=>'], 'VKS', 'Vantaankoski'),
+									_1: {
+										ctor: '::',
+										_0: A2(_user$project$Stations_ops['=>'], 'VEH', 'Vehkala'),
+										_1: {
+											ctor: '::',
+											_0: A2(_user$project$Stations_ops['=>'], 'KTÖ', 'Kivistö'),
+											_1: {
+												ctor: '::',
+												_0: A2(_user$project$Stations_ops['=>'], 'AVP', 'Aviapolis'),
+												_1: {
+													ctor: '::',
+													_0: A2(_user$project$Stations_ops['=>'], 'LEN', 'Lentoasema (Airport)'),
+													_1: {
+														ctor: '::',
+														_0: A2(_user$project$Stations_ops['=>'], 'LNÄ', 'Leinelä'),
+														_1: {
+															ctor: '::',
+															_0: A2(_user$project$Stations_ops['=>'], 'HKH', 'Hiekkaharju'),
+															_1: {
+																ctor: '::',
+																_0: A2(_user$project$Stations_ops['=>'], 'TKL', 'Tikkurila'),
+																_1: {
+																	ctor: '::',
+																	_0: A2(_user$project$Stations_ops['=>'], 'PLA', 'Puistola'),
+																	_1: {
+																		ctor: '::',
+																		_0: A2(_user$project$Stations_ops['=>'], 'TNA', 'Tapanila'),
+																		_1: {
+																			ctor: '::',
+																			_0: A2(_user$project$Stations_ops['=>'], 'ML', 'Malmi'),
+																			_1: {
+																				ctor: '::',
+																				_0: A2(_user$project$Stations_ops['=>'], 'PMK', 'Pukinmäki'),
+																				_1: {
+																					ctor: '::',
+																					_0: A2(_user$project$Stations_ops['=>'], 'OLK', 'Oulunkylä'),
+																					_1: {
+																						ctor: '::',
+																						_0: A2(_user$project$Stations_ops['=>'], 'KÄP', 'Käpylä'),
+																						_1: {ctor: '[]'}
+																					}
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+};
+var _user$project$Stations$ringTrackCCW = _elm_lang$core$List$reverse(_user$project$Stations$ringTrackCW);
+var _user$project$Stations$directionTampere = {
+	ctor: '::',
+	_0: A2(_user$project$Stations_ops['=>'], 'KÄP', 'Käpylä'),
+	_1: {
+		ctor: '::',
+		_0: A2(_user$project$Stations_ops['=>'], 'OLK', 'Oulunkylä'),
+		_1: {
+			ctor: '::',
+			_0: A2(_user$project$Stations_ops['=>'], 'PMK', 'Pukinmäki'),
+			_1: {
+				ctor: '::',
+				_0: A2(_user$project$Stations_ops['=>'], 'ML', 'Malmi'),
+				_1: {
+					ctor: '::',
+					_0: A2(_user$project$Stations_ops['=>'], 'TNA', 'Tapanila'),
+					_1: {
+						ctor: '::',
+						_0: A2(_user$project$Stations_ops['=>'], 'PLA', 'Puistola'),
+						_1: {
+							ctor: '::',
+							_0: A2(_user$project$Stations_ops['=>'], 'TKL', 'Tikkurila'),
+							_1: {
+								ctor: '::',
+								_0: A2(_user$project$Stations_ops['=>'], 'HKH', 'Hiekkaharju'),
+								_1: {
+									ctor: '::',
+									_0: A2(_user$project$Stations_ops['=>'], 'KVY', 'Koivukylä'),
+									_1: {
+										ctor: '::',
+										_0: A2(_user$project$Stations_ops['=>'], 'RKL', 'Rekola'),
+										_1: {
+											ctor: '::',
+											_0: A2(_user$project$Stations_ops['=>'], 'KRS', 'Korso'),
+											_1: {
+												ctor: '::',
+												_0: A2(_user$project$Stations_ops['=>'], 'SAV', 'Savio'),
+												_1: {
+													ctor: '::',
+													_0: A2(_user$project$Stations_ops['=>'], 'KE', 'Kerava'),
+													_1: {
+														ctor: '::',
+														_0: A2(_user$project$Stations_ops['=>'], 'AIN', 'Ainola'),
+														_1: {
+															ctor: '::',
+															_0: A2(_user$project$Stations_ops['=>'], 'JP', 'Järvenpää'),
+															_1: {
+																ctor: '::',
+																_0: A2(_user$project$Stations_ops['=>'], 'SAU', 'Saunakallio'),
+																_1: {
+																	ctor: '::',
+																	_0: A2(_user$project$Stations_ops['=>'], 'JK', 'Jokela'),
+																	_1: {
+																		ctor: '::',
+																		_0: A2(_user$project$Stations_ops['=>'], 'HY', 'Hyvinkää'),
+																		_1: {
+																			ctor: '::',
+																			_0: A2(_user$project$Stations_ops['=>'], 'RI', 'Riihimäki'),
+																			_1: {
+																				ctor: '::',
+																				_0: A2(_user$project$Stations_ops['=>'], 'RY', 'Ryttylä'),
+																				_1: {
+																					ctor: '::',
+																					_0: A2(_user$project$Stations_ops['=>'], 'TU', 'Turenki'),
+																					_1: {
+																						ctor: '::',
+																						_0: A2(_user$project$Stations_ops['=>'], 'HL', 'Hämeenlinna'),
+																						_1: {
+																							ctor: '::',
+																							_0: A2(_user$project$Stations_ops['=>'], 'PRL', 'Parola'),
+																							_1: {
+																								ctor: '::',
+																								_0: A2(_user$project$Stations_ops['=>'], 'ITA', 'Iittala'),
+																								_1: {
+																									ctor: '::',
+																									_0: A2(_user$project$Stations_ops['=>'], 'TL', 'Toijala'),
+																									_1: {
+																										ctor: '::',
+																										_0: A2(_user$project$Stations_ops['=>'], 'VIA', 'Viiala'),
+																										_1: {
+																											ctor: '::',
+																											_0: A2(_user$project$Stations_ops['=>'], 'LPÄ', 'Lempäälä'),
+																											_1: {
+																												ctor: '::',
+																												_0: A2(_user$project$Stations_ops['=>'], 'TPE', 'Tampere'),
+																												_1: {ctor: '[]'}
+																											}
+																										}
+																									}
+																								}
+																							}
+																						}
+																					}
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+};
+var _user$project$Stations$directionLahti = {
+	ctor: '::',
+	_0: A2(_user$project$Stations_ops['=>'], 'KÄP', 'Käpylä'),
+	_1: {
+		ctor: '::',
+		_0: A2(_user$project$Stations_ops['=>'], 'OLK', 'Oulunkylä'),
+		_1: {
+			ctor: '::',
+			_0: A2(_user$project$Stations_ops['=>'], 'PMK', 'Pukinmäki'),
+			_1: {
+				ctor: '::',
+				_0: A2(_user$project$Stations_ops['=>'], 'ML', 'Malmi'),
+				_1: {
+					ctor: '::',
+					_0: A2(_user$project$Stations_ops['=>'], 'TNA', 'Tapanila'),
+					_1: {
+						ctor: '::',
+						_0: A2(_user$project$Stations_ops['=>'], 'PLA', 'Puistola'),
+						_1: {
+							ctor: '::',
+							_0: A2(_user$project$Stations_ops['=>'], 'TKL', 'Tikkurila'),
+							_1: {
+								ctor: '::',
+								_0: A2(_user$project$Stations_ops['=>'], 'HKH', 'Hiekkaharju'),
+								_1: {
+									ctor: '::',
+									_0: A2(_user$project$Stations_ops['=>'], 'KVY', 'Koivukylä'),
+									_1: {
+										ctor: '::',
+										_0: A2(_user$project$Stations_ops['=>'], 'RKL', 'Rekola'),
+										_1: {
+											ctor: '::',
+											_0: A2(_user$project$Stations_ops['=>'], 'KRS', 'Korso'),
+											_1: {
+												ctor: '::',
+												_0: A2(_user$project$Stations_ops['=>'], 'SAV', 'Savio'),
+												_1: {
+													ctor: '::',
+													_0: A2(_user$project$Stations_ops['=>'], 'KE', 'Kerava'),
+													_1: {
+														ctor: '::',
+														_0: A2(_user$project$Stations_ops['=>'], 'HAA', 'Haarajoki'),
+														_1: {
+															ctor: '::',
+															_0: A2(_user$project$Stations_ops['=>'], 'MLÄ', 'Mäntsälä'),
+															_1: {
+																ctor: '::',
+																_0: A2(_user$project$Stations_ops['=>'], 'HNN', 'Henna'),
+																_1: {
+																	ctor: '::',
+																	_0: A2(_user$project$Stations_ops['=>'], 'LH', 'Lahti'),
+																	_1: {ctor: '[]'}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+};
+var _user$project$Stations$commuterStations = {
+	ctor: '::',
+	_0: A2(_elm_lang$core$Basics_ops['++'], _user$project$Stations$common, _user$project$Stations$directionSiuntio),
+	_1: {
+		ctor: '::',
+		_0: A2(_elm_lang$core$Basics_ops['++'], _user$project$Stations$common, _user$project$Stations$ringTrackCW),
+		_1: {
+			ctor: '::',
+			_0: A2(_elm_lang$core$Basics_ops['++'], _user$project$Stations$common, _user$project$Stations$directionTampere),
+			_1: {
+				ctor: '::',
+				_0: A2(_elm_lang$core$Basics_ops['++'], _user$project$Stations$common, _user$project$Stations$directionLahti),
+				_1: {ctor: '[]'}
+			}
+		}
+	}
+};
+var _user$project$Stations$all = _elm_lang$core$Dict$toList(
+	_elm_lang$core$Dict$fromList(
+		_elm_lang$core$List$concat(_user$project$Stations$commuterStations)));
+var _user$project$Stations$findName = function (abbreviation) {
+	return A2(
+		_elm_lang$core$Dict$get,
+		abbreviation,
+		_elm_lang$core$Dict$fromList(
+			_elm_lang$core$List$concat(_user$project$Stations$commuterStations)));
+};
+var _user$project$Stations$matching = function (abbreviation) {
+	return _elm_lang$core$Dict$toList(
+		A2(
+			_elm_lang$core$Dict$remove,
+			abbreviation,
+			_elm_lang$core$Dict$fromList(
+				_elm_lang$core$List$concat(
+					A2(
+						_elm_lang$core$List$filter,
+						function (track) {
+							return A2(
+								_elm_lang$core$Maybe$withDefault,
+								false,
+								A2(
+									_elm_lang$core$Maybe$map,
+									function (_p0) {
+										return true;
+									},
+									_elm_lang$core$List$head(
+										A2(
+											_elm_lang$core$List$filter,
+											function (_p1) {
+												var _p2 = _p1;
+												return _elm_lang$core$Native_Utils.eq(abbreviation, _p2._0);
+											},
+											track))));
+						},
+						_user$project$Stations$commuterStations)))));
 };
 
 var _user$project$View$prettyTime = _mgold$elm_date_format$Date_Format$format('%H.%M');
@@ -21455,6 +21878,18 @@ var _user$project$View$ts = function (scale) {
 		_elm_lang$core$Basics$toFloat(scale)) * _user$project$View$rem(1);
 };
 var _user$project$View$timeWidth = _user$project$View$rem(3);
+var _user$project$View$UrlChange = function (a) {
+	return {ctor: 'UrlChange', _0: a};
+};
+var _user$project$View$StationsResponse = function (a) {
+	return {ctor: 'StationsResponse', _0: a};
+};
+var _user$project$View$TrainsResponse = function (a) {
+	return {ctor: 'TrainsResponse', _0: a};
+};
+var _user$project$View$UpdateTime = function (a) {
+	return {ctor: 'UpdateTime', _0: a};
+};
 var _user$project$View$StatusInfo = {ctor: 'StatusInfo'};
 var _user$project$View$StationDifference = {ctor: 'StationDifference'};
 var _user$project$View$StationName = {ctor: 'StationName'};
@@ -21472,6 +21907,113 @@ var _user$project$View$TrainRow = {ctor: 'TrainRow'};
 var _user$project$View$Trains = {ctor: 'Trains'};
 var _user$project$View$Main = {ctor: 'Main'};
 var _user$project$View$None = {ctor: 'None'};
+var _user$project$View$selectDepView = function (model) {
+	return A3(
+		_mdgriffith$style_elements$Element$column,
+		_user$project$View$None,
+		{
+			ctor: '::',
+			_0: _mdgriffith$style_elements$Element_Attributes$spacing(
+				_user$project$View$rem(1)),
+			_1: {ctor: '[]'}
+		},
+		{
+			ctor: '::',
+			_0: A3(
+				_mdgriffith$style_elements$Element$el,
+				_user$project$View$Heading,
+				{ctor: '[]'},
+				_mdgriffith$style_elements$Element$text('Select departure')),
+			_1: {
+				ctor: '::',
+				_0: A3(
+					_mdgriffith$style_elements$Element$column,
+					_user$project$View$None,
+					{ctor: '[]'},
+					A2(
+						_elm_lang$core$List$map,
+						function (_p0) {
+							var _p1 = _p0;
+							return A2(
+								_mdgriffith$style_elements$Element$link,
+								A2(_elm_lang$core$Basics_ops['++'], '#', _p1._0),
+								A3(
+									_mdgriffith$style_elements$Element$el,
+									_user$project$View$None,
+									{ctor: '[]'},
+									_mdgriffith$style_elements$Element$text(_p1._1)));
+						},
+						_user$project$Stations$all)),
+				_1: {ctor: '[]'}
+			}
+		});
+};
+var _user$project$View$selectDestView = F2(
+	function (model, dep) {
+		var linkText = function (dest) {
+			return A2(
+				_elm_lang$core$Maybe$withDefault,
+				dest,
+				A2(
+					_elm_lang$core$Maybe$map,
+					function (name) {
+						return A2(
+							_elm_lang$core$Basics_ops['++'],
+							name,
+							A2(_elm_lang$core$Basics_ops['++'], '–', dest));
+					},
+					_user$project$Stations$findName(dep)));
+		};
+		var url = function (dest) {
+			return A2(
+				_elm_lang$core$Basics_ops['++'],
+				'#',
+				A2(
+					_elm_lang$core$Basics_ops['++'],
+					dep,
+					A2(_elm_lang$core$Basics_ops['++'], '/', dest)));
+		};
+		return A3(
+			_mdgriffith$style_elements$Element$column,
+			_user$project$View$None,
+			{
+				ctor: '::',
+				_0: _mdgriffith$style_elements$Element_Attributes$spacing(
+					_user$project$View$rem(1)),
+				_1: {ctor: '[]'}
+			},
+			{
+				ctor: '::',
+				_0: A3(
+					_mdgriffith$style_elements$Element$el,
+					_user$project$View$Heading,
+					{ctor: '[]'},
+					_mdgriffith$style_elements$Element$text('Select destination')),
+				_1: {
+					ctor: '::',
+					_0: A3(
+						_mdgriffith$style_elements$Element$column,
+						_user$project$View$None,
+						{ctor: '[]'},
+						A2(
+							_elm_lang$core$List$map,
+							function (_p2) {
+								var _p3 = _p2;
+								return A2(
+									_mdgriffith$style_elements$Element$link,
+									url(_p3._0),
+									A3(
+										_mdgriffith$style_elements$Element$el,
+										_user$project$View$None,
+										{ctor: '[]'},
+										_mdgriffith$style_elements$Element$text(
+											linkText(_p3._1))));
+							},
+							_user$project$Stations$matching(dep))),
+					_1: {ctor: '[]'}
+				}
+			});
+	});
 var _user$project$View$Moving = {ctor: 'Moving'};
 var _user$project$View$OffSchedule = {ctor: 'OffSchedule'};
 var _user$project$View$SlightlyOffSchedule = {ctor: 'SlightlyOffSchedule'};
@@ -21844,9 +22386,9 @@ var _user$project$View$stationRow = F2(
 			{
 				ctor: '::',
 				_0: function () {
-					var _p0 = {ctor: '_Tuple2', _0: station.liveEstimateTime, _1: station.differenceInMinutes};
-					if (((_p0.ctor === '_Tuple2') && (_p0._0.ctor === 'Just')) && (_p0._1.ctor === 'Just')) {
-						var _p1 = _p0._1._0;
+					var _p4 = {ctor: '_Tuple2', _0: station.liveEstimateTime, _1: station.differenceInMinutes};
+					if (((_p4.ctor === '_Tuple2') && (_p4._0.ctor === 'Just')) && (_p4._1.ctor === 'Just')) {
+						var _p5 = _p4._1._0;
 						return A3(
 							_mdgriffith$style_elements$Element$column,
 							_user$project$View$StationTime,
@@ -21860,7 +22402,7 @@ var _user$project$View$stationRow = F2(
 										_mdgriffith$style_elements$Element_Attributes$vary,
 										_user$project$View$OnTime,
 										_elm_lang$core$Native_Utils.cmp(
-											_elm_lang$core$Basics$abs(_p1),
+											_elm_lang$core$Basics$abs(_p5),
 											1) < 1),
 									_1: {
 										ctor: '::',
@@ -21868,9 +22410,9 @@ var _user$project$View$stationRow = F2(
 											_mdgriffith$style_elements$Element_Attributes$vary,
 											_user$project$View$SlightlyOffSchedule,
 											(_elm_lang$core$Native_Utils.cmp(
-												_elm_lang$core$Basics$abs(_p1),
+												_elm_lang$core$Basics$abs(_p5),
 												1) > 0) && (_elm_lang$core$Native_Utils.cmp(
-												_elm_lang$core$Basics$abs(_p1),
+												_elm_lang$core$Basics$abs(_p5),
 												5) < 1)),
 										_1: {
 											ctor: '::',
@@ -21878,7 +22420,7 @@ var _user$project$View$stationRow = F2(
 												_mdgriffith$style_elements$Element_Attributes$vary,
 												_user$project$View$OffSchedule,
 												_elm_lang$core$Native_Utils.cmp(
-													_elm_lang$core$Basics$abs(_p1),
+													_elm_lang$core$Basics$abs(_p5),
 													5) > 0),
 											_1: {ctor: '[]'}
 										}
@@ -21888,12 +22430,12 @@ var _user$project$View$stationRow = F2(
 							{
 								ctor: '::',
 								_0: _mdgriffith$style_elements$Element$text(
-									_user$project$View$prettyTime(_p0._0._0)),
+									_user$project$View$prettyTime(_p4._0._0)),
 								_1: {
 									ctor: '::',
 									_0: A2(
 										_mdgriffith$style_elements$Element$when,
-										!_elm_lang$core$Native_Utils.eq(_p1, 0),
+										!_elm_lang$core$Native_Utils.eq(_p5, 0),
 										A3(
 											_mdgriffith$style_elements$Element$el,
 											_user$project$View$StationTimeShouldBe,
@@ -21929,10 +22471,10 @@ var _user$project$View$stationRow = F2(
 			});
 	});
 var _user$project$View$trainRow = F3(
-	function (_p3, _p2, train) {
-		var _p4 = _p3;
-		var _p11 = _p4.stations;
-		var _p5 = _p2;
+	function (_p7, _p6, train) {
+		var _p8 = _p7;
+		var _p15 = _p8.stations;
+		var _p9 = _p6;
 		var statusInfoBadge = F2(
 			function (station, n) {
 				return A3(
@@ -21993,16 +22535,16 @@ var _user$project$View$trainRow = F3(
 			A2(
 				_elm_lang$core$List$filter,
 				function (row) {
-					return _elm_lang$core$Native_Utils.eq(row.rowType, _user$project$Model$Arrival) && _elm_lang$core$Native_Utils.eq(row.stationShortCode, _p5._1);
+					return _elm_lang$core$Native_Utils.eq(row.rowType, _user$project$Model$Arrival) && _elm_lang$core$Native_Utils.eq(row.stationShortCode, _p9._1);
 				},
 				train.timetableRows));
-		var _p6 = function (homeStationRows) {
+		var _p10 = function (homeStationRows) {
 			return {
 				ctor: '_Tuple2',
 				_0: _elm_lang$core$List$head(
 					A2(
 						_elm_lang$core$List$filter,
-						function (_p7) {
+						function (_p11) {
 							return A2(
 								F2(
 									function (x, y) {
@@ -22011,13 +22553,13 @@ var _user$project$View$trainRow = F3(
 								_user$project$Model$Arrival,
 								function (_) {
 									return _.rowType;
-								}(_p7));
+								}(_p11));
 						},
 						homeStationRows)),
 				_1: _elm_lang$core$List$head(
 					A2(
 						_elm_lang$core$List$filter,
-						function (_p8) {
+						function (_p12) {
 							return A2(
 								F2(
 									function (x, y) {
@@ -22026,27 +22568,27 @@ var _user$project$View$trainRow = F3(
 								_user$project$Model$Departure,
 								function (_) {
 									return _.rowType;
-								}(_p8));
+								}(_p12));
 						},
 						homeStationRows))
 			};
 		}(
 			A2(
 				_elm_lang$core$List$filter,
-				function (_p9) {
+				function (_p13) {
 					return A2(
 						F2(
 							function (x, y) {
 								return _elm_lang$core$Native_Utils.eq(x, y);
 							}),
-						_p5._0,
+						_p9._0,
 						function (_) {
 							return _.stationShortCode;
-						}(_p9));
+						}(_p13));
 				},
 				train.timetableRows));
-		var homeStationArrival = _p6._0;
-		var homeStationDeparture = _p6._1;
+		var homeStationArrival = _p10._0;
+		var homeStationDeparture = _p10._1;
 		var homeStationArrivingIn = A2(
 			_elm_lang$core$Maybe$andThen,
 			function (timeDiff) {
@@ -22056,7 +22598,7 @@ var _user$project$View$trainRow = F3(
 			A2(
 				_elm_lang$core$Maybe$map,
 				function (date) {
-					return _elm_lang$core$Date$toTime(date) - _p4.currentTime;
+					return _elm_lang$core$Date$toTime(date) - _p8.currentTime;
 				},
 				A2(
 					_elm_lang$core$Maybe$withDefault,
@@ -22085,7 +22627,7 @@ var _user$project$View$trainRow = F3(
 			_elm_lang$core$List$reverse(
 				A2(
 					_elm_lang$core$List$filter,
-					function (_p10) {
+					function (_p14) {
 						return A2(
 							F2(
 								function (x, y) {
@@ -22094,7 +22636,7 @@ var _user$project$View$trainRow = F3(
 							_elm_lang$core$Maybe$Nothing,
 							function (_) {
 								return _.actualTime;
-							}(_p10));
+							}(_p14));
 					},
 					train.timetableRows)));
 		var isMoving = !_elm_lang$core$Native_Utils.eq(currentStation, _elm_lang$core$Maybe$Nothing);
@@ -22164,7 +22706,7 @@ var _user$project$View$trainRow = F3(
 							_0: A2(
 								_mdgriffith$style_elements$Element$whenJust,
 								homeStationDeparture,
-								_user$project$View$stationRow(_p11)),
+								_user$project$View$stationRow(_p15)),
 							_1: {
 								ctor: '::',
 								_0: A3(
@@ -22182,7 +22724,7 @@ var _user$project$View$trainRow = F3(
 									_0: A2(
 										_mdgriffith$style_elements$Element$whenJust,
 										endStation,
-										_user$project$View$stationRow(_p11)),
+										_user$project$View$stationRow(_p15)),
 									_1: {ctor: '[]'}
 								}
 							}
@@ -22230,17 +22772,17 @@ var _user$project$View$trainRow = F3(
 			});
 	});
 var _user$project$View$trainsView = F3(
-	function (model, _p12, trains) {
-		var _p13 = _p12;
-		var _p15 = _p13._1;
-		var _p14 = _p13._0;
+	function (model, _p16, trains) {
+		var _p17 = _p16;
+		var _p19 = _p17._1;
+		var _p18 = _p17._0;
 		var heading = A2(
 			_elm_lang$core$Basics_ops['++'],
-			A2(_user$project$View$stationName, model.stations, _p14),
+			A2(_user$project$View$stationName, model.stations, _p18),
 			A2(
 				_elm_lang$core$Basics_ops['++'],
 				'—',
-				A2(_user$project$View$stationName, model.stations, _p15)));
+				A2(_user$project$View$stationName, model.stations, _p19)));
 		var rightDirection = _user$project$Model$sortedTrainList(trains);
 		return A3(
 			_mdgriffith$style_elements$Element$column,
@@ -22307,8 +22849,8 @@ var _user$project$View$trainsView = F3(
 											'#',
 											A2(
 												_elm_lang$core$Basics_ops['++'],
-												_p15,
-												A2(_elm_lang$core$Basics_ops['++'], '/', _p14))),
+												_p19,
+												A2(_elm_lang$core$Basics_ops['++'], '/', _p18))),
 										A3(
 											_mdgriffith$style_elements$Element$el,
 											_user$project$View$HeadingSwap,
@@ -22337,15 +22879,15 @@ var _user$project$View$trainsView = F3(
 					A2(
 						_user$project$View$trainRow,
 						model,
-						{ctor: '_Tuple2', _0: _p14, _1: _p15}),
+						{ctor: '_Tuple2', _0: _p18, _1: _p19}),
 					rightDirection)));
 	});
 var _user$project$View$scheduleView = F2(
 	function (model, targets) {
-		var _p16 = model.trains;
-		switch (_p16.ctor) {
+		var _p20 = model.trains;
+		switch (_p20.ctor) {
 			case 'Success':
-				return A3(_user$project$View$trainsView, model, targets, _p16._0);
+				return A3(_user$project$View$trainsView, model, targets, _p20._0);
 			case 'Failure':
 				return A3(
 					_mdgriffith$style_elements$Element$column,
@@ -22366,8 +22908,8 @@ var _user$project$View$scheduleView = F2(
 						_1: {
 							ctor: '::',
 							_0: function () {
-								var _p17 = _p16._0;
-								switch (_p17.ctor) {
+								var _p21 = _p20._0;
+								switch (_p21.ctor) {
 									case 'NetworkError':
 										return _mdgriffith$style_elements$Element$text('It\'s the network.');
 									case 'Timeout':
@@ -22449,53 +22991,17 @@ var _user$project$View$view = function (model) {
 						}
 					},
 					function () {
-						var _p18 = model.route;
-						if (_p18.ctor === 'SelectRoute') {
-							return A3(
-								_mdgriffith$style_elements$Element$column,
-								_user$project$View$None,
-								{
-									ctor: '::',
-									_0: _mdgriffith$style_elements$Element_Attributes$spacing(
-										_user$project$View$rem(1)),
-									_1: {ctor: '[]'}
-								},
-								{
-									ctor: '::',
-									_0: A3(
-										_mdgriffith$style_elements$Element$el,
-										_user$project$View$Heading,
-										{ctor: '[]'},
-										_mdgriffith$style_elements$Element$text('Select stations')),
-									_1: {
-										ctor: '::',
-										_0: A2(
-											_mdgriffith$style_elements$Element$link,
-											'#KIL/HKI',
-											A3(
-												_mdgriffith$style_elements$Element$el,
-												_user$project$View$None,
-												{ctor: '[]'},
-												_mdgriffith$style_elements$Element$text('Kilo—Helsinki'))),
-										_1: {
-											ctor: '::',
-											_0: A2(
-												_mdgriffith$style_elements$Element$link,
-												'#HKI/KIL',
-												A3(
-													_mdgriffith$style_elements$Element$el,
-													_user$project$View$None,
-													{ctor: '[]'},
-													_mdgriffith$style_elements$Element$text('Helsinki—Kilo'))),
-											_1: {ctor: '[]'}
-										}
-									}
-								});
-						} else {
-							return A2(
-								_user$project$View$scheduleView,
-								model,
-								{ctor: '_Tuple2', _0: _p18._0, _1: _p18._1});
+						var _p22 = model.route;
+						switch (_p22.ctor) {
+							case 'SelectDepRoute':
+								return _user$project$View$selectDepView(model);
+							case 'SelectDestRoute':
+								return A2(_user$project$View$selectDestView, model, _p22._0);
+							default:
+								return A2(
+									_user$project$View$scheduleView,
+									model,
+									{ctor: '_Tuple2', _0: _p22._0, _1: _p22._1});
 						}
 					}()),
 				_1: {ctor: '[]'}
@@ -22503,37 +23009,8 @@ var _user$project$View$view = function (model) {
 };
 
 var _user$project$Main$get = _ohanhi$remotedata_http$RemoteData_Http$getWithConfig(_ohanhi$remotedata_http$RemoteData_Http$defaultConfig);
-var _user$project$Main$parseLocation = function (location) {
-	var routeParser = _evancz$url_parser$UrlParser$oneOf(
-		{
-			ctor: '::',
-			_0: A2(_evancz$url_parser$UrlParser$map, _user$project$Model$SelectRoute, _evancz$url_parser$UrlParser$top),
-			_1: {
-				ctor: '::',
-				_0: A2(
-					_evancz$url_parser$UrlParser$map,
-					_user$project$Model$ScheduleRoute,
-					A2(_evancz$url_parser$UrlParser_ops['</>'], _evancz$url_parser$UrlParser$string, _evancz$url_parser$UrlParser$string)),
-				_1: {ctor: '[]'}
-			}
-		});
-	return A2(
-		_elm_lang$core$Maybe$withDefault,
-		_user$project$Model$SelectRoute,
-		A2(_evancz$url_parser$UrlParser$parseHash, routeParser, location));
-};
-var _user$project$Main$UrlChange = function (a) {
-	return {ctor: 'UrlChange', _0: a};
-};
-var _user$project$Main$StationsResponse = function (a) {
-	return {ctor: 'StationsResponse', _0: a};
-};
-var _user$project$Main$getStations = function () {
-	var stationsUrl = 'https://rata.digitraffic.fi/api/v1/metadata/stations';
-	return A3(_user$project$Main$get, stationsUrl, _user$project$Main$StationsResponse, _user$project$Model$stationsDecoder);
-}();
-var _user$project$Main$TrainsResponse = function (a) {
-	return {ctor: 'TrainsResponse', _0: a};
+var _user$project$Main$subscriptions = function (model) {
+	return A2(_elm_lang$core$Time$every, _elm_lang$core$Time$second, _user$project$View$UpdateTime);
 };
 var _user$project$Main$getTrains = function (_p0) {
 	var _p1 = _p0;
@@ -22561,9 +23038,36 @@ var _user$project$Main$getTrains = function (_p0) {
 	return A3(
 		_user$project$Main$get,
 		trainsUrl,
-		_user$project$Main$TrainsResponse,
+		_user$project$View$TrainsResponse,
 		_user$project$Model$trainsDecoder(
 			{ctor: '_Tuple2', _0: _p2, _1: _p1._1}));
+};
+var _user$project$Main$getStations = function () {
+	var stationsUrl = 'https://rata.digitraffic.fi/api/v1/metadata/stations';
+	return A3(_user$project$Main$get, stationsUrl, _user$project$View$StationsResponse, _user$project$Model$stationsDecoder);
+}();
+var _user$project$Main$parseLocation = function (location) {
+	var routeParser = _evancz$url_parser$UrlParser$oneOf(
+		{
+			ctor: '::',
+			_0: A2(_evancz$url_parser$UrlParser$map, _user$project$Model$SelectDepRoute, _evancz$url_parser$UrlParser$top),
+			_1: {
+				ctor: '::',
+				_0: A2(_evancz$url_parser$UrlParser$map, _user$project$Model$SelectDestRoute, _evancz$url_parser$UrlParser$string),
+				_1: {
+					ctor: '::',
+					_0: A2(
+						_evancz$url_parser$UrlParser$map,
+						_user$project$Model$ScheduleRoute,
+						A2(_evancz$url_parser$UrlParser_ops['</>'], _evancz$url_parser$UrlParser$string, _evancz$url_parser$UrlParser$string)),
+					_1: {ctor: '[]'}
+				}
+			}
+		});
+	return A2(
+		_elm_lang$core$Maybe$withDefault,
+		_user$project$Model$SelectDepRoute,
+		A2(_evancz$url_parser$UrlParser$parseHash, routeParser, location));
 };
 var _user$project$Main$locationChange = F2(
 	function (location, model) {
@@ -22594,35 +23098,14 @@ var _user$project$Main$locationChange = F2(
 				_1: {ctor: '[]'}
 			});
 	});
-var _user$project$Main$init = F2(
-	function (time, location) {
-		var _p5 = A2(
-			_user$project$Main$locationChange,
-			location,
-			{trains: _krisajenkins$remotedata$RemoteData$NotAsked, stations: _elm_lang$core$Dict$empty, currentTime: time, lastRequestTime: _elm_lang$core$Maybe$Nothing, route: _user$project$Model$SelectRoute});
-		var model = _p5._0;
-		var trainsCmd = _p5._1;
-		return A2(
-			_elm_lang$core$Platform_Cmd_ops['!'],
-			model,
-			{
-				ctor: '::',
-				_0: _user$project$Main$getStations,
-				_1: {
-					ctor: '::',
-					_0: trainsCmd,
-					_1: {ctor: '[]'}
-				}
-			});
-	});
 var _user$project$Main$update = F2(
 	function (msg, model) {
-		var _p6 = msg;
-		switch (_p6.ctor) {
+		var _p5 = msg;
+		switch (_p5.ctor) {
 			case 'UrlChange':
-				return A2(_user$project$Main$locationChange, _p6._0, model);
+				return A2(_user$project$Main$locationChange, _p5._0, model);
 			case 'UpdateTime':
-				var _p7 = A2(
+				var _p6 = A2(
 					_elm_lang$core$Maybe$withDefault,
 					{
 						ctor: '_Tuple2',
@@ -22632,15 +23115,15 @@ var _user$project$Main$update = F2(
 					A2(
 						_elm_lang$core$Maybe$map,
 						function (time) {
-							var _p8 = model.route;
-							if (_p8.ctor === 'ScheduleRoute') {
+							var _p7 = model.route;
+							if (_p7.ctor === 'ScheduleRoute') {
 								return (_elm_lang$core$Native_Utils.cmp(model.currentTime - time, 10 * _elm_lang$core$Time$second) > -1) ? {
 									ctor: '_Tuple2',
 									_0: _elm_lang$core$Maybe$Just(model.currentTime),
 									_1: {
 										ctor: '::',
 										_0: _user$project$Main$getTrains(
-											{ctor: '_Tuple2', _0: _p8._0, _1: _p8._1}),
+											{ctor: '_Tuple2', _0: _p7._0, _1: _p7._1}),
 										_1: {ctor: '[]'}
 									}
 								} : {
@@ -22657,28 +23140,28 @@ var _user$project$Main$update = F2(
 							}
 						},
 						model.lastRequestTime));
-				var lastRequestTime = _p7._0;
-				var cmds = _p7._1;
+				var lastRequestTime = _p6._0;
+				var cmds = _p6._1;
 				return A2(
 					_elm_lang$core$Platform_Cmd_ops['!'],
 					_elm_lang$core$Native_Utils.update(
 						model,
-						{currentTime: _p6._0, lastRequestTime: lastRequestTime}),
+						{currentTime: _p5._0, lastRequestTime: lastRequestTime}),
 					cmds);
 			case 'TrainsResponse':
 				return A2(
 					_elm_lang$core$Platform_Cmd_ops['!'],
 					_elm_lang$core$Native_Utils.update(
 						model,
-						{trains: _p6._0}),
+						{trains: _p5._0}),
 					{ctor: '[]'});
 			default:
-				if (_p6._0.ctor === 'Success') {
+				if (_p5._0.ctor === 'Success') {
 					return A2(
 						_elm_lang$core$Platform_Cmd_ops['!'],
 						_elm_lang$core$Native_Utils.update(
 							model,
-							{stations: _p6._0._0}),
+							{stations: _p5._0._0}),
 						{ctor: '[]'});
 				} else {
 					return A2(
@@ -22688,15 +23171,30 @@ var _user$project$Main$update = F2(
 				}
 		}
 	});
-var _user$project$Main$UpdateTime = function (a) {
-	return {ctor: 'UpdateTime', _0: a};
-};
-var _user$project$Main$subscriptions = function (model) {
-	return A2(_elm_lang$core$Time$every, _elm_lang$core$Time$second, _user$project$Main$UpdateTime);
-};
+var _user$project$Main$init = F2(
+	function (time, location) {
+		var _p8 = A2(
+			_user$project$Main$locationChange,
+			location,
+			{trains: _krisajenkins$remotedata$RemoteData$NotAsked, stations: _elm_lang$core$Dict$empty, currentTime: time, lastRequestTime: _elm_lang$core$Maybe$Nothing, route: _user$project$Model$SelectDepRoute});
+		var model = _p8._0;
+		var trainsCmd = _p8._1;
+		return A2(
+			_elm_lang$core$Platform_Cmd_ops['!'],
+			model,
+			{
+				ctor: '::',
+				_0: _user$project$Main$getStations,
+				_1: {
+					ctor: '::',
+					_0: trainsCmd,
+					_1: {ctor: '[]'}
+				}
+			});
+	});
 var _user$project$Main$main = A2(
 	_elm_lang$navigation$Navigation$programWithFlags,
-	_user$project$Main$UrlChange,
+	_user$project$View$UrlChange,
 	{init: _user$project$Main$init, view: _user$project$View$view, update: _user$project$Main$update, subscriptions: _user$project$Main$subscriptions})(_elm_lang$core$Json_Decode$float);
 
 var Elm = {};
