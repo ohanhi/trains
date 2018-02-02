@@ -8,14 +8,7 @@ import RemoteData exposing (..)
 import RemoteData.Http as Http
 import Time exposing (Time)
 import UrlParser as Url exposing ((</>))
-import View exposing (view)
-
-
-type Msg
-    = UpdateTime Time
-    | TrainsResponse (WebData Trains)
-    | StationsResponse (WebData Stations)
-    | UrlChange Location
+import View exposing (Msg(..), view)
 
 
 init : Time -> Location -> ( Model, Cmd Msg )
@@ -26,7 +19,7 @@ init time location =
             , stations = Dict.empty
             , currentTime = time
             , lastRequestTime = Nothing
-            , route = SelectRoute
+            , route = SelectDepRoute
             }
                 |> locationChange location
     in
@@ -72,7 +65,7 @@ update msg model =
                                         else
                                             ( model.lastRequestTime, [] )
 
-                                    SelectRoute ->
+                                    _ ->
                                         ( model.lastRequestTime, [] )
                             )
                         |> Maybe.withDefault ( Just model.currentTime, [] )
@@ -99,14 +92,16 @@ parseLocation location =
         routeParser =
             Url.oneOf
                 [ Url.top
-                    |> Url.map SelectRoute
+                    |> Url.map SelectDepRoute
+                , (Url.string)
+                    |> Url.map SelectDestRoute
                 , (Url.string </> Url.string)
                     |> Url.map ScheduleRoute
                 ]
     in
     location
         |> Url.parseHash routeParser
-        |> Maybe.withDefault SelectRoute
+        |> Maybe.withDefault SelectDepRoute
 
 
 getStations : Cmd Msg

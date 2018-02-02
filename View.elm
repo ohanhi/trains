@@ -1,4 +1,4 @@
-module View exposing (view)
+module View exposing (Msg(..), view)
 
 import Color
 import Date exposing (Date)
@@ -10,13 +10,22 @@ import Html exposing (Html)
 import Http
 import Icons
 import Model exposing (..)
-import RemoteData exposing (RemoteData(..))
+import Navigation exposing (Location)
+import RemoteData exposing (RemoteData(..), WebData)
+import Stations
 import Style exposing (..)
 import Style.Color as Color
 import Style.Font as Font
 import Style.Shadow as Shadow
 import Time exposing (Time)
 import Time.Format
+
+
+type Msg
+    = UpdateTime Time
+    | TrainsResponse (WebData Trains)
+    | StationsResponse (WebData Stations)
+    | UrlChange Location
 
 
 rem : Float -> Float
@@ -152,7 +161,7 @@ stylesheet =
         ]
 
 
-view : Model -> Html Msg
+view : Model -> Html sg
 view model =
     Element.viewport stylesheet <|
         column Main
@@ -168,21 +177,51 @@ view model =
                 ]
               <|
                 case model.route of
-                    SelectRoute ->
-                        selectStationsView model
+                    SelectDepRoute ->
+                        selectDepView model
+
+                    SelectDestRoute dep ->
+                        selectDestView model dep
 
                     ScheduleRoute from to ->
                         scheduleView model ( from, to )
             ]
 
 
-selectStationsView : Model -> Element Styles Variations Msg
-selectStationsView model =
+selectDepView : Model -> Element Styles Variations msg
+selectDepView model =
     column None
         [ spacing (rem 1) ]
-        [ el Heading [] (text "Select stations")
-        , link "#KIL/HKI" <| el None [] (text "Kilo—Helsinki")
-        , link "#HKI/KIL" <| el None [] (text "Helsinki—Kilo")
+        [ el Heading [] (text "Select departure")
+        , column None
+            []
+            (Stations.all
+                |> List.map
+                    (\( abbr, name ) -> link ("#" ++ abbr) <| el None [] (text name))
+            )
+        ]
+
+
+selectDestView : Model -> String -> Element Styles Variations msg
+selectDestView model dep =
+    let
+        url dest =
+            "#" ++ dep ++ "/" ++ dest
+
+        linkText dest =
+            Stations.findName dep
+                |> Maybe.map (\name -> name ++ "–" ++ dest)
+                |> Maybe.withDefault dest
+    in
+    column None
+        [ spacing (rem 1) ]
+        [ el Heading [] (text "Select destination")
+        , column None
+            []
+            (Stations.matching dep
+                |> List.map
+                    (\( abbr, name ) -> link (url abbr) <| el None [] (text (linkText name)))
+            )
         ]
 
 

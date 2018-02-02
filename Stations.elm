@@ -1,4 +1,6 @@
-module Stations exposing (commuterStations)
+module Stations exposing (all, findName, matching)
+
+import Dict
 
 
 (=>) : a -> b -> ( a, b )
@@ -10,16 +12,46 @@ type alias StationList =
     List ( String, String )
 
 
-commuterStations :
-    { westTrack : StationList
-    , ringTrackCW : StationList
-    , eastTrack : StationList
-    }
+all : StationList
+all =
+    commuterStations
+        |> List.concat
+        |> Dict.fromList
+        |> Dict.toList
+
+
+findName : String -> Maybe String
+findName abbreviation =
+    commuterStations
+        |> List.concat
+        |> Dict.fromList
+        |> Dict.get abbreviation
+
+
+matching : String -> StationList
+matching abbreviation =
+    commuterStations
+        |> List.filter
+            (\track ->
+                track
+                    |> List.filter (\( abbr, name ) -> abbreviation == abbr)
+                    |> List.head
+                    |> Maybe.map (\_ -> True)
+                    |> Maybe.withDefault False
+            )
+        |> List.concat
+        |> Dict.fromList
+        |> Dict.remove abbreviation
+        |> Dict.toList
+
+
+commuterStations : List StationList
 commuterStations =
-    { westTrack = common ++ westTrack
-    , ringTrackCW = common ++ ringTrackCW
-    , eastTrack = common ++ eastTrack
-    }
+    [ common ++ directionSiuntio
+    , common ++ ringTrackCW
+    , common ++ directionTampere
+    , common ++ directionLahti
+    ]
 
 
 common : StationList
@@ -29,8 +61,8 @@ common =
     ]
 
 
-westTrack : StationList
-westTrack =
+directionSiuntio : StationList
+directionSiuntio =
     [ "ILA" => "Ilmala"
     , "HPL" => "Huopalahti"
     , "VMO" => "Valimo"
@@ -84,8 +116,8 @@ ringTrackCCW =
     List.reverse ringTrackCW
 
 
-eastTrack : StationList
-eastTrack =
+directionTampere : StationList
+directionTampere =
     [ "KÄP" => "Käpylä"
     , "OLK" => "Oulunkylä"
     , "PMK" => "Pukinmäki"
@@ -99,4 +131,41 @@ eastTrack =
     , "KRS" => "Korso"
     , "SAV" => "Savio"
     , "KE" => "Kerava"
+    , "AIN" => "Ainola"
+    , "JP" => "Järvenpää"
+    , "SAU" => "Saunakallio"
+    , "JK" => "Jokela"
+    , "HY" => "Hyvinkää"
+    , "RI" => "Riihimäki"
+    , "RY" => "Ryttylä"
+    , "TU" => "Turenki"
+    , "HL" => "Hämeenlinna"
+    , "PRL" => "Parola"
+    , "ITA" => "Iittala"
+    , "TL" => "Toijala"
+    , "VIA" => "Viiala"
+    , "LPÄ" => "Lempäälä"
+    , "TPE" => "Tampere"
+    ]
+
+
+directionLahti : StationList
+directionLahti =
+    [ "KÄP" => "Käpylä"
+    , "OLK" => "Oulunkylä"
+    , "PMK" => "Pukinmäki"
+    , "ML" => "Malmi"
+    , "TNA" => "Tapanila"
+    , "PLA" => "Puistola"
+    , "TKL" => "Tikkurila"
+    , "HKH" => "Hiekkaharju"
+    , "KVY" => "Koivukylä"
+    , "RKL" => "Rekola"
+    , "KRS" => "Korso"
+    , "SAV" => "Savio"
+    , "KE" => "Kerava"
+    , "HAA" => "Haarajoki"
+    , "MLÄ" => "Mäntsälä"
+    , "HNN" => "Henna"
+    , "LH" => "Lahti"
     ]
