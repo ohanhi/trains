@@ -15,7 +15,8 @@ import Time exposing (Time)
 
 
 type Route
-    = SelectRoute
+    = SelectDepRoute
+    | SelectDestRoute String
     | ScheduleRoute String String
 
 
@@ -40,6 +41,7 @@ type alias Train =
 type alias TrainRaw =
     { trainNumber : Int
     , lineId : String
+    , trainCategory : String
     , timetableRows : List TimetableRow
     , cancelled : Bool
     }
@@ -93,6 +95,7 @@ trainsDecoder targets =
     decode TrainRaw
         |> required "trainNumber" int
         |> required "commuterLineID" string
+        |> required "trainCategory" string
         |> required "timeTableRows" timetableRowsDecoder
         |> required "cancelled" bool
         |> andThen (toTrain targets)
@@ -113,7 +116,7 @@ sortedTrainList trains =
 
 
 toTrain : ( String, String ) -> TrainRaw -> Decoder (Maybe Train)
-toTrain ( from, to ) { trainNumber, lineId, timetableRows, cancelled } =
+toTrain ( from, to ) { trainNumber, lineId, trainCategory, timetableRows, cancelled } =
     let
         rightDirection =
             timetableRows
@@ -157,7 +160,7 @@ toTrain ( from, to ) { trainNumber, lineId, timetableRows, cancelled } =
                     )
                 |> List.head
     in
-    if rightDirection then
+    if trainCategory == "Commuter" && rightDirection then
         departingFromStation
             |> Maybe.map (succeed << Just << Train trainNumber lineId timetableRows cancelled)
             |> Maybe.withDefault (succeed Nothing)
