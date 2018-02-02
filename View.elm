@@ -161,7 +161,7 @@ stylesheet =
         ]
 
 
-view : Model -> Html sg
+view : Model -> Html msg
 view model =
     Element.viewport stylesheet <|
         column Main
