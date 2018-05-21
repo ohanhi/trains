@@ -5,16 +5,16 @@ import Svg
 import Svg.Attributes exposing (..)
 
 
-swap : Float -> Html msg
-swap floatSize =
+swap : Int -> Html msg
+swap size =
     let
-        size =
-            String.fromInt (round floatSize)
+        sizeString =
+            String.fromInt size
     in
     Svg.svg
         [ viewBox "0 0 13 13"
-        , width size
-        , height size
+        , width sizeString
+        , height sizeString
         ]
         [ Svg.path
             [ strokeWidth "0.7"

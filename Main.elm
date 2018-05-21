@@ -114,9 +114,14 @@ parseUrl url =
                     |> Url.Parser.map ScheduleRoute
                 ]
     in
-    url
-        |> Url.Parser.parse routeParser
-        |> Maybe.withDefault SelectDepRoute
+    case url.fragment of
+        Nothing ->
+            SelectDepRoute
+
+        Just fragment ->
+            { url | path = fragment, fragment = Nothing }
+                |> Url.Parser.parse routeParser
+                |> Maybe.withDefault SelectDepRoute
 
 
 getStations : Cmd Msg

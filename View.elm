@@ -23,14 +23,14 @@ type Msg
     | UrlChange Url
 
 
-rem : Float -> Float
+rem : Float -> Int
 rem x =
-    x * 16
+    round (x * 16)
 
 
-ts : Int -> Float
+ts : Int -> Int
 ts scale =
-    1.33 ^ toFloat scale * rem 1
+    round (1.33 ^ toFloat scale * 16)
 
 
 whenJust : Maybe a -> (a -> Element msg) -> Element msg
@@ -71,7 +71,7 @@ shadow =
 
 
 headingStyles =
-    [ Font.size (round (ts 2))
+    [ Font.size (ts 2)
     , Element.spacing 2
     , Font.color colors.black
     ]
@@ -83,146 +83,163 @@ depDestLink =
 
 view : Model -> Page msg
 view model =
+    case model.route of
+        SelectDepRoute ->
+            selectDepPage model
+
+        SelectDestRoute dep ->
+            selectDestPage model dep
+
+        ScheduleRoute from to ->
+            schedulePage model ( from, to )
+
+
+container : List (Element msg) -> List (Html msg)
+container elements =
+    [ Element.layout
+        [ Background.color colors.lightGray
+        , Font.family [ Font.typeface "Roboto", Font.sansSerif ]
+        , Font.size (ts 0)
+        ]
+        (column
+            [ centerX
+            , spacing (rem 2)
+            , padding (rem 2)
+            , width
+                (px (rem 1000)
+                    |> maximum (rem 30)
+                )
+            ]
+            elements
+        )
+    ]
+
+
+selectDepPage : Model -> Page msg
+selectDepPage model =
     { title = "Schedules! Helsinki region commuter trains"
     , body =
-        [ Element.layout
-            [ Background.color colors.lightGray
-            , Font.family [ Font.typeface "Roboto", Font.sansSerif ]
-            , Font.size (round (ts 0))
-            ]
-            (column
+        container
+            [ column
                 [ centerX
-                , spacing (round (rem 2))
-                , padding (round (rem 2))
-                , width
-                    (fill
-                        |> maximum (round (rem 30))
+                , spacing (rem 1)
+                ]
+                [ el headingStyles (text "Select departure")
+                , column
+                    [ spacing (rem 0.5) ]
+                    (Stations.all
+                        |> List.map
+                            (\( abbr, name ) -> depDestLink { url = "#/" ++ abbr, label = text name })
                     )
                 ]
-                [ case model.route of
-                    SelectDepRoute ->
-                        selectDepView model
-
-                    SelectDestRoute dep ->
-                        selectDestView model dep
-
-                    ScheduleRoute from to ->
-                        scheduleView model ( from, to )
-                ]
-            )
-        ]
+            ]
     }
 
 
-selectDepView : Model -> Element msg
-selectDepView model =
-    column
-        [ centerX
-        , spacing (round (rem 1))
-        ]
-        [ el headingStyles (text "Select departure")
-        , column
-            [ spacing (round (rem 0.5)) ]
-            (Stations.all
-                |> List.map
-                    (\( abbr, name ) -> depDestLink { url = "#" ++ abbr, label = text name })
-            )
-        ]
-
-
-selectDestView : Model -> String -> Element msg
-selectDestView model dep =
+selectDestPage : Model -> String -> Page msg
+selectDestPage model dep =
     let
         url dest =
-            "#" ++ dep ++ "/" ++ dest
+            "#/" ++ dep ++ "/" ++ dest
 
         linkText dest =
             Stations.findName dep
                 |> Maybe.map (\name -> name ++ "–" ++ dest)
                 |> Maybe.withDefault dest
     in
-    column
-        [ centerX
-        , spacing (round (rem 1))
-        ]
-        [ el headingStyles (text "Select destination")
-        , column
-            [ spacing (round (rem 1)) ]
-            (Stations.matching dep
-                |> List.map
-                    (\( abbr, name ) -> depDestLink { url = url abbr, label = text (linkText name) })
-            )
-        ]
-
-
-scheduleView : Model -> ( String, String ) -> Element msg
-scheduleView model targets =
-    case model.trains of
-        Success trains ->
-            trainsView model targets trains
-
-        Failure err ->
-            column
-                [ spacing (round (rem 1)) ]
-                [ el headingStyles <| text "Oh noes, an error!"
-                , case err of
-                    Http.NetworkError ->
-                        text "It's the network."
-
-                    Http.Timeout ->
-                        text "Helloooo? (There was no response.)"
-
-                    Http.BadUrl _ ->
-                        text "It's not you, it's me. I have the server address wrong."
-
-                    Http.BadStatus _ ->
-                        text "Whoops, looks like the server didn't like the request."
-
-                    Http.BadPayload _ _ ->
-                        text "Ouch, the server responded with strange contents."
+    { title = "Select destination – Schedules!"
+    , body =
+        container
+            [ column
+                [ centerX
+                , spacing (rem 1)
                 ]
+                [ el headingStyles (text "Select destination")
+                , column
+                    [ spacing (rem 1) ]
+                    (Stations.matching dep
+                        |> List.map
+                            (\( abbr, name ) -> depDestLink { url = url abbr, label = text (linkText name) })
+                    )
+                ]
+            ]
+    }
 
-        Loading ->
-            el headingStyles <| text "Loading"
 
-        _ ->
-            text ""
+schedulePage : Model -> ( String, String ) -> Page msg
+schedulePage model ( from, to ) =
+    let
+        heading =
+            stationName model.stations from ++ "—" ++ stationName model.stations to
+    in
+    { title = heading ++ " – Schedules!"
+    , body =
+        container
+            [ case model.trains of
+                Success trains ->
+                    trainsView model ( from, to ) heading trains
+
+                Failure err ->
+                    column
+                        [ spacing (rem 1) ]
+                        [ el headingStyles <| text "Oh noes, an error!"
+                        , case err of
+                            Http.NetworkError ->
+                                text "It's the network."
+
+                            Http.Timeout ->
+                                text "Helloooo? (There was no response.)"
+
+                            Http.BadUrl _ ->
+                                text "It's not you, it's me. I have the server address wrong."
+
+                            Http.BadStatus _ ->
+                                text "Whoops, looks like the server didn't like the request."
+
+                            Http.BadPayload _ _ ->
+                                text "Ouch, the server responded with strange contents."
+                        ]
+
+                Loading ->
+                    el headingStyles <| text "Loading"
+
+                _ ->
+                    text ""
+            ]
+    }
 
 
-trainsView : Model -> ( String, String ) -> Trains -> Element msg
-trainsView model ( from, to ) trains =
+trainsView : Model -> ( String, String ) -> String -> Trains -> Element msg
+trainsView model ( from, to ) heading trains =
     let
         rightDirection =
             trains
                 |> Model.sortedTrainList
-
-        heading =
-            stationName model.stations from ++ "—" ++ stationName model.stations to
     in
     column
-        [ spacing (round (rem 1))
+        [ spacing (rem 1)
         , width
             (fill
-                |> minimum (round (rem 20))
+                |> minimum (rem 20)
             )
         ]
     <|
         [ row
-            (headingStyles ++ [ spacing (round (rem 1)) ])
+            (headingStyles ++ [ spacing (rem 1) ])
             [ link
                 [ Font.color colors.black
                 , Font.center
-                , width (px (round (rem 2)))
+                , width (px (rem 2))
                 ]
-                { url = "#", label = text "‹" }
+                { url = "#/", label = text "‹" }
             , el headingStyles (text heading)
             , link
                 [ Font.color colors.gray
                 , Font.center
-                , width (px (round (rem 2)))
+                , width (px (rem 2))
                 , centerX
                 ]
-                { url = "#" ++ to ++ "/" ++ from, label = html <| Icons.swap (ts 2) }
+                { url = "#/" ++ to ++ "/" ++ from, label = html <| Icons.swap (ts 2) }
             ]
         ]
             ++ List.map (trainRow model ( from, to )) rightDirection
@@ -283,7 +300,7 @@ trainRow { stations, currentTime } ( from, to ) train =
 
         statusInfoBadge station n =
             row
-                [ Font.size (round (ts -1))
+                [ Font.size (ts -1)
                 , Font.center
                 , centerX
                 ]
@@ -298,15 +315,15 @@ trainRow { stations, currentTime } ( from, to ) train =
     row
         [ Background.color colors.white
         , shadow
-        , paddingXY (round (rem 1)) (round (rem 0.5))
-        , spacing (round (rem 1))
+        , paddingXY (rem 1) (rem 0.5)
+        , spacing (rem 1)
         , centerY
         , width fill
         ]
         [ column
-            [ width (px (round (rem 2))) ]
+            [ width (px (rem 2)) ]
             [ paragraph
-                ([ Font.size (round (ts 3))
+                ([ Font.size (ts 3)
                  , Font.bold
                  , Font.center
                  , Element.spacing 1
@@ -332,7 +349,7 @@ trainRow { stations, currentTime } ( from, to ) train =
             [ whenJust homeStationArrivingIn <|
                 \time ->
                     el
-                        [ Font.size (round (ts -1))
+                        [ Font.size (ts -1)
                         , Font.center
                         , Font.bold
                         , Font.color colors.gray
@@ -341,7 +358,7 @@ trainRow { stations, currentTime } ( from, to ) train =
             , whenJust homeStationArrivingIn <|
                 \time ->
                     paragraph
-                        [ Font.size (round (ts 2))
+                        [ Font.size (ts 2)
                         , Font.center
                         , Element.spacing 1
                         , Font.color colors.gray
@@ -359,7 +376,7 @@ stationRow stations station =
             stationName stations station.stationShortCode
     in
     row
-        [ spacing (round (rem 0.5)) ]
+        [ spacing (rem 0.5) ]
         [ case ( station.liveEstimateTime, station.differenceInMinutes ) of
             ( Just estimate, Just n ) ->
                 column
@@ -371,7 +388,7 @@ stationRow stations station =
                         el
                             [ Font.color colors.gray
                             , Font.strike
-                            , Font.size (round (ts -1))
+                            , Font.size (ts -1)
                             ]
                             (text <| prettyTime station.scheduledTime)
 
@@ -387,7 +404,7 @@ stationRow stations station =
 
 timeWidth : Int
 timeWidth =
-    round (rem 3)
+    rem 3
 
 
 stationName : Stations -> String -> String
