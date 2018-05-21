@@ -1,39 +1,44 @@
 module Main exposing (..)
 
+import Browser
+import Browser.Navigation
 import Dict
 import Json.Decode exposing (Decoder)
 import Model exposing (..)
-import Navigation exposing (Location)
 import RemoteData exposing (..)
 import RemoteData.Http as Http
-import Time exposing (Time)
-import UrlParser as Url exposing ((</>))
+import Time
+import Url
+import Url.Parser exposing ((</>), Url)
 import View exposing (Msg(..), view)
 
 
-init : Time -> Location -> ( Model, Cmd Msg )
-init time location =
+init : Browser.Env Int -> ( Model, Cmd Msg )
+init env =
     let
         ( model, trainsCmd ) =
-            { trains = NotAsked
-            , stations = Dict.empty
-            , currentTime = time
-            , lastRequestTime = Nothing
-            , route = SelectDepRoute
-            }
-                |> locationChange location
+            urlChange
+                { trains = NotAsked
+                , stations = Dict.empty
+                , currentTime = Time.millisToPosix env.flags
+                , lastRequestTime = Nothing
+                , route = SelectDepRoute
+                }
+                env.url
     in
-    model
-        ! [ getStations
-          , trainsCmd
-          ]
+    ( model
+    , Cmd.batch
+        [ getStations
+        , trainsCmd
+        ]
+    )
 
 
-locationChange : Location -> Model -> ( Model, Cmd Msg )
-locationChange location model =
+urlChange : Model -> Url -> ( Model, Cmd Msg )
+urlChange model url =
     let
         route =
-            parseLocation location
+            parseUrl url
 
         ( trains, trainsCmd ) =
             case route of
@@ -43,25 +48,28 @@ locationChange location model =
                 _ ->
                     ( NotAsked, Cmd.none )
     in
-    { model | route = route, trains = trains } ! [ trainsCmd ]
+    ( { model | route = route, trains = trains }
+    , trainsCmd
+    )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        UrlChange location ->
-            locationChange location model
+        UrlChange url ->
+            urlChange model url
 
         UpdateTime time ->
             let
                 ( lastRequestTime, cmds ) =
                     model.lastRequestTime
                         |> Maybe.map
-                            (\time ->
+                            (\requestTime ->
                                 case model.route of
                                     ScheduleRoute from to ->
-                                        if model.currentTime - time >= 10 * Time.second then
+                                        if Time.posixToMillis model.currentTime - Time.posixToMillis requestTime >= 10000 then
                                             ( Just model.currentTime, [ getTrains ( from, to ) ] )
+
                                         else
                                             ( model.lastRequestTime, [] )
 
@@ -70,37 +78,44 @@ update msg model =
                             )
                         |> Maybe.withDefault ( Just model.currentTime, [] )
             in
-            { model
+            ( { model
                 | currentTime = time
                 , lastRequestTime = lastRequestTime
-            }
-                ! cmds
+              }
+            , Cmd.batch cmds
+            )
 
         TrainsResponse webData ->
-            { model | trains = webData } ! []
+            ( { model | trains = webData }
+            , Cmd.none
+            )
 
         StationsResponse (Success stations) ->
-            { model | stations = stations } ! []
+            ( { model | stations = stations }
+            , Cmd.none
+            )
 
         StationsResponse _ ->
-            model ! []
+            ( model
+            , Cmd.none
+            )
 
 
-parseLocation : Location -> Route
-parseLocation location =
+parseUrl : Url -> Route
+parseUrl url =
     let
         routeParser =
-            Url.oneOf
-                [ Url.top
-                    |> Url.map SelectDepRoute
-                , (Url.string)
-                    |> Url.map SelectDestRoute
-                , (Url.string </> Url.string)
-                    |> Url.map ScheduleRoute
+            Url.Parser.oneOf
+                [ Url.Parser.top
+                    |> Url.Parser.map SelectDepRoute
+                , Url.Parser.string
+                    |> Url.Parser.map SelectDestRoute
+                , (Url.Parser.string </> Url.Parser.string)
+                    |> Url.Parser.map ScheduleRoute
                 ]
     in
-    location
-        |> Url.parseHash routeParser
+    url
+        |> Url.Parser.parse routeParser
         |> Maybe.withDefault SelectDepRoute
 
 
@@ -120,11 +135,12 @@ getTrains : ( String, String ) -> Cmd Msg
 getTrains ( from, to ) =
     let
         trainsUrl =
-            Http.url ("https://rata.digitraffic.fi/api/v1/live-trains/station/" ++ from)
-                [ "minutes_before_departure" => "120"
-                , "minutes_after_departure" => "0"
-                , "minutes_before_arrival" => "0"
-                , "minutes_after_arrival" => "0"
+            Url.crossOrigin "https://rata.digitraffic.fi/api/v1/live-trains/station/"
+                [ from ]
+                [ Url.int "minutes_before_departure" 120
+                , Url.int "minutes_after_departure" 0
+                , Url.int "minutes_before_arrival" 0
+                , Url.int "minutes_after_arrival" 0
                 ]
 
         -- trainsUrl =
@@ -135,7 +151,7 @@ getTrains ( from, to ) =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Time.every Time.second UpdateTime
+    Time.every 1000 UpdateTime
 
 
 get : String -> (WebData success -> msg) -> Decoder success -> Cmd msg
@@ -143,10 +159,11 @@ get =
     Http.getWithConfig Http.defaultConfig
 
 
-main : Program Float Model Msg
+main : Program Int Model Msg
 main =
-    Navigation.programWithFlags UrlChange
+    Browser.fullscreen
         { init = init
+        , onNavigation = Just UrlChange
         , view = view
         , update = update
         , subscriptions = subscriptions

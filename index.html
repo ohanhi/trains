@@ -12,13 +12,18 @@
       background-color: rgba(238,238,236,1);
       font-family: Roboto, sans-serif;
     }
+    a {
+      color: rgb(0, 0, 238);
+    }
+    a:visited {
+      color: rgb(85, 26, 139);
+    }
   </style>
+  <script src="elm.js"></script>
 </head>
-<body>
-  <div id="app"></div>
-  <script src="/_compile/Main.elm"></script>
+<body id="page-body">
   <script>
-    Elm.Main.embed(document.getElementById('app'), Date.now());
+    Elm.Main.fullscreen(Date.now());
   </script>
 </body>
 </html>

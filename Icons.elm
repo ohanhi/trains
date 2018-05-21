@@ -9,7 +9,7 @@ swap : Float -> Html msg
 swap floatSize =
     let
         size =
-            toString (round floatSize)
+            String.fromInt (round floatSize)
     in
     Svg.svg
         [ viewBox "0 0 13 13"

@@ -1,17 +1,11 @@
 module Model exposing (..)
 
-import Date exposing (Date)
-import Date.Format
 import Dict exposing (Dict)
 import Json.Decode exposing (..)
 import Json.Decode.Pipeline exposing (..)
 import RemoteData exposing (WebData)
-import Time exposing (Time)
-
-
-(=>) : a -> b -> ( a, b )
-(=>) =
-    (,)
+import Time exposing (Posix)
+import Vendor.Iso8601
 
 
 type Route
@@ -23,8 +17,8 @@ type Route
 type alias Model =
     { trains : WebData Trains
     , stations : Stations
-    , currentTime : Time
-    , lastRequestTime : Maybe Time
+    , currentTime : Posix
+    , lastRequestTime : Maybe Posix
     , route : Route
     }
 
@@ -34,7 +28,7 @@ type alias Train =
     , lineId : String
     , timetableRows : List TimetableRow
     , cancelled : Bool
-    , departingFromStation : Date
+    , departingFromStation : Posix
     }
 
 
@@ -56,13 +50,13 @@ type alias Trains =
 
 
 type alias TimetableRow =
-    { scheduledTime : Date
+    { scheduledTime : Posix
     , trainStopping : Bool
     , stationShortCode : String
     , stationUICCode : Int
     , rowType : RowType
-    , actualTime : Maybe Date
-    , liveEstimateTime : Maybe Date
+    , actualTime : Maybe Posix
+    , liveEstimateTime : Maybe Posix
     , differenceInMinutes : Maybe Int
     }
 
@@ -74,7 +68,7 @@ type RowType
 
 stationsDecoder : Decoder Stations
 stationsDecoder =
-    decode (,)
+    Json.Decode.succeed (\a b -> ( a, b ))
         |> required "stationShortCode" string
         |> required "stationName"
             (string
@@ -82,6 +76,7 @@ stationsDecoder =
                     (\a ->
                         if String.endsWith " asema" a then
                             String.dropRight 6 a
+
                         else
                             a
                     )
@@ -92,7 +87,7 @@ stationsDecoder =
 
 trainsDecoder : ( String, String ) -> Decoder Trains
 trainsDecoder targets =
-    decode TrainRaw
+    Json.Decode.succeed TrainRaw
         |> required "trainNumber" int
         |> required "commuterLineID" string
         |> required "trainCategory" string
@@ -112,7 +107,7 @@ sortedTrainList : Trains -> List Train
 sortedTrainList trains =
     trains
         |> Dict.values
-        |> List.sortBy (.departingFromStation >> Date.Format.formatISO8601)
+        |> List.sortBy (.departingFromStation >> Time.posixToMillis)
 
 
 toTrain : ( String, String ) -> TrainRaw -> Decoder (Maybe Train)
@@ -128,7 +123,8 @@ toTrain ( from, to ) { trainNumber, lineId, trainCategory, timetableRows, cancel
                                     |> List.filterMap
                                         (\row ->
                                             if row.stationShortCode == from && row.rowType == Departure then
-                                                Just (Date.Format.formatISO8601 row.scheduledTime)
+                                                Just (row.scheduledTime |> Time.posixToMillis)
+
                                             else
                                                 Nothing
                                         )
@@ -139,7 +135,8 @@ toTrain ( from, to ) { trainNumber, lineId, trainCategory, timetableRows, cancel
                                     |> List.filterMap
                                         (\row ->
                                             if row.stationShortCode == to && row.rowType == Arrival then
-                                                Just (Date.Format.formatISO8601 row.scheduledTime)
+                                                Just (row.scheduledTime |> Time.posixToMillis)
+
                                             else
                                                 Nothing
                                         )
@@ -155,6 +152,7 @@ toTrain ( from, to ) { trainNumber, lineId, trainCategory, timetableRows, cancel
                     (\a ->
                         if a.stationShortCode == from && a.rowType == Departure then
                             Just a.scheduledTime
+
                         else
                             Nothing
                     )
@@ -164,13 +162,14 @@ toTrain ( from, to ) { trainNumber, lineId, trainCategory, timetableRows, cancel
         departingFromStation
             |> Maybe.map (succeed << Just << Train trainNumber lineId timetableRows cancelled)
             |> Maybe.withDefault (succeed Nothing)
+
     else
         succeed Nothing
 
 
 timetableRowsDecoder : Decoder (List TimetableRow)
 timetableRowsDecoder =
-    decode TimetableRow
+    Json.Decode.succeed TimetableRow
         |> required "scheduledTime" dateDecoder
         |> required "trainStopping" bool
         |> required "stationShortCode" string
@@ -182,17 +181,17 @@ timetableRowsDecoder =
         |> list
 
 
-dateDecoder : Decoder Date
+dateDecoder : Decoder Posix
 dateDecoder =
     string
         |> andThen
             (\a ->
-                case Date.fromString a of
+                case Vendor.Iso8601.toTime a of
                     Ok date ->
                         succeed date
 
-                    Err error ->
-                        fail error
+                    Err _ ->
+                        fail ("Parsing date '" ++ a ++ "' failed")
             )
 
 
