@@ -1,6 +1,7 @@
 module View exposing (Msg(..), view)
 
-import Browser exposing (Page)
+import Browser exposing (Document)
+import DateFormat
 import Dict
 import Element exposing (..)
 import Element.Background as Background
@@ -13,14 +14,17 @@ import Model exposing (..)
 import RemoteData exposing (RemoteData(..), WebData)
 import Stations
 import Time exposing (Posix)
-import Url.Parser exposing (Url)
+import Url exposing (Url)
+import Url.Parser
 
 
 type Msg
     = UpdateTime Posix
+    | TimeZoneResponse Time.Zone
     | TrainsResponse (WebData Trains)
     | StationsResponse (WebData Stations)
     | UrlChange Url
+    | NoOp
 
 
 rem : Float -> Int
@@ -81,7 +85,7 @@ depDestLink =
     link [ Font.color colors.purple ]
 
 
-view : Model -> Page msg
+view : Model -> Document msg
 view model =
     case model.route of
         SelectDepRoute ->
@@ -115,7 +119,7 @@ container elements =
     ]
 
 
-selectDepPage : Model -> Page msg
+selectDepPage : Model -> Document msg
 selectDepPage model =
     { title = "Schedules! Helsinki region commuter trains"
     , body =
@@ -136,7 +140,7 @@ selectDepPage model =
     }
 
 
-selectDestPage : Model -> String -> Page msg
+selectDestPage : Model -> String -> Document msg
 selectDestPage model dep =
     let
         url dest =
@@ -166,7 +170,7 @@ selectDestPage model dep =
     }
 
 
-schedulePage : Model -> ( String, String ) -> Page msg
+schedulePage : Model -> ( String, String ) -> Document msg
 schedulePage model ( from, to ) =
     let
         heading =
@@ -246,11 +250,11 @@ trainsView model ( from, to ) heading trains =
 
 
 trainRow :
-    { a | stations : Stations, currentTime : Posix }
+    { a | zone : Time.Zone, stations : Stations, currentTime : Posix }
     -> ( String, String )
     -> Train
     -> Element msg
-trainRow { stations, currentTime } ( from, to ) train =
+trainRow { zone, stations, currentTime } ( from, to ) train =
     let
         currentStation =
             train.timetableRows
@@ -340,9 +344,9 @@ trainRow { stations, currentTime } ( from, to ) train =
             ]
         , column
             [ width fill ]
-            [ whenJust homeStationDeparture (stationRow stations)
+            [ whenJust homeStationDeparture (stationRow zone stations)
             , el [ width (px timeWidth) ] (text "︙")
-            , whenJust endStation (stationRow stations)
+            , whenJust endStation (stationRow zone stations)
             ]
         , column
             []
@@ -369,8 +373,8 @@ trainRow { stations, currentTime } ( from, to ) train =
         ]
 
 
-stationRow : Stations -> TimetableRow -> Element msg
-stationRow stations station =
+stationRow : Time.Zone -> Stations -> TimetableRow -> Element msg
+stationRow zone stations station =
     let
         name =
             stationName stations station.stationShortCode
@@ -383,21 +387,21 @@ stationRow stations station =
                     [ width (px timeWidth)
                     , Font.color (timelinessColor n)
                     ]
-                    [ text <| prettyTime estimate
+                    [ text <| prettyTime zone estimate
                     , if n /= 0 then
                         el
                             [ Font.color colors.gray
                             , Font.strike
                             , Font.size (ts -1)
                             ]
-                            (text <| prettyTime station.scheduledTime)
+                            (text <| prettyTime zone station.scheduledTime)
 
                       else
                         text ""
                     ]
 
             _ ->
-                el [ width (px timeWidth) ] (text <| prettyTime station.scheduledTime)
+                el [ width (px timeWidth) ] (text <| prettyTime zone station.scheduledTime)
         , el [] (text name)
         ]
 
@@ -434,9 +438,23 @@ formatDifference default differenceInMinutes =
 
 prettyMinutes : Int -> String
 prettyMinutes timeDiff =
-    "%M:%S"
+    let
+        rawSecs =
+            timeDiff // 1000
+
+        minutes =
+            rawSecs // 60 |> modBy 60
+
+        seconds =
+            rawSecs |> modBy 60
+    in
+    String.fromInt minutes ++ ":" ++ String.fromInt seconds
 
 
-prettyTime : Posix -> String
-prettyTime time =
-    "%H.%M"
+prettyTime : Time.Zone -> Posix -> String
+prettyTime =
+    DateFormat.format
+        [ DateFormat.hourMilitaryNumber
+        , DateFormat.text ":"
+        , DateFormat.minuteFixed
+        ]

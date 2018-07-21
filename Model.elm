@@ -18,8 +18,9 @@ type alias Model =
     { trains : WebData Trains
     , stations : Stations
     , currentTime : Posix
-    , lastRequestTime : Maybe Posix
+    , lastRequestTime : Posix
     , route : Route
+    , zone : Time.Zone
     }
 
 

@@ -7,29 +7,33 @@ import Json.Decode exposing (Decoder)
 import Model exposing (..)
 import RemoteData exposing (..)
 import RemoteData.Http as Http
+import Task
 import Time
-import Url
-import Url.Parser exposing ((</>), Url)
+import Url exposing (Url)
+import Url.Builder
+import Url.Parser exposing ((</>))
 import View exposing (Msg(..), view)
 
 
-init : Browser.Env Int -> ( Model, Cmd Msg )
-init env =
+init : Int -> Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
+init timestamp url key =
     let
         ( model, trainsCmd ) =
             urlChange
                 { trains = NotAsked
                 , stations = Dict.empty
-                , currentTime = Time.millisToPosix env.flags
-                , lastRequestTime = Nothing
+                , currentTime = Time.millisToPosix timestamp
+                , lastRequestTime = Time.millisToPosix 0
                 , route = SelectDepRoute
+                , zone = Time.utc
                 }
-                env.url
+                url
     in
     ( model
     , Cmd.batch
         [ getStations
         , trainsCmd
+        , Time.here |> Task.perform TimeZoneResponse
         ]
     )
 
@@ -60,29 +64,11 @@ update msg model =
             urlChange model url
 
         UpdateTime time ->
-            let
-                ( lastRequestTime, cmds ) =
-                    model.lastRequestTime
-                        |> Maybe.map
-                            (\requestTime ->
-                                case model.route of
-                                    ScheduleRoute from to ->
-                                        if Time.posixToMillis model.currentTime - Time.posixToMillis requestTime >= 10000 then
-                                            ( Just model.currentTime, [ getTrains ( from, to ) ] )
+            updateTime { model | currentTime = time }
 
-                                        else
-                                            ( model.lastRequestTime, [] )
-
-                                    _ ->
-                                        ( model.lastRequestTime, [] )
-                            )
-                        |> Maybe.withDefault ( Just model.currentTime, [] )
-            in
-            ( { model
-                | currentTime = time
-                , lastRequestTime = lastRequestTime
-              }
-            , Cmd.batch cmds
+        TimeZoneResponse zone ->
+            ( { model | zone = zone }
+            , Cmd.none
             )
 
         TrainsResponse webData ->
@@ -99,6 +85,30 @@ update msg model =
             ( model
             , Cmd.none
             )
+
+        NoOp ->
+            ( model, Cmd.none )
+
+
+updateTime : Model -> ( Model, Cmd Msg )
+updateTime ({ currentTime, route } as model) =
+    let
+        currentMillis =
+            Time.posixToMillis currentTime
+
+        requestMillis =
+            Time.posixToMillis model.lastRequestTime
+    in
+    case route of
+        ScheduleRoute from to ->
+            if currentMillis - requestMillis >= 10000 then
+                ( { model | lastRequestTime = currentTime }, getTrains ( from, to ) )
+
+            else
+                ( model, Cmd.none )
+
+        _ ->
+            ( model, Cmd.none )
 
 
 parseUrl : Url -> Route
@@ -129,9 +139,6 @@ getStations =
     let
         stationsUrl =
             "https://rata.digitraffic.fi/api/v1/metadata/stations"
-
-        -- stationsUrl =
-        --     "example-data/stations.json"
     in
     get stationsUrl StationsResponse stationsDecoder
 
@@ -140,16 +147,13 @@ getTrains : ( String, String ) -> Cmd Msg
 getTrains ( from, to ) =
     let
         trainsUrl =
-            Url.crossOrigin "https://rata.digitraffic.fi/api/v1/live-trains/station/"
+            Url.Builder.crossOrigin "https://rata.digitraffic.fi/api/v1/live-trains/station/"
                 [ from ]
-                [ Url.int "minutes_before_departure" 120
-                , Url.int "minutes_after_departure" 0
-                , Url.int "minutes_before_arrival" 0
-                , Url.int "minutes_after_arrival" 0
+                [ Url.Builder.int "minutes_before_departure" 120
+                , Url.Builder.int "minutes_after_departure" 120
+                , Url.Builder.int "minutes_before_arrival" 0
+                , Url.Builder.int "minutes_after_arrival" 0
                 ]
-
-        -- trainsUrl =
-        --     "example-data/trains.json"
     in
     get trainsUrl TrainsResponse (trainsDecoder ( from, to ))
 
@@ -166,10 +170,11 @@ get =
 
 main : Program Int Model Msg
 main =
-    Browser.fullscreen
+    Browser.application
         { init = init
-        , onNavigation = Just UrlChange
         , view = view
         , update = update
         , subscriptions = subscriptions
+        , onUrlRequest = \_ -> NoOp
+        , onUrlChange = UrlChange
         }
