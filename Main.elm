@@ -1,6 +1,6 @@
 module Main exposing (..)
 
-import Browser
+import Browser exposing (UrlRequest(..))
 import Browser.Navigation
 import Dict
 import Json.Decode exposing (Decoder)
@@ -26,6 +26,7 @@ init timestamp url key =
                 , lastRequestTime = Time.millisToPosix 0
                 , route = SelectDepRoute
                 , zone = Time.utc
+                , navKey = key
                 }
                 url
     in
@@ -86,8 +87,13 @@ update msg model =
             , Cmd.none
             )
 
-        NoOp ->
-            ( model, Cmd.none )
+        LinkClicked urlRequest ->
+            case urlRequest of
+                Internal url ->
+                    ( model, Browser.Navigation.pushUrl model.navKey (Url.toString url) )
+
+                External url ->
+                    ( model, Browser.Navigation.load url )
 
 
 updateTime : Model -> ( Model, Cmd Msg )
@@ -175,6 +181,6 @@ main =
         , view = view
         , update = update
         , subscriptions = subscriptions
-        , onUrlRequest = \_ -> NoOp
+        , onUrlRequest = LinkClicked
         , onUrlChange = UrlChange
         }

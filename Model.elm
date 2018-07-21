@@ -1,5 +1,6 @@
 module Model exposing (..)
 
+import Browser.Navigation
 import Dict exposing (Dict)
 import Json.Decode exposing (..)
 import Json.Decode.Pipeline exposing (..)
@@ -21,6 +22,7 @@ type alias Model =
     , lastRequestTime : Posix
     , route : Route
     , zone : Time.Zone
+    , navKey : Browser.Navigation.Key
     }
 
 

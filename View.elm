@@ -1,6 +1,6 @@
 module View exposing (Msg(..), view)
 
-import Browser exposing (Document)
+import Browser exposing (Document, UrlRequest)
 import DateFormat
 import Dict
 import Element exposing (..)
@@ -24,7 +24,7 @@ type Msg
     | TrainsResponse (WebData Trains)
     | StationsResponse (WebData Stations)
     | UrlChange Url
-    | NoOp
+    | LinkClicked UrlRequest
 
 
 rem : Float -> Int
