@@ -30,6 +30,7 @@ type alias Train =
     { trainNumber : Int
     , lineId : String
     , timetableRows : List TimetableRow
+    , runningCurrently : Bool
     , cancelled : Bool
     , departingFromStation : Posix
     }
@@ -40,6 +41,7 @@ type alias TrainRaw =
     , lineId : String
     , trainCategory : String
     , timetableRows : List TimetableRow
+    , runningCurrently : Bool
     , cancelled : Bool
     }
 
@@ -95,6 +97,7 @@ trainsDecoder targets =
         |> required "commuterLineID" string
         |> required "trainCategory" string
         |> required "timeTableRows" timetableRowsDecoder
+        |> required "runningCurrently" bool
         |> required "cancelled" bool
         |> andThen (toTrain targets)
         |> list
@@ -114,7 +117,7 @@ sortedTrainList trains =
 
 
 toTrain : ( String, String ) -> TrainRaw -> Decoder (Maybe Train)
-toTrain ( from, to ) { trainNumber, lineId, trainCategory, timetableRows, cancelled } =
+toTrain ( from, to ) { trainNumber, lineId, trainCategory, timetableRows, runningCurrently, cancelled } =
     let
         rightDirection =
             timetableRows
@@ -163,7 +166,7 @@ toTrain ( from, to ) { trainNumber, lineId, trainCategory, timetableRows, cancel
     in
     if trainCategory == "Commuter" && rightDirection then
         departingFromStation
-            |> Maybe.map (succeed << Just << Train trainNumber lineId timetableRows cancelled)
+            |> Maybe.map (succeed << Just << Train trainNumber lineId timetableRows runningCurrently cancelled)
             |> Maybe.withDefault (succeed Nothing)
 
     else

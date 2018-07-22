@@ -262,9 +262,6 @@ trainRow { zone, stations, currentTime } ( from, to ) train =
                 |> List.reverse
                 |> List.head
 
-        isMoving =
-            currentStation /= Nothing
-
         ( homeStationArrival, homeStationDeparture ) =
             train.timetableRows
                 |> List.filter (.stationShortCode >> (==) from)
@@ -325,7 +322,7 @@ trainRow { zone, stations, currentTime } ( from, to ) train =
         , width fill
         ]
         [ column
-            [ width (px (rem 2)) ]
+            [ width (px (rem 2)), centerY, centerX ]
             [ paragraph
                 ([ Font.size (ts 3)
                  , Font.bold
@@ -333,7 +330,7 @@ trainRow { zone, stations, currentTime } ( from, to ) train =
                  , Element.spacing 1
                  , Font.color colors.gray
                  ]
-                    ++ (if isMoving then
+                    ++ (if train.runningCurrently then
                             [ Font.color colors.black ]
 
                         else
@@ -345,7 +342,7 @@ trainRow { zone, stations, currentTime } ( from, to ) train =
         , column
             [ width fill ]
             [ whenJust homeStationDeparture (stationRow zone stations)
-            , el [ width (px timeWidth) ] (text "︙")
+            , el [ width (px timeWidth), Font.center ] (text "︙")
             , whenJust endStation (stationRow zone stations)
             ]
         , column
@@ -386,6 +383,7 @@ stationRow zone stations station =
                 column
                     [ width (px timeWidth)
                     , Font.color (timelinessColor n)
+                    , Font.bold
                     ]
                     [ text <| prettyTime zone estimate
                     , if n /= 0 then
@@ -393,6 +391,7 @@ stationRow zone stations station =
                             [ Font.color colors.gray
                             , Font.strike
                             , Font.size (ts -1)
+                            , Font.center
                             ]
                             (text <| prettyTime zone station.scheduledTime)
 
@@ -401,7 +400,7 @@ stationRow zone stations station =
                     ]
 
             _ ->
-                el [ width (px timeWidth) ] (text <| prettyTime zone station.scheduledTime)
+                el [ width (px timeWidth), Font.center, Font.bold ] (text <| prettyTime zone station.scheduledTime)
         , el [] (text name)
         ]
 
