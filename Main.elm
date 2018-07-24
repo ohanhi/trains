@@ -156,7 +156,7 @@ getTrains ( from, to ) =
             Url.Builder.crossOrigin "https://rata.digitraffic.fi/api/v1/live-trains/station/"
                 [ from ]
                 [ Url.Builder.int "minutes_before_departure" 120
-                , Url.Builder.int "minutes_after_departure" 120
+                , Url.Builder.int "minutes_after_departure" 0
                 , Url.Builder.int "minutes_before_arrival" 0
                 , Url.Builder.int "minutes_after_arrival" 0
                 ]
