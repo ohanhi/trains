@@ -209,14 +209,10 @@ trainRow { zone, stations, currentTime } ( from, to ) train =
             homeStationArrival
                 |> Maybe.map .liveEstimateTime
                 |> Maybe.withDefault (Maybe.map .scheduledTime homeStationArrival)
-                |> Maybe.map (\date -> Time.posixToMillis date - Time.posixToMillis currentTime)
-                |> Maybe.andThen
-                    (\timeDiff ->
-                        if timeDiff > 0 then
-                            Just (prettyMinutes timeDiff)
-
-                        else
-                            Nothing
+                |> Maybe.map
+                    (\date ->
+                        (Time.posixToMillis date - Time.posixToMillis currentTime)
+                            |> prettyMinutes
                     )
 
         homeStationLiveEstimate =
@@ -234,34 +230,40 @@ trainRow { zone, stations, currentTime } ( from, to ) train =
             whenJust station.differenceInMinutes (statusInfoBadge station)
 
         statusInfoBadge station n =
+            let
+                name =
+                    stationName stations station.stationShortCode
+            in
             div
                 [ class "train-status-badge"
-                , style "color" (timelinessColor n)
+                , style "background-color" (timelinessColor n)
                 ]
-                [ text (formatDifference "On time" station.differenceInMinutes) ]
+                [ text (formatDifference (station.differenceInMinutes |> Maybe.withDefault 0) name) ]
     in
     div [ class "train" ]
-        [ div [ classList [ ( "train-name", True ), ( "is-running", train.runningCurrently ) ] ]
-            [ text train.lineId ]
-        , div [ class "train-stations" ]
-            [ whenJust homeStationDeparture (stationRow zone stations)
-            , div [ class "train-stations-separator" ] [ text "︙" ]
-            , whenJust endStation (stationRow zone stations)
-            ]
-        , div [ class "train-status" ] <|
-            case ( homeStationArrivingIn, currentStation ) of
-                ( Just time, Just station ) ->
-                    [ div [ class "train-status-arriving" ]
-                        [ text "Arrives in" ]
-                    , div [ class "train-status-time" ]
-                        [ text time ]
-                    , currentStation
-                        |> Maybe.map statusInfo
-                        |> Maybe.withDefault (text "")
-                    ]
+        [ div [ class "train-content" ]
+            [ div [ classList [ ( "train-name", True ), ( "is-running", train.runningCurrently ) ] ]
+                [ text train.lineId ]
+            , div [ class "train-stations" ]
+                [ whenJust homeStationDeparture (stationRow zone stations)
+                , div [ class "train-stations-separator" ] [ text "︙" ]
+                , whenJust endStation (stationRow zone stations)
+                ]
+            , div [ class "train-status" ] <|
+                case ( homeStationArrivingIn, currentStation ) of
+                    ( Just time, Just station ) ->
+                        [ div [ class "train-status-arriving" ]
+                            [ text "Arrives in" ]
+                        , div [ class "train-status-time" ]
+                            [ text time ]
+                        ]
 
-                _ ->
-                    []
+                    _ ->
+                        []
+            ]
+        , currentStation
+            |> Maybe.map statusInfo
+            |> Maybe.withDefault (text "")
         ]
 
 
@@ -276,10 +278,9 @@ stationRow zone stations station =
         [ case ( station.liveEstimateTime, station.differenceInMinutes ) of
             ( Just estimate, Just n ) ->
                 div
-                    [ class "train-stations-estimate"
-                    , style "color" (timelinessColor n)
-                    ]
-                    [ text <| prettyTime zone estimate
+                    [ class "train-stations-estimate" ]
+                    [ div [ style "color" (timelinessColor n) ]
+                        [ text <| prettyTime zone estimate ]
                     , if n /= 0 then
                         div [ class "train-stations-scheduled-inaccurate" ]
                             [ text <| prettyTime zone station.scheduledTime ]
@@ -289,7 +290,8 @@ stationRow zone stations station =
                     ]
 
             _ ->
-                div [ class "train-stations-estimate" ] [ text <| prettyTime zone station.scheduledTime ]
+                div [ class "train-stations-estimate" ]
+                    [ text <| prettyTime zone station.scheduledTime ]
         , div [] [ text name ]
         ]
 
@@ -301,43 +303,37 @@ stationName stations shortCode =
         |> Maybe.withDefault shortCode
 
 
-formatDifference : String -> Maybe Int -> String
-formatDifference default differenceInMinutes =
+formatDifference : Int -> String -> String
+formatDifference n name =
     let
-        stringify n =
-            if n == 0 then
-                Nothing
-
-            else if n < 0 then
-                Just (String.fromInt (abs n) ++ " min early")
-
-            else
-                Just (String.fromInt n ++ " min late")
+        suffix =
+            " in " ++ name
     in
-    differenceInMinutes
-        |> Maybe.andThen stringify
-        |> Maybe.withDefault default
+    if abs n <= 1 then
+        "On time" ++ suffix
+
+    else if n < 0 then
+        (String.fromInt (abs n) ++ " min early") ++ suffix
+
+    else
+        (String.fromInt n ++ " min late") ++ suffix
 
 
 prettyMinutes : Int -> String
 prettyMinutes timeDiff =
-    let
-        rawSecs =
-            timeDiff // 1000
-
-        minutes =
-            rawSecs // 60 |> modBy 60
-
-        seconds =
-            rawSecs |> modBy 60
-    in
-    String.fromInt minutes ++ ":" ++ String.fromInt seconds
+    DateFormat.format
+        [ DateFormat.minuteNumber
+        , DateFormat.text ":"
+        , DateFormat.secondFixed
+        ]
+        Time.utc
+        (Time.millisToPosix timeDiff)
 
 
 prettyTime : Time.Zone -> Posix -> String
 prettyTime =
     DateFormat.format
         [ DateFormat.hourMilitaryNumber
-        , DateFormat.text ":"
+        , DateFormat.text "."
         , DateFormat.minuteFixed
         ]

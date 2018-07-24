@@ -194,6 +194,7 @@ dateDecoder =
             (\a ->
                 case Vendor.Iso8601.toTime a of
                     Ok date ->
+                        -- e.g. Posix 1530364980000
                         succeed date
 
                     Err _ ->
