@@ -195,54 +195,70 @@ trainRow :
     -> Html msg
 trainRow { zone, stations, currentTime } ( from, to ) train =
     let
-        currentStation =
-            train.timetableRows
-                |> List.filter (.actualTime >> (/=) Nothing)
-                |> List.reverse
-                |> List.head
-
-        ( homeStationArrival, homeStationDeparture ) =
+        ( homeStationArrivingIn, homeStationDeparture ) =
             train.timetableRows
                 |> List.filter (.stationShortCode >> (==) from)
                 |> (\homeStationRows ->
-                        ( homeStationRows |> List.filter (.rowType >> (==) Arrival) |> List.head
-                        , homeStationRows |> List.filter (.rowType >> (==) Departure) |> List.head
+                        ( homeStationRows
+                            |> List.filter (.rowType >> (==) Arrival)
+                            |> List.head
+                            |> Maybe.andThen
+                                (\row ->
+                                    case row.liveEstimateTime of
+                                        Just estimate ->
+                                            prettyDiff estimate
+                                                |> Maybe.map LiveEstimate
+
+                                        Nothing ->
+                                            prettyDiff row.scheduledTime
+                                                |> Maybe.map ScheduleEstimate
+                                )
+                        , homeStationRows
+                            |> List.filter (.rowType >> (==) Departure)
+                            |> List.head
                         )
                    )
 
         prettyDiff date =
             (Time.posixToMillis date - Time.posixToMillis currentTime)
-                |> prettyMinutes
+                |> Time.millisToPosix
+                |> (\posix ->
+                        if Time.toMinute Time.utc posix < 30 then
+                            Just (prettyMinutes posix)
 
-        homeStationArrivingIn =
-            homeStationArrival
-                |> Maybe.map (Maybe.map (LiveEstimate << prettyDiff) << .liveEstimateTime)
-                |> Maybe.withDefault (Maybe.map (ScheduleEstimate << prettyDiff << .scheduledTime) homeStationArrival)
-
-        homeStationLiveEstimate =
-            homeStationDeparture
-                |> Maybe.map .liveEstimateTime
-                |> Maybe.andThen identity
+                        else
+                            Nothing
+                   )
 
         endStation =
             train.timetableRows
                 |> List.filter
                     (\row -> row.rowType == Arrival && row.stationShortCode == to)
+                |> List.reverse
                 |> List.head
 
-        statusInfo station =
-            whenJust station.differenceInMinutes (statusInfoBadge station)
+        statusInfoBadge =
+            train.timetableRows
+                |> List.filter (.actualTime >> (/=) Nothing)
+                |> List.reverse
+                |> List.head
+                |> Maybe.andThen
+                    (\station ->
+                        case station.differenceInMinutes of
+                            Just n ->
+                                Just
+                                    (div
+                                        [ class "train-status-badge"
+                                        , class ("is-" ++ timelinessColor n)
+                                        ]
+                                        [ text (formatDifference n (stationName stations station.stationShortCode)) ]
+                                    )
 
-        statusInfoBadge station n =
-            let
-                name =
-                    stationName stations station.stationShortCode
-            in
-            div
-                [ class "train-status-badge"
-                , class ("is-" ++ timelinessColor n)
-                ]
-                [ text (formatDifference (station.differenceInMinutes |> Maybe.withDefault 0) name) ]
+                            Nothing ->
+                                Nothing
+                    )
+                |> Maybe.withDefault
+                    (div [ class "train-status-badge" ] [ text "Not moving" ])
     in
     div [ class "train" ]
         [ div [ class "train-content" ]
@@ -271,9 +287,7 @@ trainRow { zone, stations, currentTime } ( from, to ) train =
                     _ ->
                         []
             ]
-        , currentStation
-            |> Maybe.map statusInfo
-            |> Maybe.withDefault (text "")
+        , statusInfoBadge
         ]
 
 
@@ -305,7 +319,8 @@ stationRow zone stations station =
             _ ->
                 div [ class "train-stations-estimate" ]
                     [ text <| prettyTime zone station.scheduledTime ]
-        , div [] [ text name ]
+        , div [ class "train-stations-name" ] [ text name ]
+        , div [ class "train-stations-track" ] [ text station.track ]
         ]
 
 
@@ -332,19 +347,19 @@ formatDifference n name =
         (String.fromInt n ++ " min late") ++ suffix
 
 
-prettyMinutes : Int -> String
-prettyMinutes timeDiff =
-    if timeDiff > 0 then
-        "0:00"
-
-    else
-        DateFormat.format
-            [ DateFormat.minuteNumber
-            , DateFormat.text ":"
-            , DateFormat.secondFixed
-            ]
-            Time.utc
-            (Time.millisToPosix timeDiff)
+prettyMinutes : Posix -> String
+prettyMinutes posix =
+    let
+        formatted =
+            DateFormat.format
+                [ DateFormat.minuteNumber
+                , DateFormat.text ":"
+                , DateFormat.secondFixed
+                ]
+                Time.utc
+                posix
+    in
+    formatted
 
 
 prettyTime : Time.Zone -> Posix -> String

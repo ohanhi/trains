@@ -1,6 +1,7 @@
 module Model exposing (..)
 
 import Browser.Navigation
+import DateFormat
 import Dict exposing (Dict)
 import Json.Decode exposing (..)
 import Json.Decode.Pipeline exposing (..)
@@ -59,6 +60,7 @@ type alias TimetableRow =
     , trainStopping : Bool
     , stationShortCode : String
     , stationUICCode : Int
+    , track : String
     , rowType : RowType
     , actualTime : Maybe Posix
     , liveEstimateTime : Maybe Posix
@@ -180,6 +182,7 @@ timetableRowsDecoder =
         |> required "trainStopping" bool
         |> required "stationShortCode" string
         |> required "stationUICCode" int
+        |> required "commercialTrack" string
         |> required "type" rowTypeDecoder
         |> optional "actualTime" (maybe dateDecoder) Nothing
         |> optional "liveEstimateTime" (maybe dateDecoder) Nothing
@@ -191,14 +194,11 @@ dateDecoder : Decoder Posix
 dateDecoder =
     string
         |> andThen
-            (\a ->
-                case Vendor.Iso8601.toTime a of
-                    Ok date ->
-                        -- e.g. Posix 1530364980000
-                        succeed date
-
-                    Err _ ->
-                        fail ("Parsing date '" ++ a ++ "' failed")
+            (\str ->
+                str
+                    |> Vendor.Iso8601.toTime
+                    |> Result.map succeed
+                    |> Result.withDefault (fail ("Parsing date '" ++ str ++ "' failed"))
             )
 
 
