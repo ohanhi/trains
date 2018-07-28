@@ -1,31 +1,27 @@
 module View exposing (Msg(..), view)
 
-import Color
-import Date exposing (Date)
-import Date.Format
+import Browser exposing (Document, UrlRequest)
+import DateFormat
 import Dict
-import Element exposing (..)
-import Element.Attributes exposing (..)
-import Html exposing (Html)
+import Html exposing (..)
+import Html.Attributes exposing (..)
 import Http
 import Icons
 import Model exposing (..)
-import Navigation exposing (Location)
 import RemoteData exposing (RemoteData(..), WebData)
 import Stations
-import Style exposing (..)
-import Style.Color as Color
-import Style.Font as Font
-import Style.Shadow as Shadow
-import Time exposing (Time)
-import Time.Format
+import Time exposing (Posix)
+import Url exposing (Url)
+import Url.Parser
 
 
 type Msg
-    = UpdateTime Time
+    = UpdateTime Posix
+    | TimeZoneResponse Time.Zone
     | TrainsResponse (WebData Trains)
     | StationsResponse (WebData Stations)
-    | UrlChange Location
+    | UrlChange Url
+    | LinkClicked UrlRequest
 
 
 rem : Float -> Float
@@ -35,381 +31,297 @@ rem x =
 
 ts : Int -> Float
 ts scale =
-    1.33 ^ toFloat scale * rem 1
+    1.33 ^ toFloat scale * 16
 
 
-type Styles
-    = None
-    | Main
-    | Trains
-    | TrainRow
-    | TrainLineId
-    | TrainArrivingIn
-    | TrainArrivingTime
-    | TimetableRow
-    | TimetableRowCurrent
-    | Heading
-    | HeadingBack
-    | HeadingSwap
-    | StationTime
-    | StationTimeShouldBe
-    | StationName
-    | StationDifference
-    | StatusInfo
+tsPx : Int -> String
+tsPx scale =
+    String.fromFloat (ts scale) ++ "px"
 
 
-type Variations
-    = OnTime
-    | SlightlyOffSchedule
-    | OffSchedule
-    | Moving
+whenJust : Maybe a -> (a -> Html msg) -> Html msg
+whenJust value toHtml =
+    case value of
+        Just a ->
+            toHtml a
+
+        Nothing ->
+            text ""
 
 
-stylesheet : StyleSheet Styles Variations
-stylesheet =
-    let
-        colors =
-            { online = Color.rgb 0 205 0
-            , onTime = Color.darkGreen
-            , slightlyOffSchedule = Color.orange
-            , offSchedule = Color.darkRed
-            }
+timelinessColor difference =
+    if abs difference <= 1 then
+        "onTime"
 
-        shadow =
-            Style.shadows
-                [ Shadow.box
-                    { offset = ( 1, 5 ), blur = 10, color = Color.rgba 0 0 0 0.1, size = 0 }
-                ]
-    in
-    Style.stylesheet
-        [ style None []
-        , style Main
-            [ Color.background Color.lightGray
-            , Font.typeface [ "Roboto", "sans-serif" ]
-            , Font.lineHeight 1.5
-            , Font.size (ts 0)
-            ]
-        , style Trains []
-        , style TrainRow
-            [ Color.background Color.white
-            , Font.pre
-            , shadow
-            ]
-        , style TrainLineId
-            [ Font.size (ts 3)
-            , Font.weight 600
-            , Font.center
-            , Font.lineHeight 1
-            , Color.text Color.darkGray
-            , variation Moving
-                [ Color.text Color.black ]
-            ]
-        , style TrainArrivingIn
-            [ Font.size (ts -1)
-            , Font.center
-            , Font.weight 600
-            , Color.text Color.darkGray
-            ]
-        , style TrainArrivingTime
-            [ Font.size (ts 2)
-            , Font.center
-            , Font.lineHeight 1
-            , Color.text Color.darkGray
-            ]
-        , style TimetableRow
-            [ Font.pre
-            , Color.text Color.gray
-            ]
-        , style TimetableRowCurrent
-            [ Font.pre
-            , Color.text Color.black
-            ]
-        , style Heading
-            [ Font.size (ts 2)
-            , Font.lineHeight 2
-            , Color.text Color.black
-            ]
-        , style HeadingBack
-            [ Color.text Color.black
-            , Font.center
-            ]
-        , style HeadingSwap
-            [ Color.text Color.darkGray
-            , Font.center
-            ]
-        , style StationTime
-            [ Font.center
-            , Font.weight 600
-            , variation OnTime
-                [ Color.text colors.onTime ]
-            , variation SlightlyOffSchedule
-                [ Color.text colors.slightlyOffSchedule ]
-            , variation OffSchedule
-                [ Color.text colors.offSchedule ]
-            ]
-        , style StationTimeShouldBe
-            [ Color.text Color.darkGray
-            , Font.strike
-            , Font.size (ts -1)
-            ]
-        , style StationName []
-        , style StationDifference []
-        , style StatusInfo
-            [ Font.size (ts -1)
-            , Font.center
-            ]
-        ]
+    else if abs difference <= 5 then
+        "slightlyOffSchedule"
+
+    else
+        "offSchedule"
 
 
-view : Model -> Html msg
+view : Model -> Document msg
 view model =
-    Element.viewport stylesheet <|
-        column Main
-            [ center
-            , width (percent 100)
-            , padding (rem 2)
+    case model.route of
+        SelectDepRoute ->
+            selectDepPage model
+
+        SelectDestRoute dep ->
+            selectDestPage model dep
+
+        ScheduleRoute from to ->
+            schedulePage model ( from, to )
+
+
+container : List (Html msg) -> List (Html msg)
+container elements =
+    [ div [ class "container" ] elements ]
+
+
+selectDepPage : Model -> Document msg
+selectDepPage model =
+    { title = "Schedules! Helsinki region commuter trains"
+    , body =
+        container
+            [ header [] [ h1 [] [ text "Select departure" ] ]
+            , ul [ class "stations" ] <|
+                List.map
+                    (\( abbr, name ) ->
+                        li [] [ a [ href ("#/" ++ abbr) ] [ text name ] ]
+                    )
+                    Stations.all
             ]
-            [ el None
-                [ spacing (rem 2)
-                , width (percent 100)
-                , maxWidth (px (rem 30))
-                , center
-                ]
-              <|
-                case model.route of
-                    SelectDepRoute ->
-                        selectDepView model
-
-                    SelectDestRoute dep ->
-                        selectDestView model dep
-
-                    ScheduleRoute from to ->
-                        scheduleView model ( from, to )
-            ]
+    }
 
 
-selectDepView : Model -> Element Styles Variations msg
-selectDepView model =
-    column None
-        [ spacing (rem 1) ]
-        [ el Heading [] (text "Select departure")
-        , column None
-            []
-            (Stations.all
-                |> List.map
-                    (\( abbr, name ) -> link ("#" ++ abbr) <| el None [] (text name))
-            )
-        ]
-
-
-selectDestView : Model -> String -> Element Styles Variations msg
-selectDestView model dep =
+selectDestPage : Model -> String -> Document msg
+selectDestPage model dep =
     let
         url dest =
-            "#" ++ dep ++ "/" ++ dest
+            "#/" ++ dep ++ "/" ++ dest
 
         linkText dest =
             Stations.findName dep
                 |> Maybe.map (\name -> name ++ "–" ++ dest)
                 |> Maybe.withDefault dest
     in
-    column None
-        [ spacing (rem 1) ]
-        [ el Heading [] (text "Select destination")
-        , column None
-            []
-            (Stations.matching dep
-                |> List.map
-                    (\( abbr, name ) -> link (url abbr) <| el None [] (text (linkText name)))
-            )
-        ]
+    { title = "Select destination – Schedules!"
+    , body =
+        container
+            [ header [] [ h1 [] [ text "Select departure" ] ]
+            , ul [ class "stations" ] <|
+                List.map
+                    (\( abbr, name ) ->
+                        li [] [ a [ href (url abbr) ] [ text (linkText name) ] ]
+                    )
+                    (Stations.matching dep)
+            ]
+    }
 
 
-scheduleView : Model -> ( String, String ) -> Element Styles Variations msg
-scheduleView model targets =
-    case model.trains of
-        Success trains ->
-            trainsView model targets trains
+schedulePage : Model -> ( String, String ) -> Document msg
+schedulePage model ( from, to ) =
+    let
+        heading =
+            stationName model.stations from ++ "—" ++ stationName model.stations to
+    in
+    { title = heading ++ " – Schedules!"
+    , body =
+        container
+            [ case model.trains of
+                Success trains ->
+                    trainsView model ( from, to ) heading trains
 
-        Failure err ->
-            column None
-                [ spacing (rem 1) ]
-                [ el Heading [] <| text "Oh noes, an error!"
-                , case err of
-                    Http.NetworkError ->
-                        text "It's the network."
+                Failure err ->
+                    div
+                        []
+                        [ header [] [ text "Oh noes, an error!" ]
+                        , case err of
+                            Http.NetworkError ->
+                                text "It's the network."
 
-                    Http.Timeout ->
-                        text "Helloooo?"
-                            |> below [ text "There was no response." ]
+                            Http.Timeout ->
+                                text "Helloooo? (There was no response.)"
 
-                    Http.BadUrl _ ->
-                        text "It's not you, it's me. I have the server address wrong."
+                            Http.BadUrl _ ->
+                                text "It's not you, it's me. I have the server address wrong."
 
-                    Http.BadStatus _ ->
-                        text "Whoops, looks like the server didn't like the request."
+                            Http.BadStatus _ ->
+                                text "Whoops, looks like the server didn't like the request."
 
-                    Http.BadPayload _ _ ->
-                        text "Ouch, the server responded with strange contents."
-                ]
+                            Http.BadPayload _ _ ->
+                                text "Ouch, the server responded with strange contents."
+                        ]
 
-        Loading ->
-            el Heading [] <| text "Loading"
+                Loading ->
+                    header [] [ text "Loading" ]
 
-        _ ->
-            empty
+                _ ->
+                    text ""
+            ]
+    }
 
 
-trainsView : Model -> ( String, String ) -> Trains -> Element Styles Variations msg
-trainsView model ( from, to ) trains =
+trainsView : Model -> ( String, String ) -> String -> Trains -> Html msg
+trainsView model ( from, to ) heading trains =
     let
         rightDirection =
             trains
                 |> Model.sortedTrainList
-
-        heading =
-            stationName model.stations from ++ "—" ++ stationName model.stations to
     in
-    column Trains
-        [ spacing (rem 1)
-        , width (percent 100)
-        , minWidth (px (rem 20))
-        ]
-    <|
-        [ row Heading
-            [ spacing (rem 1) ]
-            [ link "#" <|
-                el HeadingBack [ width (px (rem 2)) ] (text "‹")
-            , el Heading [] (text heading)
-            , link ("#" ++ to ++ "/" ++ from) <|
-                el HeadingSwap
-                    [ width (px (rem 2)), center ]
-                    (html <| Icons.swap (ts 2))
+    div [ class "trains" ] <|
+        [ header []
+            [ a
+                [ class "back-link", href "#/" ]
+                [ text "‹" ]
+            , h1 [] [ text heading ]
+            , a
+                [ class "swap-link", href ("#/" ++ to ++ "/" ++ from) ]
+                [ Icons.swap ]
             ]
         ]
             ++ List.map (trainRow model ( from, to )) rightDirection
 
 
+type ArrivalEstimate
+    = LiveEstimate String
+    | ScheduleEstimate String
+
+
 trainRow :
-    { a | stations : Stations, currentTime : Time }
+    { a | zone : Time.Zone, stations : Stations, currentTime : Posix }
     -> ( String, String )
     -> Train
-    -> Element Styles Variations msg
-trainRow { stations, currentTime } ( from, to ) train =
+    -> Html msg
+trainRow { zone, stations, currentTime } ( from, to ) train =
     let
-        currentStation =
-            train.timetableRows
-                |> List.filter (.actualTime >> (/=) Nothing)
-                |> List.reverse
-                |> List.head
-
-        isMoving =
-            currentStation /= Nothing
-
-        ( homeStationArrival, homeStationDeparture ) =
+        ( homeStationArrivingIn, homeStationDeparture ) =
             train.timetableRows
                 |> List.filter (.stationShortCode >> (==) from)
                 |> (\homeStationRows ->
-                        ( homeStationRows |> List.filter (.rowType >> (==) Arrival) |> List.head
-                        , homeStationRows |> List.filter (.rowType >> (==) Departure) |> List.head
+                        ( homeStationRows
+                            |> List.filter (.rowType >> (==) Arrival)
+                            |> List.head
+                            |> Maybe.andThen
+                                (\row ->
+                                    case row.liveEstimateTime of
+                                        Just estimate ->
+                                            prettyDiff estimate
+                                                |> Maybe.map LiveEstimate
+
+                                        Nothing ->
+                                            prettyDiff row.scheduledTime
+                                                |> Maybe.map ScheduleEstimate
+                                )
+                        , homeStationRows
+                            |> List.filter (.rowType >> (==) Departure)
+                            |> List.head
                         )
                    )
 
-        homeStationArrivingIn =
-            homeStationArrival
-                |> Maybe.map .liveEstimateTime
-                |> Maybe.withDefault (Maybe.map .scheduledTime homeStationArrival)
-                |> Maybe.map (\date -> Date.toTime date - currentTime)
-                |> Maybe.andThen
-                    (\timeDiff ->
-                        if timeDiff > 0 then
-                            Just (Time.Format.format "%M:%S" timeDiff)
+        prettyDiff date =
+            (Time.posixToMillis date - Time.posixToMillis currentTime)
+                |> Time.millisToPosix
+                |> (\posix ->
+                        if Time.toMinute Time.utc posix < 30 then
+                            Just (prettyMinutes posix)
+
                         else
                             Nothing
-                    )
-
-        homeStationLiveEstimate =
-            homeStationDeparture
-                |> Maybe.map .liveEstimateTime
-                |> Maybe.andThen identity
+                   )
 
         endStation =
             train.timetableRows
                 |> List.filter
                     (\row -> row.rowType == Arrival && row.stationShortCode == to)
+                |> List.reverse
                 |> List.head
 
-        statusInfo station =
-            whenJust station.differenceInMinutes (statusInfoBadge station)
+        statusInfoBadge =
+            train.timetableRows
+                |> List.filter (.actualTime >> (/=) Nothing)
+                |> List.reverse
+                |> List.head
+                |> Maybe.andThen
+                    (\station ->
+                        case station.differenceInMinutes of
+                            Just n ->
+                                Just
+                                    (div
+                                        [ class "train-status-badge"
+                                        , class ("is-" ++ timelinessColor n)
+                                        ]
+                                        [ text (formatDifference n (stationName stations station.stationShortCode)) ]
+                                    )
 
-        statusInfoBadge station n =
-            wrappedRow StatusInfo
-                [ center ]
-                [ el StationTime
-                    [ vary OnTime (abs n <= 1)
-                    , vary SlightlyOffSchedule (abs n > 1 && abs n <= 5)
-                    , vary OffSchedule (abs n > 5)
-                    ]
-                    (text (formatDifference "On time" station.differenceInMinutes))
-                ]
+                            Nothing ->
+                                Nothing
+                    )
+                |> Maybe.withDefault
+                    (div [ class "train-status-badge" ] [ text "Not moving" ])
     in
-    row TrainRow
-        [ paddingXY (rem 1) (rem 0.5)
-        , spacing (rem 1)
-        , verticalCenter
-        , width (percent 100)
-        ]
-        [ column None
-            [ width (px (rem 2)) ]
-            [ el TrainLineId [ vary Moving isMoving ] (text train.lineId)
+    div [ class "train" ]
+        [ div [ class "train-content" ]
+            [ div [ classList [ ( "train-name", True ), ( "is-running", train.runningCurrently ) ] ]
+                [ text train.lineId ]
+            , div [ class "train-stations" ]
+                [ whenJust homeStationDeparture (stationRow zone stations)
+                , div [ class "train-stations-separator" ] [ text "︙" ]
+                , whenJust endStation (stationRow zone stations)
+                ]
+            , div [ class "train-status" ] <|
+                case homeStationArrivingIn of
+                    Just estimate ->
+                        [ div [ class "train-status-arriving" ]
+                            [ text "Arrives in" ]
+                        , div [ class "train-status-time" ]
+                            [ case estimate of
+                                LiveEstimate time ->
+                                    text time
+
+                                ScheduleEstimate time ->
+                                    text ("~" ++ time)
+                            ]
+                        ]
+
+                    _ ->
+                        []
             ]
-        , column None
-            [ width (fill 1) ]
-            [ whenJust homeStationDeparture (stationRow stations)
-            , el StationTime [ width (px timeWidth) ] (text "︙")
-            , whenJust endStation (stationRow stations)
-            ]
-        , column None
-            []
-            [ whenJust homeStationArrivingIn <|
-                \time -> el TrainArrivingIn [] (text "Arrives in")
-            , whenJust homeStationArrivingIn <|
-                \time -> el TrainArrivingTime [] (text time)
-            , whenJust currentStation statusInfo
-            ]
+        , statusInfoBadge
         ]
 
 
-stationRow : Stations -> TimetableRow -> Element Styles Variations msg
-stationRow stations station =
+stationRow : Time.Zone -> Stations -> TimetableRow -> Html msg
+stationRow zone stations station =
     let
         name =
             stationName stations station.stationShortCode
     in
-    row None
-        [ spacing (rem 0.5) ]
+    div
+        [ class "train-stations-row" ]
         [ case ( station.liveEstimateTime, station.differenceInMinutes ) of
             ( Just estimate, Just n ) ->
-                column StationTime
-                    [ width (px timeWidth)
-                    , vary OnTime (abs n <= 1)
-                    , vary SlightlyOffSchedule (abs n > 1 && abs n <= 5)
-                    , vary OffSchedule (abs n > 5)
-                    ]
-                    [ text <| prettyTime estimate
-                    , when (n /= 0) <|
-                        el StationTimeShouldBe [] (text <| prettyTime station.scheduledTime)
+                div
+                    [ class "train-stations-estimate" ]
+                    [ div
+                        [ class "train-stations-estimate-time"
+                        , class ("is-" ++ timelinessColor n)
+                        ]
+                        [ text <| prettyTime zone estimate ]
+                    , if n /= 0 then
+                        div [ class "train-stations-scheduled-inaccurate" ]
+                            [ text <| prettyTime zone station.scheduledTime ]
+
+                      else
+                        text ""
                     ]
 
             _ ->
-                el StationTime [ width (px timeWidth) ] (text <| prettyTime station.scheduledTime)
-        , el StationName [] (text name)
+                div [ class "train-stations-estimate" ]
+                    [ text <| prettyTime zone station.scheduledTime ]
+        , div [ class "train-stations-name" ] [ text name ]
+        , div [ class "train-stations-track" ] [ text station.track ]
         ]
-
-
-timeWidth : Float
-timeWidth =
-    rem 3
 
 
 stationName : Stations -> String -> String
@@ -419,22 +331,41 @@ stationName stations shortCode =
         |> Maybe.withDefault shortCode
 
 
-formatDifference : String -> Maybe Int -> String
-formatDifference default differenceInMinutes =
+formatDifference : Int -> String -> String
+formatDifference n name =
     let
-        stringify n =
-            if n == 0 then
-                Nothing
-            else if n < 0 then
-                Just (toString (abs n) ++ " min early")
-            else
-                Just (toString n ++ " min late")
+        suffix =
+            " in " ++ name
     in
-    differenceInMinutes
-        |> Maybe.andThen stringify
-        |> Maybe.withDefault default
+    if abs n <= 1 then
+        "On time" ++ suffix
+
+    else if n < 0 then
+        (String.fromInt (abs n) ++ " min early") ++ suffix
+
+    else
+        (String.fromInt n ++ " min late") ++ suffix
 
 
-prettyTime : Date -> String
+prettyMinutes : Posix -> String
+prettyMinutes posix =
+    let
+        formatted =
+            DateFormat.format
+                [ DateFormat.minuteNumber
+                , DateFormat.text ":"
+                , DateFormat.secondFixed
+                ]
+                Time.utc
+                posix
+    in
+    formatted
+
+
+prettyTime : Time.Zone -> Posix -> String
 prettyTime =
-    Date.Format.format "%H.%M"
+    DateFormat.format
+        [ DateFormat.hourMilitaryNumber
+        , DateFormat.text "."
+        , DateFormat.minuteFixed
+        ]

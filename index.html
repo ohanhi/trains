@@ -1,24 +1,19 @@
 <!DOCTYPE HTML>
 <html>
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width">
-  <title>Schedules! Helsinki region commuter trains</title>
-  <link href="https://fonts.googleapis.com/css?family=Roboto:300,600" rel="stylesheet">
-  <style>
-    html,head,body {
-      padding: 0;
-      margin: 0;
-      background-color: rgba(238,238,236,1);
-      font-family: Roboto, sans-serif;
-    }
-  </style>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width">
+	<title>Schedules! Helsinki region commuter trains</title>
+	<link href="https://fonts.googleapis.com/css?family=Roboto:300,600" rel="stylesheet">
+	<link href="style.css" rel="stylesheet">
+	<script src="elm.js"></script>
 </head>
-<body>
-  <div id="app"></div>
-  <script src="elm.js"></script>
-  <script>
-    Elm.Main.embed(document.getElementById('app'), Date.now());
-  </script>
+
+<body id="page-body">
+	<script>
+		Elm.Main.init({ flags: Date.now() });
+	</script>
 </body>
+
 </html>
