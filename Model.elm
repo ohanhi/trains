@@ -136,75 +136,17 @@ toTrain ( from, to ) { trainNumber, lineId, trainCategory, timetableRows, runnin
         stoppingRows =
             List.filter .trainStopping timetableRows
 
-        departure =
-            stoppingRows
-                |> List.filterMap
-                    (\row ->
-                        if row.stationShortCode == from && row.rowType == Departure then
-                            Just ( row.scheduledTime |> Time.posixToMillis, row )
-
-                        else
-                            Nothing
-                    )
-                |> List.head
-
-        homeStationArrival =
-            stoppingRows
-                |> List.filter (\row -> row.stationShortCode == from && row.rowType == Arrival)
-                |> List.head
-
-        rightDirection =
-            departure
-                |> Maybe.map
-                    (\( dep, _ ) ->
-                        stoppingRows
-                            |> List.filterMap
-                                (\row ->
-                                    if row.stationShortCode == to && row.rowType == Arrival then
-                                        Just (row.scheduledTime |> Time.posixToMillis)
-
-                                    else
-                                        Nothing
-                                )
-                            |> List.any (\arr -> arr > dep)
-                    )
-                |> Maybe.withDefault False
-
-        currentStation =
-            timetableRows
-                |> List.filter (.actualTime >> (/=) Nothing)
-                |> List.reverse
-                |> List.head
-                |> Maybe.andThen
-                    (\row ->
-                        Maybe.map2
-                            (\actualTime differenceInMinutes ->
-                                { stationShortCode = row.stationShortCode
-                                , stationUICCode = row.stationUICCode
-                                , rowType = row.rowType
-                                , actualTime = actualTime
-                                , differenceInMinutes = differenceInMinutes
-                                }
-                            )
-                            row.actualTime
-                            row.differenceInMinutes
-                    )
-
-        endStationArrival =
-            timetableRows
-                |> List.filter
-                    (\row -> row.rowType == Arrival && row.stationShortCode == to)
-                |> List.reverse
-                |> List.head
+        homeStationDeparture =
+            findTimetableRow Departure from stoppingRows
     in
-    if trainCategory == "Commuter" && rightDirection then
+    if trainCategory == "Commuter" && isRightDirection stoppingRows to homeStationDeparture then
         Maybe.map3
             (\arr dep end ->
                 { trainNumber = trainNumber
                 , lineId = lineId
                 , runningCurrently = runningCurrently
                 , cancelled = cancelled
-                , currentStation = currentStation
+                , currentStation = findCurrentStation timetableRows
                 , homeStationArrival = arr
                 , homeStationDeparture = dep
                 , endStationArrival = end
@@ -212,13 +154,57 @@ toTrain ( from, to ) { trainNumber, lineId, trainCategory, timetableRows, runnin
                     |> Just
                     |> succeed
             )
-            homeStationArrival
-            (Maybe.map Tuple.second departure)
-            endStationArrival
+            (findTimetableRow Arrival from stoppingRows)
+            homeStationDeparture
+            (findTimetableRow Arrival to (List.reverse timetableRows))
             |> Maybe.withDefault (succeed Nothing)
 
     else
         succeed Nothing
+
+
+findTimetableRow : RowType -> String -> List TimetableRow -> Maybe TimetableRow
+findTimetableRow rowType shortCode rows =
+    rows
+        |> List.filter
+            (\row -> row.stationShortCode == shortCode && row.rowType == rowType)
+        |> List.head
+
+
+isRightDirection : List TimetableRow -> String -> Maybe TimetableRow -> Bool
+isRightDirection rows toShortCode departureRow =
+    case departureRow of
+        Nothing ->
+            False
+
+        Just departure ->
+            rows
+                |> List.filter
+                    (\row -> row.stationShortCode == toShortCode && row.rowType == Arrival)
+                |> List.any
+                    (\arr -> Time.posixToMillis arr.scheduledTime > Time.posixToMillis departure.scheduledTime)
+
+
+findCurrentStation : List TimetableRow -> Maybe CurrentStation
+findCurrentStation rows =
+    rows
+        |> List.filter (.actualTime >> (/=) Nothing)
+        |> List.reverse
+        |> List.head
+        |> Maybe.andThen
+            (\row ->
+                Maybe.map2
+                    (\actualTime differenceInMinutes ->
+                        { stationShortCode = row.stationShortCode
+                        , stationUICCode = row.stationUICCode
+                        , rowType = row.rowType
+                        , actualTime = actualTime
+                        , differenceInMinutes = differenceInMinutes
+                        }
+                    )
+                    row.actualTime
+                    row.differenceInMinutes
+            )
 
 
 timetableRowsDecoder : Decoder (List TimetableRow)
