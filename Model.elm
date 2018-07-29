@@ -30,10 +30,12 @@ type alias Model =
 type alias Train =
     { trainNumber : Int
     , lineId : String
-    , timetableRows : List TimetableRow
     , runningCurrently : Bool
     , cancelled : Bool
-    , departingFromStation : Posix
+    , currentStation : Maybe CurrentStation
+    , homeStationArrival : TimetableRow
+    , homeStationDeparture : TimetableRow
+    , endStationArrival : TimetableRow
     }
 
 
@@ -65,6 +67,15 @@ type alias TimetableRow =
     , actualTime : Maybe Posix
     , liveEstimateTime : Maybe Posix
     , differenceInMinutes : Maybe Int
+    }
+
+
+type alias CurrentStation =
+    { stationShortCode : String
+    , stationUICCode : Int
+    , rowType : RowType
+    , actualTime : Posix
+    , differenceInMinutes : Int
     }
 
 
@@ -115,60 +126,95 @@ sortedTrainList : Trains -> List Train
 sortedTrainList trains =
     trains
         |> Dict.values
-        |> List.sortBy (.departingFromStation >> Time.posixToMillis)
+        |> List.sortBy
+            (\train -> Time.posixToMillis train.homeStationArrival.scheduledTime)
 
 
 toTrain : ( String, String ) -> TrainRaw -> Decoder (Maybe Train)
 toTrain ( from, to ) { trainNumber, lineId, trainCategory, timetableRows, runningCurrently, cancelled } =
     let
-        rightDirection =
-            timetableRows
-                |> List.filter .trainStopping
-                |> (\rows ->
-                        let
-                            departureTime =
-                                rows
-                                    |> List.filterMap
-                                        (\row ->
-                                            if row.stationShortCode == from && row.rowType == Departure then
-                                                Just (row.scheduledTime |> Time.posixToMillis)
+        stoppingRows =
+            List.filter .trainStopping timetableRows
 
-                                            else
-                                                Nothing
-                                        )
-                                    |> List.head
-
-                            arrivalTimes =
-                                rows
-                                    |> List.filterMap
-                                        (\row ->
-                                            if row.stationShortCode == to && row.rowType == Arrival then
-                                                Just (row.scheduledTime |> Time.posixToMillis)
-
-                                            else
-                                                Nothing
-                                        )
-                        in
-                        departureTime
-                            |> Maybe.map (\dep -> List.any (\arr -> arr > dep) arrivalTimes)
-                            |> Maybe.withDefault False
-                   )
-
-        departingFromStation =
-            timetableRows
+        departure =
+            stoppingRows
                 |> List.filterMap
-                    (\a ->
-                        if a.stationShortCode == from && a.rowType == Departure then
-                            Just a.scheduledTime
+                    (\row ->
+                        if row.stationShortCode == from && row.rowType == Departure then
+                            Just ( row.scheduledTime |> Time.posixToMillis, row )
 
                         else
                             Nothing
                     )
                 |> List.head
+
+        homeStationArrival =
+            stoppingRows
+                |> List.filter (\row -> row.stationShortCode == from && row.rowType == Arrival)
+                |> List.head
+
+        rightDirection =
+            departure
+                |> Maybe.map
+                    (\( dep, _ ) ->
+                        stoppingRows
+                            |> List.filterMap
+                                (\row ->
+                                    if row.stationShortCode == to && row.rowType == Arrival then
+                                        Just (row.scheduledTime |> Time.posixToMillis)
+
+                                    else
+                                        Nothing
+                                )
+                            |> List.any (\arr -> arr > dep)
+                    )
+                |> Maybe.withDefault False
+
+        currentStation =
+            timetableRows
+                |> List.filter (.actualTime >> (/=) Nothing)
+                |> List.reverse
+                |> List.head
+                |> Maybe.andThen
+                    (\row ->
+                        Maybe.map2
+                            (\actualTime differenceInMinutes ->
+                                { stationShortCode = row.stationShortCode
+                                , stationUICCode = row.stationUICCode
+                                , rowType = row.rowType
+                                , actualTime = actualTime
+                                , differenceInMinutes = differenceInMinutes
+                                }
+                            )
+                            row.actualTime
+                            row.differenceInMinutes
+                    )
+
+        endStationArrival =
+            timetableRows
+                |> List.filter
+                    (\row -> row.rowType == Arrival && row.stationShortCode == to)
+                |> List.reverse
+                |> List.head
     in
     if trainCategory == "Commuter" && rightDirection then
-        departingFromStation
-            |> Maybe.map (succeed << Just << Train trainNumber lineId timetableRows runningCurrently cancelled)
+        Maybe.map3
+            (\arr dep end ->
+                { trainNumber = trainNumber
+                , lineId = lineId
+                , runningCurrently = runningCurrently
+                , cancelled = cancelled
+                , currentStation = currentStation
+                , homeStationArrival = arr
+                , homeStationDeparture = dep
+                , endStationArrival = end
+                }
+                    |> Just
+                    |> succeed
+            )
+            homeStationArrival
+            (Maybe.map Tuple.second departure)
+            endStationArrival
             |> Maybe.withDefault (succeed Nothing)
 
     else
