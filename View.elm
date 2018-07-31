@@ -208,10 +208,9 @@ trainRow { zone, stations, currentTime } ( from, to ) train =
         prettyDiff date =
             (Time.posixToMillis date - Time.posixToMillis currentTime)
                 |> Basics.max 0
-                |> Time.millisToPosix
-                |> (\posix ->
-                        if Time.toHour Time.utc posix < 1 && Time.toMinute Time.utc posix < 30 then
-                            Just (prettyMinutes posix)
+                |> (\millis ->
+                        if millis < minutesToMillis 30 then
+                            Just (prettyMinutes (Time.millisToPosix millis))
 
                         else
                             Nothing
@@ -258,6 +257,11 @@ trainRow { zone, stations, currentTime } ( from, to ) train =
             ]
         , statusInfoBadge
         ]
+
+
+minutesToMillis : Int -> Int
+minutesToMillis minutes =
+    minutes * 60000
 
 
 stationRow : Time.Zone -> Stations -> TimetableRow -> Html msg
