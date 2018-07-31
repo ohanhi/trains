@@ -1,0 +1,22 @@
+{
+  "name": "commuter-station-schedule",
+  "version": "1.0.0",
+  "description": "Commuter Train Station Schedule",
+  "main": "index.html",
+  "scripts": {
+    "test": "elm-test",
+    "serve": "python -m SimpleHTTPServer 8000",
+    "build": "elm make src/Main.elm --output=elm.js --optimize",
+    "build-dev": "elm make src/Main.elm --output=elm.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ohanhi/commuter-station-schedule.git"
+  },
+  "author": "ohanhi",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/ohanhi/commuter-station-schedule/issues"
+  },
+  "homepage": "https://github.com/ohanhi/commuter-station-schedule#readme"
+}

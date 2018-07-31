@@ -195,79 +195,47 @@ trainRow :
     -> Html msg
 trainRow { zone, stations, currentTime } ( from, to ) train =
     let
-        ( homeStationArrivingIn, homeStationDeparture ) =
-            train.timetableRows
-                |> List.filter (.stationShortCode >> (==) from)
-                |> (\homeStationRows ->
-                        ( homeStationRows
-                            |> List.filter (.rowType >> (==) Arrival)
-                            |> List.head
-                            |> Maybe.andThen
-                                (\row ->
-                                    case row.liveEstimateTime of
-                                        Just estimate ->
-                                            prettyDiff estimate
-                                                |> Maybe.map LiveEstimate
+        homeStationArrivingIn =
+            case train.homeStationArrival.liveEstimateTime of
+                Just estimate ->
+                    prettyDiff estimate
+                        |> Maybe.map LiveEstimate
 
-                                        Nothing ->
-                                            prettyDiff row.scheduledTime
-                                                |> Maybe.map ScheduleEstimate
-                                )
-                        , homeStationRows
-                            |> List.filter (.rowType >> (==) Departure)
-                            |> List.head
-                        )
-                   )
+                Nothing ->
+                    prettyDiff train.homeStationArrival.scheduledTime
+                        |> Maybe.map ScheduleEstimate
 
         prettyDiff date =
             (Time.posixToMillis date - Time.posixToMillis currentTime)
-                |> Time.millisToPosix
-                |> (\posix ->
-                        if Time.toMinute Time.utc posix < 30 then
-                            Just (prettyMinutes posix)
+                |> Basics.max 0
+                |> (\millis ->
+                        if millis < minutesToMillis 30 then
+                            Just (prettyMinutes (Time.millisToPosix millis))
 
                         else
                             Nothing
                    )
 
-        endStation =
-            train.timetableRows
-                |> List.filter
-                    (\row -> row.rowType == Arrival && row.stationShortCode == to)
-                |> List.reverse
-                |> List.head
-
         statusInfoBadge =
-            train.timetableRows
-                |> List.filter (.actualTime >> (/=) Nothing)
-                |> List.reverse
-                |> List.head
-                |> Maybe.andThen
-                    (\station ->
-                        case station.differenceInMinutes of
-                            Just n ->
-                                Just
-                                    (div
-                                        [ class "train-status-badge"
-                                        , class ("is-" ++ timelinessColor n)
-                                        ]
-                                        [ text (formatDifference n (stationName stations station.stationShortCode)) ]
-                                    )
+            case train.currentStation of
+                Just station ->
+                    div
+                        [ class "train-status-badge"
+                        , class ("is-" ++ timelinessColor station.differenceInMinutes)
+                        ]
+                        [ text (formatDifference station.differenceInMinutes (stationName stations station.stationShortCode)) ]
 
-                            Nothing ->
-                                Nothing
-                    )
-                |> Maybe.withDefault
-                    (div [ class "train-status-badge" ] [ text "Not moving" ])
+                Nothing ->
+                    div [ class "train-status-badge" ] [ text "Not moving" ]
     in
     div [ class "train" ]
         [ div [ class "train-content" ]
             [ div [ classList [ ( "train-name", True ), ( "is-running", train.runningCurrently ) ] ]
                 [ text train.lineId ]
             , div [ class "train-stations" ]
-                [ whenJust homeStationDeparture (stationRow zone stations)
+                [ stationRow zone stations train.homeStationDeparture
                 , div [ class "train-stations-separator" ] [ text "︙" ]
-                , whenJust endStation (stationRow zone stations)
+                , stationRow zone stations train.endStationArrival
                 ]
             , div [ class "train-status" ] <|
                 case homeStationArrivingIn of
@@ -289,6 +257,11 @@ trainRow { zone, stations, currentTime } ( from, to ) train =
             ]
         , statusInfoBadge
         ]
+
+
+minutesToMillis : Int -> Int
+minutesToMillis minutes =
+    minutes * 60000
 
 
 stationRow : Time.Zone -> Stations -> TimetableRow -> Html msg
