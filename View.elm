@@ -207,6 +207,7 @@ trainRow { zone, stations, currentTime } ( from, to ) train =
 
         prettyDiff date =
             (Time.posixToMillis date - Time.posixToMillis currentTime)
+                |> Basics.max 0
                 |> Time.millisToPosix
                 |> (\posix ->
                         if Time.toHour Time.utc posix < 1 && Time.toMinute Time.utc posix < 30 then

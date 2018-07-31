@@ -3,11 +3,11 @@ module Model exposing (..)
 import Browser.Navigation
 import DateFormat
 import Dict exposing (Dict)
+import Iso8601
 import Json.Decode exposing (..)
 import Json.Decode.Pipeline exposing (..)
 import RemoteData exposing (WebData)
 import Time exposing (Posix)
-import Vendor.Iso8601
 
 
 type Route
@@ -228,7 +228,7 @@ dateDecoder =
         |> andThen
             (\str ->
                 str
-                    |> Vendor.Iso8601.toTime
+                    |> Iso8601.toTime
                     |> Result.map succeed
                     |> Result.withDefault (fail ("Parsing date '" ++ str ++ "' failed"))
             )
