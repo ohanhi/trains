@@ -3,11 +3,11 @@ module Model exposing (..)
 import Browser.Navigation
 import DateFormat
 import Dict exposing (Dict)
+import Iso8601
 import Json.Decode exposing (..)
 import Json.Decode.Pipeline exposing (..)
 import RemoteData exposing (WebData)
 import Time exposing (Posix)
-import Vendor.Iso8601
 
 
 type Route
@@ -30,10 +30,12 @@ type alias Model =
 type alias Train =
     { trainNumber : Int
     , lineId : String
-    , timetableRows : List TimetableRow
     , runningCurrently : Bool
     , cancelled : Bool
-    , departingFromStation : Posix
+    , currentStation : Maybe CurrentStation
+    , homeStationArrival : TimetableRow
+    , homeStationDeparture : TimetableRow
+    , endStationArrival : TimetableRow
     }
 
 
@@ -65,6 +67,15 @@ type alias TimetableRow =
     , actualTime : Maybe Posix
     , liveEstimateTime : Maybe Posix
     , differenceInMinutes : Maybe Int
+    }
+
+
+type alias CurrentStation =
+    { stationShortCode : String
+    , stationUICCode : Int
+    , rowType : RowType
+    , actualTime : Posix
+    , differenceInMinutes : Int
     }
 
 
@@ -115,64 +126,85 @@ sortedTrainList : Trains -> List Train
 sortedTrainList trains =
     trains
         |> Dict.values
-        |> List.sortBy (.departingFromStation >> Time.posixToMillis)
+        |> List.sortBy
+            (\train -> Time.posixToMillis train.homeStationArrival.scheduledTime)
 
 
 toTrain : ( String, String ) -> TrainRaw -> Decoder (Maybe Train)
 toTrain ( from, to ) { trainNumber, lineId, trainCategory, timetableRows, runningCurrently, cancelled } =
     let
-        rightDirection =
-            timetableRows
-                |> List.filter .trainStopping
-                |> (\rows ->
-                        let
-                            departureTime =
-                                rows
-                                    |> List.filterMap
-                                        (\row ->
-                                            if row.stationShortCode == from && row.rowType == Departure then
-                                                Just (row.scheduledTime |> Time.posixToMillis)
+        stoppingRows =
+            List.filter .trainStopping timetableRows
 
-                                            else
-                                                Nothing
-                                        )
-                                    |> List.head
-
-                            arrivalTimes =
-                                rows
-                                    |> List.filterMap
-                                        (\row ->
-                                            if row.stationShortCode == to && row.rowType == Arrival then
-                                                Just (row.scheduledTime |> Time.posixToMillis)
-
-                                            else
-                                                Nothing
-                                        )
-                        in
-                        departureTime
-                            |> Maybe.map (\dep -> List.any (\arr -> arr > dep) arrivalTimes)
-                            |> Maybe.withDefault False
-                   )
-
-        departingFromStation =
-            timetableRows
-                |> List.filterMap
-                    (\a ->
-                        if a.stationShortCode == from && a.rowType == Departure then
-                            Just a.scheduledTime
-
-                        else
-                            Nothing
-                    )
-                |> List.head
+        homeStationDeparture =
+            findTimetableRow Departure from stoppingRows
     in
-    if trainCategory == "Commuter" && rightDirection then
-        departingFromStation
-            |> Maybe.map (succeed << Just << Train trainNumber lineId timetableRows runningCurrently cancelled)
+    if trainCategory == "Commuter" && isRightDirection stoppingRows to homeStationDeparture then
+        Maybe.map3
+            (\arr dep end ->
+                { trainNumber = trainNumber
+                , lineId = lineId
+                , runningCurrently = runningCurrently
+                , cancelled = cancelled
+                , currentStation = findCurrentStation timetableRows
+                , homeStationArrival = arr
+                , homeStationDeparture = dep
+                , endStationArrival = end
+                }
+                    |> Just
+                    |> succeed
+            )
+            (findTimetableRow Arrival from stoppingRows)
+            homeStationDeparture
+            (findTimetableRow Arrival to (List.reverse timetableRows))
             |> Maybe.withDefault (succeed Nothing)
 
     else
         succeed Nothing
+
+
+findTimetableRow : RowType -> String -> List TimetableRow -> Maybe TimetableRow
+findTimetableRow rowType shortCode rows =
+    rows
+        |> List.filter
+            (\row -> row.stationShortCode == shortCode && row.rowType == rowType)
+        |> List.head
+
+
+isRightDirection : List TimetableRow -> String -> Maybe TimetableRow -> Bool
+isRightDirection rows toShortCode departureRow =
+    case departureRow of
+        Nothing ->
+            False
+
+        Just departure ->
+            rows
+                |> List.filter
+                    (\row -> row.stationShortCode == toShortCode && row.rowType == Arrival)
+                |> List.any
+                    (\arr -> Time.posixToMillis arr.scheduledTime > Time.posixToMillis departure.scheduledTime)
+
+
+findCurrentStation : List TimetableRow -> Maybe CurrentStation
+findCurrentStation rows =
+    rows
+        |> List.filter (.actualTime >> (/=) Nothing)
+        |> List.reverse
+        |> List.head
+        |> Maybe.andThen
+            (\row ->
+                Maybe.map2
+                    (\actualTime differenceInMinutes ->
+                        { stationShortCode = row.stationShortCode
+                        , stationUICCode = row.stationUICCode
+                        , rowType = row.rowType
+                        , actualTime = actualTime
+                        , differenceInMinutes = differenceInMinutes
+                        }
+                    )
+                    row.actualTime
+                    row.differenceInMinutes
+            )
 
 
 timetableRowsDecoder : Decoder (List TimetableRow)
@@ -196,7 +228,7 @@ dateDecoder =
         |> andThen
             (\str ->
                 str
-                    |> Vendor.Iso8601.toTime
+                    |> Iso8601.toTime
                     |> Result.map succeed
                     |> Result.withDefault (fail ("Parsing date '" ++ str ++ "' failed"))
             )
