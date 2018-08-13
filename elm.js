@@ -6678,10 +6678,11 @@ var author$project$Model$timetableRowsDecoder = elm$json$Json$Decode$list(
 					NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required,
 					'type',
 					author$project$Model$rowTypeDecoder,
-					A3(
-						NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required,
+					A4(
+						NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$optional,
 						'commercialTrack',
-						elm$json$Json$Decode$string,
+						elm$json$Json$Decode$maybe(elm$json$Json$Decode$string),
+						elm$core$Maybe$Nothing,
 						A3(
 							NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required,
 							'stationUICCode',
@@ -8779,7 +8780,8 @@ var author$project$View$stationRow = F3(
 						]),
 					_List_fromArray(
 						[
-							elm$html$Html$text(station.bP)
+							elm$html$Html$text(
+							A2(elm$core$Maybe$withDefault, '-', station.bP))
 						]))
 				]));
 	});
