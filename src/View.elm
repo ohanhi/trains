@@ -196,14 +196,18 @@ trainRow :
 trainRow { zone, stations, currentTime } ( from, to ) train =
     let
         homeStationArrivingIn =
-            case train.homeStationArrival.liveEstimateTime of
-                Just estimate ->
-                    prettyDiff estimate
-                        |> Maybe.map LiveEstimate
+            train.homeStationArrival
+                |> Maybe.andThen
+                    (\arrival ->
+                        case arrival.liveEstimateTime of
+                            Just estimate ->
+                                prettyDiff estimate
+                                    |> Maybe.map LiveEstimate
 
-                Nothing ->
-                    prettyDiff train.homeStationArrival.scheduledTime
-                        |> Maybe.map ScheduleEstimate
+                            Nothing ->
+                                prettyDiff arrival.scheduledTime
+                                    |> Maybe.map ScheduleEstimate
+                    )
 
         prettyDiff date =
             (Time.posixToMillis date - Time.posixToMillis currentTime)

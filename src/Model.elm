@@ -33,7 +33,7 @@ type alias Train =
     , runningCurrently : Bool
     , cancelled : Bool
     , currentStation : Maybe CurrentStation
-    , homeStationArrival : TimetableRow
+    , homeStationArrival : Maybe TimetableRow
     , homeStationDeparture : TimetableRow
     , endStationArrival : TimetableRow
     }
@@ -127,7 +127,7 @@ sortedTrainList trains =
     trains
         |> Dict.values
         |> List.sortBy
-            (\train -> Time.posixToMillis train.homeStationArrival.scheduledTime)
+            (\train -> Time.posixToMillis train.homeStationDeparture.scheduledTime)
 
 
 toTrain : ( String, String ) -> TrainRaw -> Decoder (Maybe Train)
@@ -140,21 +140,20 @@ toTrain ( from, to ) { trainNumber, lineId, trainCategory, timetableRows, runnin
             findTimetableRow Departure from stoppingRows
     in
     if trainCategory == "Commuter" && isRightDirection stoppingRows to homeStationDeparture then
-        Maybe.map3
-            (\arr dep end ->
+        Maybe.map2
+            (\dep end ->
                 { trainNumber = trainNumber
                 , lineId = lineId
                 , runningCurrently = runningCurrently
                 , cancelled = cancelled
                 , currentStation = findCurrentStation timetableRows
-                , homeStationArrival = arr
+                , homeStationArrival = findTimetableRow Arrival from stoppingRows
                 , homeStationDeparture = dep
                 , endStationArrival = end
                 }
                     |> Just
                     |> succeed
             )
-            (findTimetableRow Arrival from stoppingRows)
             homeStationDeparture
             (findTimetableRow Arrival to (List.reverse timetableRows))
             |> Maybe.withDefault (succeed Nothing)
