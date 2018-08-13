@@ -7,7 +7,8 @@
     "test": "elm-test",
     "serve": "python -m SimpleHTTPServer 8000",
     "build": "elm make src/Main.elm --output=elm.js --optimize",
-    "build-dev": "elm make src/Main.elm --output=elm.js"
+    "build-dev": "elm make src/Main.elm --output=elm.js",
+    "build-debug": "elm make src/Main.elm --debug --output=elm.js"
   },
   "repository": {
     "type": "git",
