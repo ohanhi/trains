@@ -293,7 +293,7 @@ stationRow zone stations station =
                 div [ class "train-stations-estimate" ]
                     [ text <| prettyTime zone station.scheduledTime ]
         , div [ class "train-stations-name" ] [ text name ]
-        , div [ class "train-stations-track" ] [ text station.track ]
+        , div [ class "train-stations-track" ] [ text (Maybe.withDefault "-" station.track) ]
         ]
 
 
