@@ -6825,26 +6825,6 @@ var author$project$Model$isRightDirection = F3(
 					rows));
 		}
 	});
-var elm$core$Maybe$map3 = F4(
-	function (func, ma, mb, mc) {
-		if (ma.$ === 1) {
-			return elm$core$Maybe$Nothing;
-		} else {
-			var a = ma.a;
-			if (mb.$ === 1) {
-				return elm$core$Maybe$Nothing;
-			} else {
-				var b = mb.a;
-				if (mc.$ === 1) {
-					return elm$core$Maybe$Nothing;
-				} else {
-					var c = mc.a;
-					return elm$core$Maybe$Just(
-						A3(func, a, b, c));
-				}
-			}
-		}
-	});
 var elm$core$Maybe$withDefault = F2(
 	function (_default, maybe) {
 		if (!maybe.$) {
@@ -6874,24 +6854,23 @@ var author$project$Model$toTrain = F2(
 		return ((trainCategory === 'Commuter') && A3(author$project$Model$isRightDirection, stoppingRows, to, homeStationDeparture)) ? A2(
 			elm$core$Maybe$withDefault,
 			elm$json$Json$Decode$succeed(elm$core$Maybe$Nothing),
-			A4(
-				elm$core$Maybe$map3,
-				F3(
-					function (arr, dep, end) {
+			A3(
+				elm$core$Maybe$map2,
+				F2(
+					function (dep, end) {
 						return elm$json$Json$Decode$succeed(
 							elm$core$Maybe$Just(
 								{
 									P: cancelled,
 									aH: author$project$Model$findCurrentStation(timetableRows),
 									aL: end,
-									ac: arr,
-									aR: dep,
+									aR: A3(author$project$Model$findTimetableRow, 1, from, stoppingRows),
+									ac: dep,
 									S: lineId,
 									T: runningCurrently,
 									M: trainNumber
 								}));
 					}),
-				A3(author$project$Model$findTimetableRow, 1, from, stoppingRows),
 				homeStationDeparture,
 				A3(
 					author$project$Model$findTimetableRow,
@@ -8862,21 +8841,24 @@ var author$project$View$trainRow = F3(
 					0,
 					elm$time$Time$posixToMillis(date) - elm$time$Time$posixToMillis(currentTime)));
 		};
-		var homeStationArrivingIn = function () {
-			var _n4 = train.ac.bF;
-			if (!_n4.$) {
-				var estimate = _n4.a;
-				return A2(
-					elm$core$Maybe$map,
-					author$project$View$LiveEstimate,
-					prettyDiff(estimate));
-			} else {
-				return A2(
-					elm$core$Maybe$map,
-					author$project$View$ScheduleEstimate,
-					prettyDiff(train.ac.U));
-			}
-		}();
+		var homeStationArrivingIn = A2(
+			elm$core$Maybe$andThen,
+			function (arrival) {
+				var _n4 = arrival.bF;
+				if (!_n4.$) {
+					var estimate = _n4.a;
+					return A2(
+						elm$core$Maybe$map,
+						author$project$View$LiveEstimate,
+						prettyDiff(estimate));
+				} else {
+					return A2(
+						elm$core$Maybe$map,
+						author$project$View$ScheduleEstimate,
+						prettyDiff(arrival.U));
+				}
+			},
+			train.aR);
 		return A2(
 			elm$html$Html$div,
 			_List_fromArray(
@@ -8916,7 +8898,7 @@ var author$project$View$trainRow = F3(
 								]),
 							_List_fromArray(
 								[
-									A3(author$project$View$stationRow, zone, stations, train.aR),
+									A3(author$project$View$stationRow, zone, stations, train.ac),
 									A2(
 									elm$html$Html$div,
 									_List_fromArray(
