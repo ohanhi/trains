@@ -458,8 +458,8 @@ function _Debug_crash_UNUSED(identifier, fact1, fact2, fact3, fact4)
 			throw new Error('Browser.application programs cannot handle URLs like this:\n\n    ' + document.location.href + '\n\nWhat is the root? The root of your file system? Try looking at this program with `elm reactor` or some other server.');
 
 		case 2:
-			var message = fact1;
-			throw new Error('Problem with the flags given to your Elm program on initialization.\n\n' + message);
+			var jsonErrorString = fact1;
+			throw new Error('Problem with the flags given to your Elm program on initialization.\n\n' + jsonErrorString);
 
 		case 3:
 			var portName = fact1;
@@ -987,12 +987,12 @@ var _Http_toTask = F2(function(request, maybeProgress)
 			callback(_Scheduler_fail(elm$http$Http$Timeout));
 		});
 		xhr.addEventListener('load', function() {
-			callback(_Http_handleResponse(xhr, request.aa.a));
+			callback(_Http_handleResponse(xhr, request.ab.a));
 		});
 
 		try
 		{
-			xhr.open(request.al, request.bR, true);
+			xhr.open(request.am, request.bR, true);
 		}
 		catch (e)
 		{
@@ -1001,7 +1001,7 @@ var _Http_toTask = F2(function(request, maybeProgress)
 
 		_Http_configureRequest(xhr, request);
 
-		var body = request.Y;
+		var body = request.Z;
 		xhr.send(elm$http$Http$Internal$isStringBody(body)
 			? (xhr.setRequestHeader('Content-Type', body.a), body.b)
 			: body.a
@@ -1032,12 +1032,12 @@ function _Http_configureProgress(xhr, maybeProgress)
 
 function _Http_configureRequest(xhr, request)
 {
-	for (var headers = request.R; headers.b; headers = headers.b) // WHILE_CONS
+	for (var headers = request.S; headers.b; headers = headers.b) // WHILE_CONS
 	{
 		xhr.setRequestHeader(headers.a.a, headers.a.b);
 	}
 
-	xhr.responseType = request.aa.b;
+	xhr.responseType = request.ab.b;
 	xhr.withCredentials = request.aC;
 
 	elm$core$Maybe$isJust(request.az) && (xhr.timeout = request.az.a);
@@ -1074,8 +1074,8 @@ function _Http_toResponse(xhr)
 	return {
 		bR: xhr.responseURL,
 		bN: { bv: xhr.status, o: xhr.statusText },
-		R: _Http_parseHeaders(xhr.getAllResponseHeaders()),
-		Y: xhr.response
+		S: _Http_parseHeaders(xhr.getAllResponseHeaders()),
+		Z: xhr.response
 	};
 }
 
@@ -1210,6 +1210,375 @@ var _Basics_and = F2(function(a, b) { return a && b; });
 var _Basics_or  = F2(function(a, b) { return a || b; });
 var _Basics_xor = F2(function(a, b) { return a !== b; });
 
+
+
+function _Char_toCode(char)
+{
+	var code = char.charCodeAt(0);
+	if (0xD800 <= code && code <= 0xDBFF)
+	{
+		return (code - 0xD800) * 0x400 + char.charCodeAt(1) - 0xDC00 + 0x10000
+	}
+	return code;
+}
+
+function _Char_fromCode(code)
+{
+	return _Utils_chr(
+		(code < 0 || 0x10FFFF < code)
+			? '\uFFFD'
+			:
+		(code <= 0xFFFF)
+			? String.fromCharCode(code)
+			:
+		(code -= 0x10000,
+			String.fromCharCode(Math.floor(code / 0x400) + 0xD800)
+			+
+			String.fromCharCode(code % 0x400 + 0xDC00)
+		)
+	);
+}
+
+function _Char_toUpper(char)
+{
+	return _Utils_chr(char.toUpperCase());
+}
+
+function _Char_toLower(char)
+{
+	return _Utils_chr(char.toLowerCase());
+}
+
+function _Char_toLocaleUpper(char)
+{
+	return _Utils_chr(char.toLocaleUpperCase());
+}
+
+function _Char_toLocaleLower(char)
+{
+	return _Utils_chr(char.toLocaleLowerCase());
+}
+
+
+
+var _String_cons = F2(function(chr, str)
+{
+	return chr + str;
+});
+
+function _String_uncons(string)
+{
+	var word = string.charCodeAt(0);
+	return word
+		? elm$core$Maybe$Just(
+			0xD800 <= word && word <= 0xDBFF
+				? _Utils_Tuple2(_Utils_chr(string[0] + string[1]), string.slice(2))
+				: _Utils_Tuple2(_Utils_chr(string[0]), string.slice(1))
+		)
+		: elm$core$Maybe$Nothing;
+}
+
+var _String_append = F2(function(a, b)
+{
+	return a + b;
+});
+
+function _String_length(str)
+{
+	return str.length;
+}
+
+var _String_map = F2(function(func, string)
+{
+	var len = string.length;
+	var array = new Array(len);
+	var i = 0;
+	while (i < len)
+	{
+		var word = string.charCodeAt(i);
+		if (0xD800 <= word && word <= 0xDBFF)
+		{
+			array[i] = func(_Utils_chr(string[i] + string[i+1]));
+			i += 2;
+			continue;
+		}
+		array[i] = func(_Utils_chr(string[i]));
+		i++;
+	}
+	return array.join('');
+});
+
+var _String_filter = F2(function(isGood, str)
+{
+	var arr = [];
+	var len = str.length;
+	var i = 0;
+	while (i < len)
+	{
+		var char = str[i];
+		var word = str.charCodeAt(i);
+		i++;
+		if (0xD800 <= word && word <= 0xDBFF)
+		{
+			char += str[i];
+			i++;
+		}
+
+		if (isGood(_Utils_chr(char)))
+		{
+			arr.push(char);
+		}
+	}
+	return arr.join('');
+});
+
+function _String_reverse(str)
+{
+	var len = str.length;
+	var arr = new Array(len);
+	var i = 0;
+	while (i < len)
+	{
+		var word = str.charCodeAt(i);
+		if (0xD800 <= word && word <= 0xDBFF)
+		{
+			arr[len - i] = str[i + 1];
+			i++;
+			arr[len - i] = str[i - 1];
+			i++;
+		}
+		else
+		{
+			arr[len - i] = str[i];
+			i++;
+		}
+	}
+	return arr.join('');
+}
+
+var _String_foldl = F3(function(func, state, string)
+{
+	var len = string.length;
+	var i = 0;
+	while (i < len)
+	{
+		var char = string[i];
+		var word = string.charCodeAt(i);
+		i++;
+		if (0xD800 <= word && word <= 0xDBFF)
+		{
+			char += string[i];
+			i++;
+		}
+		state = A2(func, _Utils_chr(char), state);
+	}
+	return state;
+});
+
+var _String_foldr = F3(function(func, state, string)
+{
+	var i = string.length;
+	while (i--)
+	{
+		var char = string[i];
+		var word = string.charCodeAt(i);
+		if (0xDC00 <= word && word <= 0xDFFF)
+		{
+			i--;
+			char = string[i] + char;
+		}
+		state = A2(func, _Utils_chr(char), state);
+	}
+	return state;
+});
+
+var _String_split = F2(function(sep, str)
+{
+	return str.split(sep);
+});
+
+var _String_join = F2(function(sep, strs)
+{
+	return strs.join(sep);
+});
+
+var _String_slice = F3(function(start, end, str) {
+	return str.slice(start, end);
+});
+
+function _String_trim(str)
+{
+	return str.trim();
+}
+
+function _String_trimLeft(str)
+{
+	return str.replace(/^\s+/, '');
+}
+
+function _String_trimRight(str)
+{
+	return str.replace(/\s+$/, '');
+}
+
+function _String_words(str)
+{
+	return _List_fromArray(str.trim().split(/\s+/g));
+}
+
+function _String_lines(str)
+{
+	return _List_fromArray(str.split(/\r\n|\r|\n/g));
+}
+
+function _String_toUpper(str)
+{
+	return str.toUpperCase();
+}
+
+function _String_toLower(str)
+{
+	return str.toLowerCase();
+}
+
+var _String_any = F2(function(isGood, string)
+{
+	var i = string.length;
+	while (i--)
+	{
+		var char = string[i];
+		var word = string.charCodeAt(i);
+		if (0xDC00 <= word && word <= 0xDFFF)
+		{
+			i--;
+			char = string[i] + char;
+		}
+		if (isGood(_Utils_chr(char)))
+		{
+			return true;
+		}
+	}
+	return false;
+});
+
+var _String_all = F2(function(isGood, string)
+{
+	var i = string.length;
+	while (i--)
+	{
+		var char = string[i];
+		var word = string.charCodeAt(i);
+		if (0xDC00 <= word && word <= 0xDFFF)
+		{
+			i--;
+			char = string[i] + char;
+		}
+		if (!isGood(_Utils_chr(char)))
+		{
+			return false;
+		}
+	}
+	return true;
+});
+
+var _String_contains = F2(function(sub, str)
+{
+	return str.indexOf(sub) > -1;
+});
+
+var _String_startsWith = F2(function(sub, str)
+{
+	return str.indexOf(sub) === 0;
+});
+
+var _String_endsWith = F2(function(sub, str)
+{
+	return str.length >= sub.length &&
+		str.lastIndexOf(sub) === str.length - sub.length;
+});
+
+var _String_indexes = F2(function(sub, str)
+{
+	var subLen = sub.length;
+
+	if (subLen < 1)
+	{
+		return _List_Nil;
+	}
+
+	var i = 0;
+	var is = [];
+
+	while ((i = str.indexOf(sub, i)) > -1)
+	{
+		is.push(i);
+		i = i + subLen;
+	}
+
+	return _List_fromArray(is);
+});
+
+
+// TO STRING
+
+function _String_fromNumber(number)
+{
+	return number + '';
+}
+
+
+// INT CONVERSIONS
+
+function _String_toInt(str)
+{
+	var total = 0;
+	var code0 = str.charCodeAt(0);
+	var start = code0 == 0x2B /* + */ || code0 == 0x2D /* - */ ? 1 : 0;
+
+	for (var i = start; i < str.length; ++i)
+	{
+		var code = str.charCodeAt(i);
+		if (code < 0x30 || 0x39 < code)
+		{
+			return elm$core$Maybe$Nothing;
+		}
+		total = 10 * total + code - 0x30;
+	}
+
+	return i == start
+		? elm$core$Maybe$Nothing
+		: elm$core$Maybe$Just(code0 == 0x2D ? -total : total);
+}
+
+
+// FLOAT CONVERSIONS
+
+function _String_toFloat(s)
+{
+	// check if it is a hex, octal, or binary number
+	if (s.length === 0 || /[\sxbo]/.test(s))
+	{
+		return elm$core$Maybe$Nothing;
+	}
+	var n = +s;
+	// faster isNaN check
+	return n === n ? elm$core$Maybe$Just(n) : elm$core$Maybe$Nothing;
+}
+
+function _String_fromList(chars)
+{
+	return _List_toArray(chars).join('');
+}
+
+
+
+
+/**_UNUSED/
+function _Json_errorToString(error)
+{
+	return elm$json$Json$Decode$errorToString(error);
+}
+//*/
 
 
 // CORE DECODERS
@@ -1601,7 +1970,7 @@ function _Json_listEquality(aDecoders, bDecoders)
 
 var _Json_encode = F2(function(indentLevel, value)
 {
-	return JSON.stringify(_Json_unwrap(value), null, indentLevel);
+	return JSON.stringify(_Json_unwrap(value), null, indentLevel) + '';
 });
 
 function _Json_wrap_UNUSED(value) { return { $: 0, a: value }; }
@@ -1629,367 +1998,6 @@ function _Json_addEntry(func)
 }
 
 var _Json_encodeNull = _Json_wrap(null);
-
-
-
-function _Char_toCode(char)
-{
-	var code = char.charCodeAt(0);
-	if (0xD800 <= code && code <= 0xDBFF)
-	{
-		return (code - 0xD800) * 0x400 + char.charCodeAt(1) - 0xDC00 + 0x10000
-	}
-	return code;
-}
-
-function _Char_fromCode(code)
-{
-	return _Utils_chr(
-		(code < 0 || 0x10FFFF < code)
-			? '\uFFFD'
-			:
-		(code <= 0xFFFF)
-			? String.fromCharCode(code)
-			:
-		(code -= 0x10000,
-			String.fromCharCode(Math.floor(code / 0x400) + 0xD800)
-			+
-			String.fromCharCode(code % 0x400 + 0xDC00)
-		)
-	);
-}
-
-function _Char_toUpper(char)
-{
-	return _Utils_chr(char.toUpperCase());
-}
-
-function _Char_toLower(char)
-{
-	return _Utils_chr(char.toLowerCase());
-}
-
-function _Char_toLocaleUpper(char)
-{
-	return _Utils_chr(char.toLocaleUpperCase());
-}
-
-function _Char_toLocaleLower(char)
-{
-	return _Utils_chr(char.toLocaleLowerCase());
-}
-
-
-
-var _String_cons = F2(function(chr, str)
-{
-	return chr + str;
-});
-
-function _String_uncons(string)
-{
-	var word = string.charCodeAt(0);
-	return word
-		? elm$core$Maybe$Just(
-			0xD800 <= word && word <= 0xDBFF
-				? _Utils_Tuple2(_Utils_chr(string[0] + string[1]), string.slice(2))
-				: _Utils_Tuple2(_Utils_chr(string[0]), string.slice(1))
-		)
-		: elm$core$Maybe$Nothing;
-}
-
-var _String_append = F2(function(a, b)
-{
-	return a + b;
-});
-
-function _String_length(str)
-{
-	return str.length;
-}
-
-var _String_map = F2(function(func, string)
-{
-	var len = string.length;
-	var array = new Array(len);
-	var i = 0;
-	while (i < len)
-	{
-		var word = string.charCodeAt(i);
-		if (0xD800 <= word && word <= 0xDBFF)
-		{
-			array[i] = func(_Utils_chr(string[i] + string[i+1]));
-			i += 2;
-			continue;
-		}
-		array[i] = func(_Utils_chr(string[i]));
-		i++;
-	}
-	return array.join('');
-});
-
-var _String_filter = F2(function(isGood, str)
-{
-	var arr = [];
-	var len = str.length;
-	var i = 0;
-	while (i < len)
-	{
-		var char = str[i];
-		var word = str.charCodeAt(i);
-		i++;
-		if (0xD800 <= word && word <= 0xDBFF)
-		{
-			char += str[i];
-			i++;
-		}
-
-		if (isGood(_Utils_chr(char)))
-		{
-			arr.push(char);
-		}
-	}
-	return arr.join('');
-});
-
-function _String_reverse(str)
-{
-	var len = str.length;
-	var arr = new Array(len);
-	var i = 0;
-	while (i < len)
-	{
-		var word = str.charCodeAt(i);
-		if (0xD800 <= word && word <= 0xDBFF)
-		{
-			arr[len - i] = str[i + 1];
-			i++;
-			arr[len - i] = str[i - 1];
-			i++;
-		}
-		else
-		{
-			arr[len - i] = str[i];
-			i++;
-		}
-	}
-	return arr.join('');
-}
-
-var _String_foldl = F3(function(func, state, string)
-{
-	var len = string.length;
-	var i = 0;
-	while (i < len)
-	{
-		var char = string[i];
-		var word = string.charCodeAt(i);
-		i++;
-		if (0xD800 <= word && word <= 0xDBFF)
-		{
-			char += string[i];
-			i++;
-		}
-		state = A2(func, _Utils_chr(char), state);
-	}
-	return state;
-});
-
-var _String_foldr = F3(function(func, state, string)
-{
-	var i = string.length;
-	while (i--)
-	{
-		var char = string[i];
-		var word = string.charCodeAt(i);
-		if (0xDC00 <= word && word <= 0xDFFF)
-		{
-			i--;
-			char = string[i] + char;
-		}
-		state = A2(func, _Utils_chr(char), state);
-	}
-	return state;
-});
-
-var _String_split = F2(function(sep, str)
-{
-	return str.split(sep);
-});
-
-var _String_join = F2(function(sep, strs)
-{
-	return strs.join(sep);
-});
-
-var _String_slice = F3(function(start, end, str) {
-	return str.slice(start, end);
-});
-
-function _String_trim(str)
-{
-	return str.trim();
-}
-
-function _String_trimLeft(str)
-{
-	return str.replace(/^\s+/, '');
-}
-
-function _String_trimRight(str)
-{
-	return str.replace(/\s+$/, '');
-}
-
-function _String_words(str)
-{
-	return _List_fromArray(str.trim().split(/\s+/g));
-}
-
-function _String_lines(str)
-{
-	return _List_fromArray(str.split(/\r\n|\r|\n/g));
-}
-
-function _String_toUpper(str)
-{
-	return str.toUpperCase();
-}
-
-function _String_toLower(str)
-{
-	return str.toLowerCase();
-}
-
-var _String_any = F2(function(isGood, string)
-{
-	var i = string.length;
-	while (i--)
-	{
-		var char = string[i];
-		var word = string.charCodeAt(i);
-		if (0xDC00 <= word && word <= 0xDFFF)
-		{
-			i--;
-			char = string[i] + char;
-		}
-		if (isGood(_Utils_chr(char)))
-		{
-			return true;
-		}
-	}
-	return false;
-});
-
-var _String_all = F2(function(isGood, string)
-{
-	var i = string.length;
-	while (i--)
-	{
-		var char = string[i];
-		var word = string.charCodeAt(i);
-		if (0xDC00 <= word && word <= 0xDFFF)
-		{
-			i--;
-			char = string[i] + char;
-		}
-		if (!isGood(_Utils_chr(char)))
-		{
-			return false;
-		}
-	}
-	return true;
-});
-
-var _String_contains = F2(function(sub, str)
-{
-	return str.indexOf(sub) > -1;
-});
-
-var _String_startsWith = F2(function(sub, str)
-{
-	return str.indexOf(sub) === 0;
-});
-
-var _String_endsWith = F2(function(sub, str)
-{
-	return str.length >= sub.length &&
-		str.lastIndexOf(sub) === str.length - sub.length;
-});
-
-var _String_indexes = F2(function(sub, str)
-{
-	var subLen = sub.length;
-
-	if (subLen < 1)
-	{
-		return _List_Nil;
-	}
-
-	var i = 0;
-	var is = [];
-
-	while ((i = str.indexOf(sub, i)) > -1)
-	{
-		is.push(i);
-		i = i + subLen;
-	}
-
-	return _List_fromArray(is);
-});
-
-
-// TO STRING
-
-function _String_fromNumber(number)
-{
-	return number + '';
-}
-
-
-// INT CONVERSIONS
-
-function _String_toInt(str)
-{
-	var total = 0;
-	var code0 = str.charCodeAt(0);
-	var start = code0 == 0x2B /* + */ || code0 == 0x2D /* - */ ? 1 : 0;
-
-	for (var i = start; i < str.length; ++i)
-	{
-		var code = str.charCodeAt(i);
-		if (code < 0x30 || 0x39 < code)
-		{
-			return elm$core$Maybe$Nothing;
-		}
-		total = 10 * total + code - 0x30;
-	}
-
-	return i == start
-		? elm$core$Maybe$Nothing
-		: elm$core$Maybe$Just(code0 == 0x2D ? -total : total);
-}
-
-
-// FLOAT CONVERSIONS
-
-function _String_toFloat(s)
-{
-	// check if it is a hex, octal, or binary number
-	if (s.length === 0 || /[\sxbo]/.test(s))
-	{
-		return elm$core$Maybe$Nothing;
-	}
-	var n = +s;
-	// faster isNaN check
-	return n === n ? elm$core$Maybe$Just(n) : elm$core$Maybe$Nothing;
-}
-
-function _String_fromList(chars)
-{
-	return _List_toArray(chars).join('');
-}
-
 
 
 
@@ -2030,7 +2038,7 @@ var _Platform_worker = F4(function(impl, flagDecoder, debugMetadata, args)
 function _Platform_initialize(flagDecoder, args, init, update, subscriptions, stepperBuilder)
 {
 	var result = A2(_Json_run, flagDecoder, _Json_wrap(args ? args['flags'] : undefined));
-	elm$core$Result$isOk(result) || _Debug_crash(2, result.a);
+	elm$core$Result$isOk(result) || _Debug_crash(2 /**_UNUSED/, _Json_errorToString(result.a) /**/);
 	var managers = {};
 	result = init(result.a);
 	var model = result.a;
@@ -2943,12 +2951,12 @@ function _VirtualDom_noInnerHtmlOrFormAction(key)
 
 function _VirtualDom_noJavaScriptUri(value)
 {
-	return /^\s*javascript:/i.test(value) ? '' : value;
+	return /^javascript:/i.test(value.replace(/\s/g,'')) ? '' : value;
 }
 
 function _VirtualDom_noJavaScriptUri_UNUSED(value)
 {
-	return /^\s*javascript:/i.test(value)
+	return /^javascript:/i.test(value.replace(/\s/g,''))
 		? 'javascript:alert("This is an XSS vector. Please use ports or web components instead.")'
 		: value;
 }
@@ -3012,7 +3020,7 @@ var _VirtualDom_mapEventRecord = F2(function(func, record)
 	return {
 		o: func(record.o),
 		ay: record.ay,
-		an: record.an
+		ao: record.ao
 	}
 });
 
@@ -3145,7 +3153,7 @@ function _VirtualDom_applyFacts(domNode, eventNode, facts)
 		key === 'a4'
 			? _VirtualDom_applyAttrsNS(domNode, value)
 			:
-		(key !== 'value' || domNode[key] !== value) && (domNode[key] = value);
+		(key !== 'value' || key !== 'checked' || domNode[key] !== value) && (domNode[key] = value);
 	}
 }
 
@@ -3284,7 +3292,7 @@ function _VirtualDom_makeCallback(eventNode, initialHandler)
 		var stopPropagation = tag == 1 ? value.b : tag == 3 && value.ay;
 		var currentEventNode = (
 			stopPropagation && event.stopPropagation(),
-			(tag == 2 ? value.b : tag == 3 && value.an) && event.preventDefault(),
+			(tag == 2 ? value.b : tag == 3 && value.ao) && event.preventDefault(),
 			eventNode
 		);
 		var tagger;
@@ -3561,7 +3569,7 @@ function _VirtualDom_diffFacts(x, y, category)
 		var yValue = y[xKey];
 
 		// reference equal, so don't worry about it
-		if (xValue === yValue && xKey !== 'value'
+		if (xValue === yValue && xKey !== 'value' && xKey !== 'checked'
 			|| category === 'a0' && _VirtualDom_equalEvents(xValue, yValue))
 		{
 			continue;
@@ -4270,7 +4278,7 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 		impl.bQ,
 		impl.bO,
 		function(sendToApp, initialModel) {
-			var divertHrefToApp = impl.aq && impl.aq(sendToApp)
+			var divertHrefToApp = impl.I && impl.I(sendToApp)
 			var view = impl.bS;
 			var title = _VirtualDom_doc.title;
 			var bodyNode = _VirtualDom_doc.body;
@@ -4279,7 +4287,7 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 			{
 				_VirtualDom_divertHrefToApp = divertHrefToApp;
 				var doc = view(model);
-				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.Y);
+				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.Z);
 				var patches = _VirtualDom_diff(currNode, nextNode);
 				bodyNode = _VirtualDom_applyPatches(bodyNode, currNode, patches, sendToApp);
 				currNode = nextNode;
@@ -4335,25 +4343,20 @@ function _Browser_makeAnimator(model, draw)
 
 function _Browser_application(impl)
 {
-	var key = {};
 	var onUrlChange = impl.bH;
 	var onUrlRequest = impl.bI;
+	var key = function() { key.a(onUrlChange(_Browser_getUrl())); };
+
 	return _Browser_document({
-		aq: function(sendToApp)
+		I: function(sendToApp)
 		{
-			function reportChange()
-			{
-				sendToApp(onUrlChange(_Browser_getUrl()));
-			}
-
-			key.a = reportChange;
-
-			_Browser_window.addEventListener('popstate', reportChange);
-			_Browser_window.navigator.userAgent.indexOf('Trident') < 0 || _Browser_window.addEventListener('hashchange', reportChange);
+			key.a = sendToApp;
+			_Browser_window.addEventListener('popstate', key);
+			_Browser_window.navigator.userAgent.indexOf('Trident') < 0 || _Browser_window.addEventListener('hashchange', key);
 
 			return F2(function(domNode, event)
 			{
-				if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button < 1 && !domNode.target)
+				if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button < 1 && !domNode.target && !domNode.download)
 				{
 					event.preventDefault();
 					var href = domNode.href;
@@ -4390,7 +4393,7 @@ var _Browser_go = F2(function(key, n)
 {
 	return A2(elm$core$Task$perform, elm$core$Basics$never, _Scheduler_binding(function() {
 		n && history.go(n);
-		key.a();
+		key();
 	}));
 });
 
@@ -4398,7 +4401,7 @@ var _Browser_pushUrl = F2(function(key, url)
 {
 	return A2(elm$core$Task$perform, elm$core$Basics$never, _Scheduler_binding(function() {
 		history.pushState({}, '', url);
-		key.a();
+		key();
 	}));
 });
 
@@ -4406,7 +4409,7 @@ var _Browser_replaceUrl = F2(function(key, url)
 {
 	return A2(elm$core$Task$perform, elm$core$Basics$never, _Scheduler_binding(function() {
 		history.replaceState({}, '', url);
-		key.a();
+		key();
 	}));
 });
 
@@ -4533,21 +4536,26 @@ var _Browser_call = F2(function(functionName, id)
 
 function _Browser_getViewport()
 {
-	var node = _Browser_doc.documentElement;
 	return {
-		bc: {
-			x: node.scrollWidth,
-			s: node.scrollHeight
-		},
+		bc: _Browser_getScene(),
 		bn: {
-			W: _Browser_window.pageXOffset,
-			X: _Browser_window.pageYOffset,
-			x: node.clientWidth,
-			s: node.clientHeight
+			X: _Browser_window.pageXOffset,
+			Y: _Browser_window.pageYOffset,
+			D: _Browser_doc.documentElement.clientWidth,
+			w: _Browser_doc.documentElement.clientHeight
 		}
 	};
 }
 
+function _Browser_getScene()
+{
+	var body = _Browser_doc.body;
+	var elem = _Browser_doc.documentElement;
+	return {
+		D: Math.max(body.scrollWidth, body.offsetWidth, elem.scrollWidth, elem.offsetWidth, elem.clientWidth),
+		w: Math.max(body.scrollHeight, body.offsetHeight, elem.scrollHeight, elem.offsetHeight, elem.clientHeight)
+	};
+}
 
 var _Browser_setViewport = F2(function(x, y)
 {
@@ -4569,14 +4577,14 @@ function _Browser_getViewportOf(id)
 	{
 		return {
 			bc: {
-				x: node.scrollWidth,
-				s: node.scrollHeight
+				D: node.scrollWidth,
+				w: node.scrollHeight
 			},
 			bn: {
-				W: node.scrollLeft,
-				X: node.scrollTop,
-				x: node.clientWidth,
-				s: node.clientHeight
+				X: node.scrollLeft,
+				Y: node.scrollTop,
+				D: node.clientWidth,
+				w: node.clientHeight
 			}
 		};
 	});
@@ -4606,21 +4614,18 @@ function _Browser_getElement(id)
 		var x = _Browser_window.pageXOffset;
 		var y = _Browser_window.pageYOffset;
 		return {
-			bc: {
-				x: node.scrollWidth,
-				s: node.scrollHeight
-			},
+			bc: _Browser_getScene(),
 			bn: {
-				W: x,
-				X: y,
-				x: node.clientWidth,
-				s: node.clientHeight
+				X: x,
+				Y: y,
+				D: _Browser_doc.documentElement.clientWidth,
+				w: _Browser_doc.documentElement.clientHeight
 			},
 			bx: {
-				W: x + rect.left,
-				X: y + rect.top,
-				x: rect.width,
-				s: rect.height
+				X: x + rect.left,
+				Y: y + rect.top,
+				D: rect.width,
+				w: rect.height
 			}
 		};
 	});
@@ -4744,7 +4749,7 @@ var elm$http$Http$Internal$Header = F2(
 var elm$http$Http$header = elm$http$Http$Internal$Header;
 var ohanhi$remotedata_http$RemoteData$Http$acceptJson = A2(elm$http$Http$header, 'Accept', 'application/json');
 var ohanhi$remotedata_http$RemoteData$Http$defaultConfig = {
-	R: _List_fromArray(
+	S: _List_fromArray(
 		[ohanhi$remotedata_http$RemoteData$Http$acceptJson]),
 	az: elm$core$Maybe$Nothing,
 	aC: false
@@ -5510,7 +5515,6 @@ var elm$json$Json$Decode$Index = F2(
 var elm$json$Json$Decode$OneOf = function (a) {
 	return {$: 2, a: a};
 };
-var elm$json$Json$Decode$decodeString = _Json_runOnString;
 var elm$core$Basics$and = _Basics_and;
 var elm$core$Basics$append = _Utils_append;
 var elm$core$Basics$or = _Basics_or;
@@ -5701,10 +5705,11 @@ var elm$json$Json$Decode$errorToStringHelp = F2(
 			}
 		}
 	});
+var elm$json$Json$Decode$decodeString = _Json_runOnString;
 var elm$http$Http$expectJson = function (decoder) {
 	return elm$http$Http$expectStringResponse(
 		function (response) {
-			var _n0 = A2(elm$json$Json$Decode$decodeString, decoder, response.Y);
+			var _n0 = A2(elm$json$Json$Decode$decodeString, decoder, response.Z);
 			if (_n0.$ === 1) {
 				var decodeError = _n0.a;
 				return elm$core$Result$Err(
@@ -5724,10 +5729,10 @@ var ohanhi$remotedata_http$RemoteData$Http$createRequest = F5(
 	function (config, method, url, successDecoder, body) {
 		return elm$http$Http$request(
 			{
-				Y: body,
-				aa: elm$http$Http$expectJson(successDecoder),
-				R: config.R,
-				al: method,
+				Z: body,
+				ab: elm$http$Http$expectJson(successDecoder),
+				S: config.S,
+				am: method,
 				az: config.az,
 				bR: url,
 				aC: config.aC
@@ -5938,12 +5943,12 @@ var ohanhi$remotedata_http$RemoteData$Http$getWithConfig = F4(
 	});
 var author$project$Main$get = ohanhi$remotedata_http$RemoteData$Http$getWithConfig(ohanhi$remotedata_http$RemoteData$Http$defaultConfig);
 var elm$json$Json$Decode$map2 = _Json_map2;
-var NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$custom = elm$json$Json$Decode$map2(elm$core$Basics$apR);
+var NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom = elm$json$Json$Decode$map2(elm$core$Basics$apR);
 var elm$json$Json$Decode$field = _Json_decodeField;
-var NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required = F3(
+var NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required = F3(
 	function (key, valDecoder, decoder) {
 		return A2(
-			NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$custom,
+			NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom,
 			A2(elm$json$Json$Decode$field, key, valDecoder),
 			decoder);
 	});
@@ -5983,7 +5988,7 @@ var author$project$Model$stationsDecoder = A2(
 	A2(elm$core$Basics$composeR, elm$core$Dict$fromList, elm$json$Json$Decode$succeed),
 	elm$json$Json$Decode$list(
 		A3(
-			NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required,
+			NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 			'stationName',
 			A2(
 				elm$json$Json$Decode$map,
@@ -5992,7 +5997,7 @@ var author$project$Model$stationsDecoder = A2(
 				},
 				elm$json$Json$Decode$string),
 			A3(
-				NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required,
+				NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 				'stationShortCode',
 				elm$json$Json$Decode$string,
 				elm$json$Json$Decode$succeed(
@@ -6009,14 +6014,14 @@ var author$project$Main$getStations = function () {
 }();
 var author$project$Model$TrainRaw = F6(
 	function (trainNumber, lineId, trainCategory, timetableRows, runningCurrently, cancelled) {
-		return {P: cancelled, S: lineId, T: runningCurrently, bj: timetableRows, bl: trainCategory, M: trainNumber};
+		return {Q: cancelled, T: lineId, U: runningCurrently, bj: timetableRows, bl: trainCategory, N: trainNumber};
 	});
 var elm$json$Json$Decode$decodeValue = _Json_run;
 var elm$json$Json$Decode$fail = _Json_fail;
 var elm$json$Json$Decode$null = _Json_decodeNull;
 var elm$json$Json$Decode$oneOf = _Json_oneOf;
 var elm$json$Json$Decode$value = _Json_decodeValue;
-var NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$optionalDecoder = F3(
+var NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optionalDecoder = F3(
 	function (pathDecoder, valDecoder, fallback) {
 		var nullOr = function (decoder) {
 			return elm$json$Json$Decode$oneOf(
@@ -6048,12 +6053,12 @@ var NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$optionalDecoder = F3(
 		};
 		return A2(elm$json$Json$Decode$andThen, handleResult, elm$json$Json$Decode$value);
 	});
-var NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$optional = F4(
+var NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional = F4(
 	function (key, valDecoder, fallback, decoder) {
 		return A2(
-			NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$custom,
+			NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom,
 			A3(
-				NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$optionalDecoder,
+				NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optionalDecoder,
 				A2(elm$json$Json$Decode$field, key, elm$json$Json$Decode$value),
 				valDecoder,
 				fallback),
@@ -6061,7 +6066,7 @@ var NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$optional = F4(
 	});
 var author$project$Model$TimetableRow = F9(
 	function (scheduledTime, trainStopping, stationShortCode, stationUICCode, track, rowType, actualTime, liveEstimateTime, differenceInMinutes) {
-		return {E: actualTime, Q: differenceInMinutes, bF: liveEstimateTime, A: rowType, U: scheduledTime, C: stationShortCode, V: stationUICCode, bP: track, bm: trainStopping};
+		return {E: actualTime, R: differenceInMinutes, bF: liveEstimateTime, z: rowType, V: scheduledTime, B: stationShortCode, W: stationUICCode, bP: track, bm: trainStopping};
 	});
 var elm$core$Result$withDefault = F2(
 	function (def, result) {
@@ -6313,7 +6318,7 @@ var elm$parser$Parser$symbol = function (str) {
 };
 var elm$time$Time$Posix = elm$core$Basics$identity;
 var elm$time$Time$millisToPosix = elm$core$Basics$identity;
-var rtfeldman$elm_iso8601$Iso8601$fromParts = F6(
+var rtfeldman$elm_iso8601_date_strings$Iso8601$fromParts = F6(
 	function (monthYearDayMs, hour, minute, second, ms, utcOffsetMinutes) {
 		return elm$time$Time$millisToPosix((((monthYearDayMs + (((hour * 60) * 60) * 1000)) + (((minute - utcOffsetMinutes) * 60) * 1000)) + (second * 1000)) + ms);
 	});
@@ -6439,7 +6444,7 @@ var elm$parser$Parser$problem = function (msg) {
 	return elm$parser$Parser$Advanced$problem(
 		elm$parser$Parser$Problem(msg));
 };
-var rtfeldman$elm_iso8601$Iso8601$paddedInt = function (quantity) {
+var rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt = function (quantity) {
 	return A2(
 		elm$parser$Parser$andThen,
 		function (str) {
@@ -6462,69 +6467,69 @@ var rtfeldman$elm_iso8601$Iso8601$paddedInt = function (quantity) {
 		elm$parser$Parser$getChompedString(
 			elm$parser$Parser$chompWhile(elm$core$Char$isDigit)));
 };
-var rtfeldman$elm_iso8601$Iso8601$epochYear = 1970;
-var rtfeldman$elm_iso8601$Iso8601$invalidDay = function (day) {
+var rtfeldman$elm_iso8601_date_strings$Iso8601$epochYear = 1970;
+var rtfeldman$elm_iso8601_date_strings$Iso8601$invalidDay = function (day) {
 	return elm$parser$Parser$problem(
 		'Invalid day: ' + elm$core$String$fromInt(day));
 };
 var elm$core$Basics$modBy = _Basics_modBy;
 var elm$core$Basics$neq = _Utils_notEqual;
-var rtfeldman$elm_iso8601$Iso8601$isLeapYear = function (year) {
+var rtfeldman$elm_iso8601_date_strings$Iso8601$isLeapYear = function (year) {
 	return (!A2(elm$core$Basics$modBy, 4, year)) && (A2(elm$core$Basics$modBy, 100, year) || (!A2(elm$core$Basics$modBy, 400, year)));
 };
-var rtfeldman$elm_iso8601$Iso8601$leapYearsBefore = function (y1) {
+var rtfeldman$elm_iso8601_date_strings$Iso8601$leapYearsBefore = function (y1) {
 	var y = y1 - 1;
 	return (((y / 4) | 0) - ((y / 100) | 0)) + ((y / 400) | 0);
 };
-var rtfeldman$elm_iso8601$Iso8601$msPerDay = 86400000;
-var rtfeldman$elm_iso8601$Iso8601$msPerYear = 31536000000;
-var rtfeldman$elm_iso8601$Iso8601$yearMonthDay = function (_n0) {
+var rtfeldman$elm_iso8601_date_strings$Iso8601$msPerDay = 86400000;
+var rtfeldman$elm_iso8601_date_strings$Iso8601$msPerYear = 31536000000;
+var rtfeldman$elm_iso8601_date_strings$Iso8601$yearMonthDay = function (_n0) {
 	var year = _n0.a;
 	var month = _n0.b;
 	var dayInMonth = _n0.c;
 	if (dayInMonth < 0) {
-		return rtfeldman$elm_iso8601$Iso8601$invalidDay(dayInMonth);
+		return rtfeldman$elm_iso8601_date_strings$Iso8601$invalidDay(dayInMonth);
 	} else {
 		var succeedWith = function (extraMs) {
-			var yearMs = rtfeldman$elm_iso8601$Iso8601$msPerYear * (year - rtfeldman$elm_iso8601$Iso8601$epochYear);
-			var days = ((month < 3) || (!rtfeldman$elm_iso8601$Iso8601$isLeapYear(year))) ? (dayInMonth - 1) : dayInMonth;
-			var dayMs = rtfeldman$elm_iso8601$Iso8601$msPerDay * (days + (rtfeldman$elm_iso8601$Iso8601$leapYearsBefore(year) - rtfeldman$elm_iso8601$Iso8601$leapYearsBefore(rtfeldman$elm_iso8601$Iso8601$epochYear)));
+			var yearMs = rtfeldman$elm_iso8601_date_strings$Iso8601$msPerYear * (year - rtfeldman$elm_iso8601_date_strings$Iso8601$epochYear);
+			var days = ((month < 3) || (!rtfeldman$elm_iso8601_date_strings$Iso8601$isLeapYear(year))) ? (dayInMonth - 1) : dayInMonth;
+			var dayMs = rtfeldman$elm_iso8601_date_strings$Iso8601$msPerDay * (days + (rtfeldman$elm_iso8601_date_strings$Iso8601$leapYearsBefore(year) - rtfeldman$elm_iso8601_date_strings$Iso8601$leapYearsBefore(rtfeldman$elm_iso8601_date_strings$Iso8601$epochYear)));
 			return elm$parser$Parser$succeed((extraMs + yearMs) + dayMs);
 		};
 		switch (month) {
 			case 1:
-				return (dayInMonth > 31) ? rtfeldman$elm_iso8601$Iso8601$invalidDay(dayInMonth) : succeedWith(0);
+				return (dayInMonth > 31) ? rtfeldman$elm_iso8601_date_strings$Iso8601$invalidDay(dayInMonth) : succeedWith(0);
 			case 2:
-				return ((dayInMonth > 29) || ((dayInMonth === 29) && (!rtfeldman$elm_iso8601$Iso8601$isLeapYear(year)))) ? rtfeldman$elm_iso8601$Iso8601$invalidDay(dayInMonth) : succeedWith(2678400000);
+				return ((dayInMonth > 29) || ((dayInMonth === 29) && (!rtfeldman$elm_iso8601_date_strings$Iso8601$isLeapYear(year)))) ? rtfeldman$elm_iso8601_date_strings$Iso8601$invalidDay(dayInMonth) : succeedWith(2678400000);
 			case 3:
-				return (dayInMonth > 31) ? rtfeldman$elm_iso8601$Iso8601$invalidDay(dayInMonth) : succeedWith(5097600000);
+				return (dayInMonth > 31) ? rtfeldman$elm_iso8601_date_strings$Iso8601$invalidDay(dayInMonth) : succeedWith(5097600000);
 			case 4:
-				return (dayInMonth > 30) ? rtfeldman$elm_iso8601$Iso8601$invalidDay(dayInMonth) : succeedWith(7776000000);
+				return (dayInMonth > 30) ? rtfeldman$elm_iso8601_date_strings$Iso8601$invalidDay(dayInMonth) : succeedWith(7776000000);
 			case 5:
-				return (dayInMonth > 31) ? rtfeldman$elm_iso8601$Iso8601$invalidDay(dayInMonth) : succeedWith(10368000000);
+				return (dayInMonth > 31) ? rtfeldman$elm_iso8601_date_strings$Iso8601$invalidDay(dayInMonth) : succeedWith(10368000000);
 			case 6:
-				return (dayInMonth > 30) ? rtfeldman$elm_iso8601$Iso8601$invalidDay(dayInMonth) : succeedWith(13046400000);
+				return (dayInMonth > 30) ? rtfeldman$elm_iso8601_date_strings$Iso8601$invalidDay(dayInMonth) : succeedWith(13046400000);
 			case 7:
-				return (dayInMonth > 31) ? rtfeldman$elm_iso8601$Iso8601$invalidDay(dayInMonth) : succeedWith(15638400000);
+				return (dayInMonth > 31) ? rtfeldman$elm_iso8601_date_strings$Iso8601$invalidDay(dayInMonth) : succeedWith(15638400000);
 			case 8:
-				return (dayInMonth > 31) ? rtfeldman$elm_iso8601$Iso8601$invalidDay(dayInMonth) : succeedWith(18316800000);
+				return (dayInMonth > 31) ? rtfeldman$elm_iso8601_date_strings$Iso8601$invalidDay(dayInMonth) : succeedWith(18316800000);
 			case 9:
-				return (dayInMonth > 30) ? rtfeldman$elm_iso8601$Iso8601$invalidDay(dayInMonth) : succeedWith(20995200000);
+				return (dayInMonth > 30) ? rtfeldman$elm_iso8601_date_strings$Iso8601$invalidDay(dayInMonth) : succeedWith(20995200000);
 			case 10:
-				return (dayInMonth > 31) ? rtfeldman$elm_iso8601$Iso8601$invalidDay(dayInMonth) : succeedWith(23587200000);
+				return (dayInMonth > 31) ? rtfeldman$elm_iso8601_date_strings$Iso8601$invalidDay(dayInMonth) : succeedWith(23587200000);
 			case 11:
-				return (dayInMonth > 30) ? rtfeldman$elm_iso8601$Iso8601$invalidDay(dayInMonth) : succeedWith(26265600000);
+				return (dayInMonth > 30) ? rtfeldman$elm_iso8601_date_strings$Iso8601$invalidDay(dayInMonth) : succeedWith(26265600000);
 			case 12:
-				return (dayInMonth > 31) ? rtfeldman$elm_iso8601$Iso8601$invalidDay(dayInMonth) : succeedWith(28857600000);
+				return (dayInMonth > 31) ? rtfeldman$elm_iso8601_date_strings$Iso8601$invalidDay(dayInMonth) : succeedWith(28857600000);
 			default:
 				return elm$parser$Parser$problem(
 					'Invalid month: \"' + (elm$core$String$fromInt(month) + '\"'));
 		}
 	}
 };
-var rtfeldman$elm_iso8601$Iso8601$monthYearDayInMs = A2(
+var rtfeldman$elm_iso8601_date_strings$Iso8601$monthYearDayInMs = A2(
 	elm$parser$Parser$andThen,
-	rtfeldman$elm_iso8601$Iso8601$yearMonthDay,
+	rtfeldman$elm_iso8601_date_strings$Iso8601$yearMonthDay,
 	A2(
 		elm$parser$Parser$keeper,
 		A2(
@@ -6538,18 +6543,18 @@ var rtfeldman$elm_iso8601$Iso8601$monthYearDayInMs = A2(
 						})),
 				A2(
 					elm$parser$Parser$ignorer,
-					rtfeldman$elm_iso8601$Iso8601$paddedInt(4),
+					rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(4),
 					elm$parser$Parser$symbol('-'))),
 			A2(
 				elm$parser$Parser$ignorer,
-				rtfeldman$elm_iso8601$Iso8601$paddedInt(2),
+				rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2),
 				elm$parser$Parser$symbol('-'))),
-		rtfeldman$elm_iso8601$Iso8601$paddedInt(2)));
-var rtfeldman$elm_iso8601$Iso8601$utcOffsetMinutesFromParts = F3(
+		rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2)));
+var rtfeldman$elm_iso8601_date_strings$Iso8601$utcOffsetMinutesFromParts = F3(
 	function (multiplier, hours, minutes) {
 		return multiplier * ((hours * 60) + minutes);
 	});
-var rtfeldman$elm_iso8601$Iso8601$iso8601 = A2(
+var rtfeldman$elm_iso8601_date_strings$Iso8601$iso8601 = A2(
 	elm$parser$Parser$keeper,
 	A2(
 		elm$parser$Parser$keeper,
@@ -6561,24 +6566,32 @@ var rtfeldman$elm_iso8601$Iso8601$iso8601 = A2(
 					elm$parser$Parser$keeper,
 					A2(
 						elm$parser$Parser$keeper,
-						elm$parser$Parser$succeed(rtfeldman$elm_iso8601$Iso8601$fromParts),
+						elm$parser$Parser$succeed(rtfeldman$elm_iso8601_date_strings$Iso8601$fromParts),
 						A2(
 							elm$parser$Parser$ignorer,
-							rtfeldman$elm_iso8601$Iso8601$monthYearDayInMs,
+							rtfeldman$elm_iso8601_date_strings$Iso8601$monthYearDayInMs,
 							elm$parser$Parser$symbol('T'))),
 					A2(
 						elm$parser$Parser$ignorer,
-						rtfeldman$elm_iso8601$Iso8601$paddedInt(2),
+						rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2),
 						elm$parser$Parser$symbol(':'))),
 				A2(
 					elm$parser$Parser$ignorer,
-					rtfeldman$elm_iso8601$Iso8601$paddedInt(2),
+					rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2),
 					elm$parser$Parser$symbol(':'))),
-			A2(
-				elm$parser$Parser$ignorer,
-				rtfeldman$elm_iso8601$Iso8601$paddedInt(2),
-				elm$parser$Parser$symbol('.'))),
-		rtfeldman$elm_iso8601$Iso8601$paddedInt(3)),
+			rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2)),
+		elm$parser$Parser$oneOf(
+			_List_fromArray(
+				[
+					A2(
+					elm$parser$Parser$keeper,
+					A2(
+						elm$parser$Parser$ignorer,
+						elm$parser$Parser$succeed(elm$core$Basics$identity),
+						elm$parser$Parser$symbol('.')),
+					rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(3)),
+					elm$parser$Parser$succeed(0)
+				]))),
 	elm$parser$Parser$oneOf(
 		_List_fromArray(
 			[
@@ -6594,7 +6607,7 @@ var rtfeldman$elm_iso8601$Iso8601$iso8601 = A2(
 					elm$parser$Parser$keeper,
 					A2(
 						elm$parser$Parser$keeper,
-						elm$parser$Parser$succeed(rtfeldman$elm_iso8601$Iso8601$utcOffsetMinutesFromParts),
+						elm$parser$Parser$succeed(rtfeldman$elm_iso8601_date_strings$Iso8601$utcOffsetMinutesFromParts),
 						elm$parser$Parser$oneOf(
 							_List_fromArray(
 								[
@@ -6613,12 +6626,12 @@ var rtfeldman$elm_iso8601$Iso8601$iso8601 = A2(
 								]))),
 					A2(
 						elm$parser$Parser$ignorer,
-						rtfeldman$elm_iso8601$Iso8601$paddedInt(2),
+						rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2),
 						elm$parser$Parser$symbol(':'))),
-				rtfeldman$elm_iso8601$Iso8601$paddedInt(2))
+				rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2))
 			])));
-var rtfeldman$elm_iso8601$Iso8601$toTime = function (str) {
-	return A2(elm$parser$Parser$run, rtfeldman$elm_iso8601$Iso8601$iso8601, str);
+var rtfeldman$elm_iso8601_date_strings$Iso8601$toTime = function (str) {
+	return A2(elm$parser$Parser$run, rtfeldman$elm_iso8601_date_strings$Iso8601$iso8601, str);
 };
 var author$project$Model$dateDecoder = A2(
 	elm$json$Json$Decode$andThen,
@@ -6629,7 +6642,7 @@ var author$project$Model$dateDecoder = A2(
 			A2(
 				elm$core$Result$map,
 				elm$json$Json$Decode$succeed,
-				rtfeldman$elm_iso8601$Iso8601$toTime(str)));
+				rtfeldman$elm_iso8601_date_strings$Iso8601$toTime(str)));
 	},
 	elm$json$Json$Decode$string);
 var author$project$Model$Arrival = 1;
@@ -6660,43 +6673,43 @@ var elm$json$Json$Decode$maybe = function (decoder) {
 };
 var author$project$Model$timetableRowsDecoder = elm$json$Json$Decode$list(
 	A4(
-		NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$optional,
+		NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
 		'differenceInMinutes',
 		elm$json$Json$Decode$maybe(elm$json$Json$Decode$int),
 		elm$core$Maybe$Nothing,
 		A4(
-			NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$optional,
+			NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
 			'liveEstimateTime',
 			elm$json$Json$Decode$maybe(author$project$Model$dateDecoder),
 			elm$core$Maybe$Nothing,
 			A4(
-				NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$optional,
+				NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
 				'actualTime',
 				elm$json$Json$Decode$maybe(author$project$Model$dateDecoder),
 				elm$core$Maybe$Nothing,
 				A3(
-					NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required,
+					NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 					'type',
 					author$project$Model$rowTypeDecoder,
 					A4(
-						NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$optional,
+						NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional,
 						'commercialTrack',
 						elm$json$Json$Decode$maybe(elm$json$Json$Decode$string),
 						elm$core$Maybe$Nothing,
 						A3(
-							NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required,
+							NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 							'stationUICCode',
 							elm$json$Json$Decode$int,
 							A3(
-								NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required,
+								NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 								'stationShortCode',
 								elm$json$Json$Decode$string,
 								A3(
-									NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required,
+									NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 									'trainStopping',
 									elm$json$Json$Decode$bool,
 									A3(
-										NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required,
+										NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 										'scheduledTime',
 										author$project$Model$dateDecoder,
 										elm$json$Json$Decode$succeed(author$project$Model$TimetableRow)))))))))));
@@ -6752,10 +6765,10 @@ var author$project$Model$findCurrentStation = function (rows) {
 				elm$core$Maybe$map2,
 				F2(
 					function (actualTime, differenceInMinutes) {
-						return {E: actualTime, Q: differenceInMinutes, A: row.A, C: row.C, V: row.V};
+						return {E: actualTime, R: differenceInMinutes, z: row.z, B: row.B, W: row.W};
 					}),
 				row.E,
-				row.Q);
+				row.R);
 		},
 		elm$core$List$head(
 			elm$core$List$reverse(
@@ -6775,7 +6788,7 @@ var author$project$Model$findTimetableRow = F3(
 			A2(
 				elm$core$List$filter,
 				function (row) {
-					return _Utils_eq(row.C, shortCode) && _Utils_eq(row.A, rowType);
+					return _Utils_eq(row.B, shortCode) && _Utils_eq(row.z, rowType);
 				},
 				rows));
 	});
@@ -6814,13 +6827,13 @@ var author$project$Model$isRightDirection = F3(
 				elm$core$List$any,
 				function (arr) {
 					return _Utils_cmp(
-						elm$time$Time$posixToMillis(arr.U),
-						elm$time$Time$posixToMillis(departure.U)) > 0;
+						elm$time$Time$posixToMillis(arr.V),
+						elm$time$Time$posixToMillis(departure.V)) > 0;
 				},
 				A2(
 					elm$core$List$filter,
 					function (row) {
-						return _Utils_eq(row.C, toShortCode) && (row.A === 1);
+						return _Utils_eq(row.B, toShortCode) && (row.z === 1);
 					},
 					rows));
 		}
@@ -6838,12 +6851,12 @@ var author$project$Model$toTrain = F2(
 	function (_n0, _n1) {
 		var from = _n0.a;
 		var to = _n0.b;
-		var trainNumber = _n1.M;
-		var lineId = _n1.S;
+		var trainNumber = _n1.N;
+		var lineId = _n1.T;
 		var trainCategory = _n1.bl;
 		var timetableRows = _n1.bj;
-		var runningCurrently = _n1.T;
-		var cancelled = _n1.P;
+		var runningCurrently = _n1.U;
+		var cancelled = _n1.Q;
 		var stoppingRows = A2(
 			elm$core$List$filter,
 			function ($) {
@@ -6861,14 +6874,14 @@ var author$project$Model$toTrain = F2(
 						return elm$json$Json$Decode$succeed(
 							elm$core$Maybe$Just(
 								{
-									P: cancelled,
+									Q: cancelled,
 									aH: author$project$Model$findCurrentStation(timetableRows),
 									aL: end,
 									aR: A3(author$project$Model$findTimetableRow, 1, from, stoppingRows),
-									ac: dep,
-									S: lineId,
-									T: runningCurrently,
-									M: trainNumber
+									ad: dep,
+									T: lineId,
+									U: runningCurrently,
+									N: trainNumber
 								}));
 					}),
 				homeStationDeparture,
@@ -6906,7 +6919,7 @@ var author$project$Model$trainsDecoder = function (targets) {
 				elm$core$Basics$composeR,
 				elm$core$List$map(
 					function (a) {
-						return _Utils_Tuple2(a.M, a);
+						return _Utils_Tuple2(a.N, a);
 					}),
 				A2(elm$core$Basics$composeR, elm$core$Dict$fromList, elm$json$Json$Decode$succeed))),
 		elm$json$Json$Decode$list(
@@ -6914,27 +6927,27 @@ var author$project$Model$trainsDecoder = function (targets) {
 				elm$json$Json$Decode$andThen,
 				author$project$Model$toTrain(targets),
 				A3(
-					NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required,
+					NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 					'cancelled',
 					elm$json$Json$Decode$bool,
 					A3(
-						NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required,
+						NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 						'runningCurrently',
 						elm$json$Json$Decode$bool,
 						A3(
-							NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required,
+							NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 							'timeTableRows',
 							author$project$Model$timetableRowsDecoder,
 							A3(
-								NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required,
+								NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 								'trainCategory',
 								elm$json$Json$Decode$string,
 								A3(
-									NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required,
+									NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 									'commuterLineID',
 									elm$json$Json$Decode$string,
 									A3(
-										NoRedInk$json_decode_pipeline$Json$Decode$Pipeline$required,
+										NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 										'trainNumber',
 										elm$json$Json$Decode$int,
 										elm$json$Json$Decode$succeed(author$project$Model$TrainRaw))))))))));
@@ -7006,13 +7019,13 @@ var author$project$Model$SelectDestRoute = function (a) {
 var elm$url$Url$Parser$Parser = elm$core$Basics$identity;
 var elm$url$Url$Parser$State = F5(
 	function (visited, unvisited, params, frag, value) {
-		return {r: frag, u: params, q: unvisited, m: value, w: visited};
+		return {r: frag, t: params, q: unvisited, m: value, u: visited};
 	});
 var elm$url$Url$Parser$mapState = F2(
 	function (func, _n0) {
-		var visited = _n0.w;
+		var visited = _n0.u;
 		var unvisited = _n0.q;
-		var params = _n0.u;
+		var params = _n0.t;
 		var frag = _n0.r;
 		var value = _n0.m;
 		return A5(
@@ -7027,9 +7040,9 @@ var elm$url$Url$Parser$map = F2(
 	function (subValue, _n0) {
 		var parseArg = _n0;
 		return function (_n1) {
-			var visited = _n1.w;
+			var visited = _n1.u;
 			var unvisited = _n1.q;
-			var params = _n1.u;
+			var params = _n1.t;
 			var frag = _n1.r;
 			var value = _n1.m;
 			return A2(
@@ -7195,9 +7208,9 @@ var elm$url$Url$Parser$slash = F2(
 var elm$url$Url$Parser$custom = F2(
 	function (tipe, stringToSomething) {
 		return function (_n0) {
-			var visited = _n0.w;
+			var visited = _n0.u;
 			var unvisited = _n0.q;
-			var params = _n0.u;
+			var params = _n0.t;
 			var frag = _n0.r;
 			var value = _n0.m;
 			if (!unvisited.b) {
@@ -7280,7 +7293,7 @@ var author$project$Main$urlChange = F2(
 		return _Utils_Tuple2(
 			_Utils_update(
 				model,
-				{ap: route, aB: trains}),
+				{aq: route, aB: trains}),
 			trainsCmd);
 	});
 var author$project$View$TimeZoneResponse = function (a) {
@@ -7309,10 +7322,10 @@ var author$project$Main$init = F3(
 		var _n0 = A2(
 			author$project$Main$urlChange,
 			{
-				Z: elm$time$Time$millisToPosix(timestamp),
-				aj: elm$time$Time$millisToPosix(0),
+				_: elm$time$Time$millisToPosix(timestamp),
+				ak: elm$time$Time$millisToPosix(0),
 				a$: key,
-				ap: author$project$Model$SelectDepRoute,
+				aq: author$project$Model$SelectDepRoute,
 				bg: elm$core$Dict$empty,
 				aB: krisajenkins$remotedata$RemoteData$NotAsked,
 				bq: elm$time$Time$utc
@@ -7372,28 +7385,41 @@ var elm$core$Dict$merge = F6(
 	function (leftStep, bothStep, rightStep, leftDict, rightDict, initialResult) {
 		var stepState = F3(
 			function (rKey, rValue, _n0) {
-				var list = _n0.a;
-				var result = _n0.b;
-				if (!list.b) {
-					return _Utils_Tuple2(
-						list,
-						A3(rightStep, rKey, rValue, result));
-				} else {
-					var _n2 = list.a;
-					var lKey = _n2.a;
-					var lValue = _n2.b;
-					var rest = list.b;
-					return (_Utils_cmp(lKey, rKey) < 0) ? A3(
-						stepState,
-						rKey,
-						rValue,
-						_Utils_Tuple2(
-							rest,
-							A3(leftStep, lKey, lValue, result))) : ((_Utils_cmp(lKey, rKey) > 0) ? _Utils_Tuple2(
-						list,
-						A3(rightStep, rKey, rValue, result)) : _Utils_Tuple2(
-						rest,
-						A4(bothStep, lKey, lValue, rValue, result)));
+				stepState:
+				while (true) {
+					var list = _n0.a;
+					var result = _n0.b;
+					if (!list.b) {
+						return _Utils_Tuple2(
+							list,
+							A3(rightStep, rKey, rValue, result));
+					} else {
+						var _n2 = list.a;
+						var lKey = _n2.a;
+						var lValue = _n2.b;
+						var rest = list.b;
+						if (_Utils_cmp(lKey, rKey) < 0) {
+							var $temp$rKey = rKey,
+								$temp$rValue = rValue,
+								$temp$_n0 = _Utils_Tuple2(
+								rest,
+								A3(leftStep, lKey, lValue, result));
+							rKey = $temp$rKey;
+							rValue = $temp$rValue;
+							_n0 = $temp$_n0;
+							continue stepState;
+						} else {
+							if (_Utils_cmp(lKey, rKey) > 0) {
+								return _Utils_Tuple2(
+									list,
+									A3(rightStep, rKey, rValue, result));
+							} else {
+								return _Utils_Tuple2(
+									rest,
+									A4(bothStep, lKey, lValue, rValue, result));
+							}
+						}
+					}
 				}
 			});
 		var _n3 = A3(
@@ -7578,9 +7604,9 @@ var author$project$Main$subscriptions = function (model) {
 };
 var elm$core$Basics$ge = _Utils_ge;
 var author$project$Main$updateTime = function (model) {
-	var currentTime = model.Z;
-	var route = model.ap;
-	var requestMillis = elm$time$Time$posixToMillis(model.aj);
+	var currentTime = model._;
+	var route = model.aq;
+	var requestMillis = elm$time$Time$posixToMillis(model.ak);
 	var currentMillis = elm$time$Time$posixToMillis(currentTime);
 	if (route.$ === 2) {
 		var from = route.a;
@@ -7588,7 +7614,7 @@ var author$project$Main$updateTime = function (model) {
 		return ((currentMillis - requestMillis) >= 10000) ? _Utils_Tuple2(
 			_Utils_update(
 				model,
-				{aj: currentTime}),
+				{ak: currentTime}),
 			author$project$Main$getTrains(
 				_Utils_Tuple2(from, to))) : _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
 	} else {
@@ -7803,7 +7829,7 @@ var author$project$Main$update = F2(
 				return author$project$Main$updateTime(
 					_Utils_update(
 						model,
-						{Z: time}));
+						{_: time}));
 			case 1:
 				var zone = msg.a;
 				return _Utils_Tuple2(
@@ -7926,7 +7952,7 @@ var author$project$Model$sortedTrainList = function (trains) {
 	return A2(
 		elm$core$List$sortBy,
 		function (train) {
-			return elm$time$Time$posixToMillis(train.ac.U);
+			return elm$time$Time$posixToMillis(train.ad.V);
 		},
 		elm$core$Dict$values(trains));
 };
@@ -7954,7 +7980,7 @@ var author$project$View$minutesToMillis = function (minutes) {
 };
 var ryannhg$date_format$DateFormat$FormatOptions = F2(
 	function (fullMonthName, dayOfWeekName) {
-		return {_: dayOfWeekName, ab: fullMonthName};
+		return {aa: dayOfWeekName, ac: fullMonthName};
 	});
 var ryannhg$date_format$DateFormat$dayOfWeekName = function (weekday) {
 	switch (weekday) {
@@ -8510,10 +8536,10 @@ var ryannhg$date_format$DateFormat$piece = F4(
 				return A2(
 					elm$core$String$left,
 					num,
-					options.ab(
+					options.ac(
 						A2(elm$time$Time$toMonth, zone, posix)));
 			case 4:
-				return options.ab(
+				return options.ac(
 					A2(elm$time$Time$toMonth, zone, posix));
 			case 17:
 				return elm$core$String$fromInt(
@@ -8554,10 +8580,10 @@ var ryannhg$date_format$DateFormat$piece = F4(
 				return A2(
 					elm$core$String$left,
 					num,
-					options._(
+					options.aa(
 						A2(elm$time$Time$toWeekday, zone, posix)));
 			case 14:
-				return options._(
+				return options.aa(
 					A2(elm$time$Time$toWeekday, zone, posix));
 			case 19:
 				return elm$core$String$fromInt(
@@ -8680,7 +8706,7 @@ var elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var elm$html$Html$text = elm$virtual_dom$VirtualDom$text;
 var author$project$View$stationRow = F3(
 	function (zone, stations, station) {
-		var name = A2(author$project$View$stationName, stations, station.C);
+		var name = A2(author$project$View$stationName, stations, station.B);
 		return A2(
 			elm$html$Html$div,
 			_List_fromArray(
@@ -8690,7 +8716,7 @@ var author$project$View$stationRow = F3(
 			_List_fromArray(
 				[
 					function () {
-					var _n0 = _Utils_Tuple2(station.bF, station.Q);
+					var _n0 = _Utils_Tuple2(station.bF, station.R);
 					if ((!_n0.a.$) && (!_n0.b.$)) {
 						var estimate = _n0.a.a;
 						var n = _n0.b.a;
@@ -8724,7 +8750,7 @@ var author$project$View$stationRow = F3(
 									_List_fromArray(
 										[
 											elm$html$Html$text(
-											A2(author$project$View$prettyTime, zone, station.U))
+											A2(author$project$View$prettyTime, zone, station.V))
 										])) : elm$html$Html$text('')
 								]));
 					} else {
@@ -8737,7 +8763,7 @@ var author$project$View$stationRow = F3(
 							_List_fromArray(
 								[
 									elm$html$Html$text(
-									A2(author$project$View$prettyTime, zone, station.U))
+									A2(author$project$View$prettyTime, zone, station.V))
 								]));
 					}
 				}(),
@@ -8792,7 +8818,7 @@ var author$project$View$trainRow = F3(
 	function (_n0, _n1, train) {
 		var zone = _n0.bq;
 		var stations = _n0.bg;
-		var currentTime = _n0.Z;
+		var currentTime = _n0._;
 		var from = _n1.a;
 		var to = _n1.b;
 		var statusInfoBadge = function () {
@@ -8805,15 +8831,15 @@ var author$project$View$trainRow = F3(
 						[
 							elm$html$Html$Attributes$class('train-status-badge'),
 							elm$html$Html$Attributes$class(
-							'is-' + author$project$View$timelinessColor(station.Q))
+							'is-' + author$project$View$timelinessColor(station.R))
 						]),
 					_List_fromArray(
 						[
 							elm$html$Html$text(
 							A2(
 								author$project$View$formatDifference,
-								station.Q,
-								A2(author$project$View$stationName, stations, station.C)))
+								station.R,
+								A2(author$project$View$stationName, stations, station.B)))
 						]));
 			} else {
 				return A2(
@@ -8855,7 +8881,7 @@ var author$project$View$trainRow = F3(
 					return A2(
 						elm$core$Maybe$map,
 						author$project$View$ScheduleEstimate,
-						prettyDiff(arrival.U));
+						prettyDiff(arrival.V));
 				}
 			},
 			train.aR);
@@ -8883,12 +8909,12 @@ var author$project$View$trainRow = F3(
 									_List_fromArray(
 										[
 											_Utils_Tuple2('train-name', true),
-											_Utils_Tuple2('is-running', train.T)
+											_Utils_Tuple2('is-running', train.U)
 										]))
 								]),
 							_List_fromArray(
 								[
-									elm$html$Html$text(train.S)
+									elm$html$Html$text(train.T)
 								])),
 							A2(
 							elm$html$Html$div,
@@ -8898,7 +8924,7 @@ var author$project$View$trainRow = F3(
 								]),
 							_List_fromArray(
 								[
-									A3(author$project$View$stationRow, zone, stations, train.ac),
+									A3(author$project$View$stationRow, zone, stations, train.ad),
 									A2(
 									elm$html$Html$div,
 									_List_fromArray(
@@ -9030,7 +9056,7 @@ var author$project$View$schedulePage = F2(
 		var to = _n0.b;
 		var heading = A2(author$project$View$stationName, model.bg, from) + ('—' + A2(author$project$View$stationName, model.bg, to));
 		return {
-			Y: author$project$View$container(
+			Z: author$project$View$container(
 				_List_fromArray(
 					[
 						function () {
@@ -9209,7 +9235,7 @@ var elm$html$Html$li = _VirtualDom_node('li');
 var elm$html$Html$ul = _VirtualDom_node('ul');
 var author$project$View$selectDepPage = function (model) {
 	return {
-		Y: author$project$View$container(
+		Z: author$project$View$container(
 			_List_fromArray(
 				[
 					A2(
@@ -9312,7 +9338,7 @@ var author$project$View$selectDestPage = F2(
 					author$project$Stations$findName(dep)));
 		};
 		return {
-			Y: author$project$View$container(
+			Z: author$project$View$container(
 				_List_fromArray(
 					[
 						A2(
@@ -9364,7 +9390,7 @@ var author$project$View$selectDestPage = F2(
 		};
 	});
 var author$project$View$view = function (model) {
-	var _n0 = model.ap;
+	var _n0 = model.aq;
 	switch (_n0.$) {
 		case 0:
 			return author$project$View$selectDepPage(model);
