@@ -8822,9 +8822,9 @@ var author$project$View$trainRow = F3(
 		var from = _n1.a;
 		var to = _n1.b;
 		var statusInfoBadge = function () {
-			var _n5 = train.aH;
-			if (!_n5.$) {
-				var station = _n5.a;
+			var _n6 = train.aH;
+			if (!_n6.$) {
+				var station = _n6.a;
 				return A2(
 					elm$html$Html$div,
 					_List_fromArray(
@@ -8867,24 +8867,23 @@ var author$project$View$trainRow = F3(
 					0,
 					elm$time$Time$posixToMillis(date) - elm$time$Time$posixToMillis(currentTime)));
 		};
-		var homeStationArrivingIn = A2(
-			elm$core$Maybe$andThen,
-			function (arrival) {
-				var _n4 = arrival.bF;
-				if (!_n4.$) {
-					var estimate = _n4.a;
-					return A2(
-						elm$core$Maybe$map,
-						author$project$View$LiveEstimate,
-						prettyDiff(estimate));
-				} else {
-					return A2(
-						elm$core$Maybe$map,
-						author$project$View$ScheduleEstimate,
-						prettyDiff(arrival.V));
-				}
-			},
-			train.aR);
+		var prettyBestEstimateFor = function (timetableRow) {
+			var _n5 = timetableRow.bF;
+			if (!_n5.$) {
+				var estimate = _n5.a;
+				return A2(
+					elm$core$Maybe$map,
+					author$project$View$LiveEstimate,
+					prettyDiff(estimate));
+			} else {
+				return A2(
+					elm$core$Maybe$map,
+					author$project$View$ScheduleEstimate,
+					prettyDiff(timetableRow.V));
+			}
+		};
+		var homeStationDepartingIn = prettyBestEstimateFor(train.ad);
+		var homeStationArrivingIn = A2(elm$core$Maybe$andThen, prettyBestEstimateFor, train.aR);
 		return A2(
 			elm$html$Html$div,
 			_List_fromArray(
@@ -8944,8 +8943,9 @@ var author$project$View$trainRow = F3(
 									elm$html$Html$Attributes$class('train-status')
 								]),
 							function () {
-								if (!homeStationArrivingIn.$) {
-									var estimate = homeStationArrivingIn.a;
+								var _n2 = _Utils_Tuple2(homeStationArrivingIn, homeStationDepartingIn);
+								if (!_n2.a.$) {
+									var estimate = _n2.a.a;
 									return _List_fromArray(
 										[
 											A2(
@@ -8978,7 +8978,42 @@ var author$project$View$trainRow = F3(
 												]))
 										]);
 								} else {
-									return _List_Nil;
+									if (!_n2.b.$) {
+										var estimate = _n2.b.a;
+										return _List_fromArray(
+											[
+												A2(
+												elm$html$Html$div,
+												_List_fromArray(
+													[
+														elm$html$Html$Attributes$class('train-status-arriving')
+													]),
+												_List_fromArray(
+													[
+														elm$html$Html$text('Departs in')
+													])),
+												A2(
+												elm$html$Html$div,
+												_List_fromArray(
+													[
+														elm$html$Html$Attributes$class('train-status-time')
+													]),
+												_List_fromArray(
+													[
+														function () {
+														if (!estimate.$) {
+															var time = estimate.a;
+															return elm$html$Html$text(time);
+														} else {
+															var time = estimate.a;
+															return elm$html$Html$text('~' + time);
+														}
+													}()
+													]))
+											]);
+									} else {
+										return _List_Nil;
+									}
 								}
 							}())
 						])),
@@ -9112,7 +9147,7 @@ var author$project$View$schedulePage = F2(
 						}
 					}()
 					])),
-			aA: heading + ' – Schedules!'
+			aA: heading + ' – Trains.today'
 		};
 	});
 var elm$core$Tuple$pair = F2(
@@ -9281,7 +9316,7 @@ var author$project$View$selectDepPage = function (model) {
 						},
 						author$project$Stations$all))
 				])),
-		aA: 'Schedules! Helsinki region commuter trains'
+		aA: 'Trains.today - Helsinki region commuter trains'
 	};
 };
 var author$project$Stations$findName = function (abbreviation) {
@@ -9386,7 +9421,7 @@ var author$project$View$selectDestPage = F2(
 							},
 							author$project$Stations$matching(dep)))
 					])),
-			aA: 'Select destination – Schedules!'
+			aA: 'Select destination – Trains.today'
 		};
 	});
 var author$project$View$view = function (model) {
