@@ -80,7 +80,7 @@ container elements =
 
 selectDepPage : Model -> Document msg
 selectDepPage model =
-    { title = "Schedules! Helsinki region commuter trains"
+    { title = "Trains.today - Helsinki region commuter trains"
     , body =
         container
             [ header [] [ h1 [] [ text "Select departure" ] ]
@@ -105,7 +105,7 @@ selectDestPage model dep =
                 |> Maybe.map (\name -> name ++ "–" ++ dest)
                 |> Maybe.withDefault dest
     in
-    { title = "Select destination – Schedules!"
+    { title = "Select destination – Trains.today"
     , body =
         container
             [ header [] [ h1 [] [ text "Select departure" ] ]
@@ -125,7 +125,7 @@ schedulePage model ( from, to ) =
         heading =
             stationName model.stations from ++ "—" ++ stationName model.stations to
     in
-    { title = heading ++ " – Schedules!"
+    { title = heading ++ " – Trains.today"
     , body =
         container
             [ case model.trains of
@@ -197,17 +197,20 @@ trainRow { zone, stations, currentTime } ( from, to ) train =
     let
         homeStationArrivingIn =
             train.homeStationArrival
-                |> Maybe.andThen
-                    (\arrival ->
-                        case arrival.liveEstimateTime of
-                            Just estimate ->
-                                prettyDiff estimate
-                                    |> Maybe.map LiveEstimate
+                |> Maybe.andThen prettyBestEstimateFor
 
-                            Nothing ->
-                                prettyDiff arrival.scheduledTime
-                                    |> Maybe.map ScheduleEstimate
-                    )
+        homeStationDepartingIn =
+            prettyBestEstimateFor train.homeStationDeparture
+
+        prettyBestEstimateFor timetableRow =
+            case timetableRow.liveEstimateTime of
+                Just estimate ->
+                    prettyDiff estimate
+                        |> Maybe.map LiveEstimate
+
+                Nothing ->
+                    prettyDiff timetableRow.scheduledTime
+                        |> Maybe.map ScheduleEstimate
 
         prettyDiff date =
             (Time.posixToMillis date - Time.posixToMillis currentTime)
@@ -242,10 +245,23 @@ trainRow { zone, stations, currentTime } ( from, to ) train =
                 , stationRow zone stations train.endStationArrival
                 ]
             , div [ class "train-status" ] <|
-                case homeStationArrivingIn of
-                    Just estimate ->
+                case ( homeStationArrivingIn, homeStationDepartingIn ) of
+                    ( Just estimate, _ ) ->
                         [ div [ class "train-status-arriving" ]
                             [ text "Arrives in" ]
+                        , div [ class "train-status-time" ]
+                            [ case estimate of
+                                LiveEstimate time ->
+                                    text time
+
+                                ScheduleEstimate time ->
+                                    text ("~" ++ time)
+                            ]
+                        ]
+
+                    ( _, Just estimate ) ->
+                        [ div [ class "train-status-arriving" ]
+                            [ text "Departs in" ]
                         , div [ class "train-status-time" ]
                             [ case estimate of
                                 LiveEstimate time ->
