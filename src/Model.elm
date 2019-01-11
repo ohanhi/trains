@@ -1,4 +1,4 @@
-module Model exposing (..)
+module Model exposing (CurrentStation, Model, Route(..), RowType(..), Stations, Targets, TimetableRow, Train, Trains, sortedTrainList, stationsDecoder, trainsDecoder)
 
 import Browser.Navigation
 import DateFormat
@@ -84,26 +84,23 @@ type RowType
     | Arrival
 
 
+type alias Targets =
+    { from : String
+    , to : String
+    }
+
+
 stationsDecoder : Decoder Stations
 stationsDecoder =
     Json.Decode.succeed (\a b -> ( a, b ))
         |> required "stationShortCode" string
         |> required "stationName"
-            (string
-                |> map
-                    (\a ->
-                        if String.endsWith " asema" a then
-                            String.dropRight 6 a
-
-                        else
-                            a
-                    )
-            )
+            (string |> map (String.replace " asema" ""))
         |> list
         |> andThen (Dict.fromList >> succeed)
 
 
-trainsDecoder : ( String, String ) -> Decoder Trains
+trainsDecoder : Targets -> Decoder Trains
 trainsDecoder targets =
     Json.Decode.succeed TrainRaw
         |> required "trainNumber" int
@@ -112,7 +109,7 @@ trainsDecoder targets =
         |> required "timeTableRows" timetableRowsDecoder
         |> required "runningCurrently" bool
         |> required "cancelled" bool
-        |> andThen (toTrain targets)
+        |> andThen (\raw -> succeed (toTrain targets raw))
         |> list
         |> andThen
             (List.filterMap identity
@@ -130,36 +127,36 @@ sortedTrainList trains =
             (\train -> Time.posixToMillis train.homeStationDeparture.scheduledTime)
 
 
-toTrain : ( String, String ) -> TrainRaw -> Decoder (Maybe Train)
-toTrain ( from, to ) { trainNumber, lineId, trainCategory, timetableRows, runningCurrently, cancelled } =
+toTrain : Targets -> TrainRaw -> Maybe Train
+toTrain { from, to } trainRaw =
     let
         stoppingRows =
-            List.filter .trainStopping timetableRows
+            List.filter .trainStopping trainRaw.timetableRows
 
         homeStationDeparture =
             findTimetableRow Departure from stoppingRows
+
+        endStationArrival =
+            findTimetableRow Arrival to (List.reverse trainRaw.timetableRows)
+
+        isValid =
+            trainRaw.trainCategory == "Commuter" && isRightDirection stoppingRows to homeStationDeparture
     in
-    if trainCategory == "Commuter" && isRightDirection stoppingRows to homeStationDeparture then
-        Maybe.map2
-            (\dep end ->
-                { trainNumber = trainNumber
-                , lineId = lineId
-                , runningCurrently = runningCurrently
-                , cancelled = cancelled
-                , currentStation = findCurrentStation timetableRows
+    case ( isValid, homeStationDeparture, endStationArrival ) of
+        ( True, Just dep, Just end ) ->
+            Just
+                { trainNumber = trainRaw.trainNumber
+                , lineId = trainRaw.lineId
+                , runningCurrently = trainRaw.runningCurrently
+                , cancelled = trainRaw.cancelled
+                , currentStation = findCurrentStation trainRaw.timetableRows
                 , homeStationArrival = findTimetableRow Arrival from stoppingRows
                 , homeStationDeparture = dep
                 , endStationArrival = end
                 }
-                    |> Just
-                    |> succeed
-            )
-            homeStationDeparture
-            (findTimetableRow Arrival to (List.reverse timetableRows))
-            |> Maybe.withDefault (succeed Nothing)
 
-    else
-        succeed Nothing
+        _ ->
+            Nothing
 
 
 findTimetableRow : RowType -> String -> List TimetableRow -> Maybe TimetableRow
@@ -223,14 +220,7 @@ timetableRowsDecoder =
 
 dateDecoder : Decoder Posix
 dateDecoder =
-    string
-        |> andThen
-            (\str ->
-                str
-                    |> Iso8601.toTime
-                    |> Result.map succeed
-                    |> Result.withDefault (fail ("Parsing date '" ++ str ++ "' failed"))
-            )
+    Iso8601.decoder
 
 
 rowTypeDecoder : Decoder RowType

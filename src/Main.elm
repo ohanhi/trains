@@ -1,4 +1,4 @@
-module Main exposing (..)
+module Main exposing (main)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation
@@ -48,7 +48,7 @@ urlChange model url =
         ( trains, trainsCmd ) =
             case route of
                 ScheduleRoute from to ->
-                    ( Loading, getTrains ( from, to ) )
+                    ( Loading, getTrains { from = from, to = to } )
 
                 _ ->
                     ( NotAsked, Cmd.none )
@@ -108,7 +108,9 @@ updateTime ({ currentTime, route } as model) =
     case route of
         ScheduleRoute from to ->
             if currentMillis - requestMillis >= 10000 then
-                ( { model | lastRequestTime = currentTime }, getTrains ( from, to ) )
+                ( { model | lastRequestTime = currentTime }
+                , getTrains { from = from, to = to }
+                )
 
             else
                 ( model, Cmd.none )
@@ -149,19 +151,19 @@ getStations =
     get stationsUrl StationsResponse stationsDecoder
 
 
-getTrains : ( String, String ) -> Cmd Msg
-getTrains ( from, to ) =
+getTrains : Targets -> Cmd Msg
+getTrains targets =
     let
         trainsUrl =
             Url.Builder.crossOrigin "https://rata.digitraffic.fi/api/v1/live-trains/station/"
-                [ from ]
+                [ targets.from ]
                 [ Url.Builder.int "minutes_before_departure" 120
                 , Url.Builder.int "minutes_after_departure" 0
                 , Url.Builder.int "minutes_before_arrival" 0
                 , Url.Builder.int "minutes_after_arrival" 0
                 ]
     in
-    get trainsUrl TrainsResponse (trainsDecoder ( from, to ))
+    get trainsUrl TrainsResponse (trainsDecoder targets)
 
 
 subscriptions : Model -> Sub Msg

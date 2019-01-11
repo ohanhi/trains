@@ -1,4 +1,4 @@
-module Icons exposing (..)
+module Icons exposing (swap)
 
 import Html exposing (Html)
 import Svg
