@@ -145,10 +145,9 @@ schedulePage model ( from, to ) =
                 Failure err ->
                     div
                         []
-                        [ header [] [ text "Oh noes, an error!" ]
-                        , case err of
+                        [ case err of
                             Http.NetworkError ->
-                                text "It's the network."
+                                text "No connection, trying again soon..."
 
                             Http.Timeout ->
                                 text "Helloooo? (There was no response.)"
@@ -199,11 +198,11 @@ type ArrivalEstimate
 
 
 trainRow :
-    { a | zone : Time.Zone, stations : Stations, currentTime : Posix }
+    { a | zone : Time.Zone, stations : Stations, wagonCounts : TrainWagonCounts, currentTime : Posix }
     -> ( String, String )
     -> Train
     -> Html msg
-trainRow { zone, stations, currentTime } ( from, to ) train =
+trainRow { zone, stations, wagonCounts, currentTime } ( from, to ) train =
     let
         homeStationArrivingIn =
             train.homeStationArrival
@@ -240,10 +239,19 @@ trainRow { zone, stations, currentTime } ( from, to ) train =
                         [ class "train-status-badge"
                         , class ("is-" ++ timelinessColor station.differenceInMinutes)
                         ]
-                        [ text (formatDifference station.differenceInMinutes (stationName stations station.stationShortCode)) ]
+                        [ text (formatDifference station.differenceInMinutes (stationName stations station.stationShortCode))
+                        , wagonCount
+                        ]
 
                 Nothing ->
-                    div [ class "train-status-badge" ] [ text "Not moving" ]
+                    div [ class "train-status-badge" ] [ text "Not moving", wagonCount ]
+
+        wagonCount =
+            Dict.get train.trainNumber wagonCounts
+                |> Maybe.withDefault 0
+                |> (\count ->
+                        div [ class "train-wagon-count" ] (List.repeat count Icons.wagon)
+                   )
     in
     div [ class "train" ]
         [ div [ class "train-content" ]

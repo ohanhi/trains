@@ -114,7 +114,7 @@ trainsDecoder targets =
         |> required "timeTableRows" timetableRowsDecoder
         |> required "runningCurrently" bool
         |> required "cancelled" bool
-        |> andThen (\raw -> succeed (toTrain targets raw))
+        |> andThen (succeed << toTrain targets)
         |> list
         |> andThen
             (List.filterMap identity

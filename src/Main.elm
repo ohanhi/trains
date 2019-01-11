@@ -159,7 +159,7 @@ getStations =
 
 getCompositions : Cmd Msg
 getCompositions =
-    get "https://rata.digitraffic.fi/api/v1/compositions" TrainWagonCountsResponse trainWagonCountDecoder
+    get "https://rata.digitraffic.fi/api/v1/compositions/2019-01-11" TrainWagonCountsResponse trainWagonCountDecoder
 
 
 getTrains : Targets -> Cmd Msg
