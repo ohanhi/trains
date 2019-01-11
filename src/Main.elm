@@ -22,6 +22,7 @@ init timestamp url key =
             urlChange
                 { trains = NotAsked
                 , stations = Dict.empty
+                , wagonCounts = Dict.empty
                 , currentTime = Time.millisToPosix timestamp
                 , lastRequestTime = Time.millisToPosix 0
                 , route = SelectDepRoute
@@ -33,6 +34,7 @@ init timestamp url key =
     ( model
     , Cmd.batch
         [ getStations
+        , getCompositions
         , trainsCmd
         , Time.here |> Task.perform TimeZoneResponse
         ]
@@ -83,9 +85,15 @@ update msg model =
             )
 
         StationsResponse _ ->
-            ( model
+            ( model, Cmd.none )
+
+        TrainWagonCountsResponse (Success wagonCounts) ->
+            ( { model | wagonCounts = wagonCounts }
             , Cmd.none
             )
+
+        TrainWagonCountsResponse _ ->
+            ( model, Cmd.none )
 
         LinkClicked urlRequest ->
             case urlRequest of
@@ -144,11 +152,14 @@ parseUrl url =
 
 getStations : Cmd Msg
 getStations =
-    let
-        stationsUrl =
-            "https://rata.digitraffic.fi/api/v1/metadata/stations"
-    in
-    get stationsUrl StationsResponse stationsDecoder
+    get "https://rata.digitraffic.fi/api/v1/metadata/stations"
+        StationsResponse
+        stationsDecoder
+
+
+getCompositions : Cmd Msg
+getCompositions =
+    get "https://rata.digitraffic.fi/api/v1/compositions" TrainWagonCountsResponse trainWagonCountDecoder
 
 
 getTrains : Targets -> Cmd Msg
