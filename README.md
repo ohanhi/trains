@@ -11,3 +11,8 @@ Quick overview for a single station using live data from [rata.digitraffic.fi](h
 3. Build with `npm run build`
 4. Serve with `npm run serve` (uses Python)
 5. Navigate to `http://localhost:8000`.
+
+
+## Credits
+
+Train car icon CC-BY (c) Hannah Strobel <http://hannahstrobel.com/>
