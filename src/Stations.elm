@@ -36,6 +36,7 @@ matching abbreviation =
                     |> Maybe.withDefault False
             )
         |> List.concat
+        -- TODO: redo this bit
         |> Dict.fromList
         |> Dict.remove abbreviation
         |> Dict.toList

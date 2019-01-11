@@ -1,4 +1,4 @@
-module Model exposing (..)
+module Model exposing (CurrentStation, Model, Route(..), RowType(..), Stations, Targets, TimetableRow, Train, TrainWagonCounts, Trains, sortedTrainList, stationsDecoder, trainWagonCountDecoder, trainsDecoder)
 
 import Browser.Navigation
 import DateFormat
@@ -19,6 +19,7 @@ type Route
 type alias Model =
     { trains : WebData Trains
     , stations : Stations
+    , wagonCounts : TrainWagonCounts
     , currentTime : Posix
     , lastRequestTime : Posix
     , route : Route
@@ -47,6 +48,10 @@ type alias TrainRaw =
     , runningCurrently : Bool
     , cancelled : Bool
     }
+
+
+type alias TrainWagonCounts =
+    Dict Int Int
 
 
 type alias Stations =
@@ -84,26 +89,23 @@ type RowType
     | Arrival
 
 
+type alias Targets =
+    { from : String
+    , to : String
+    }
+
+
 stationsDecoder : Decoder Stations
 stationsDecoder =
     Json.Decode.succeed (\a b -> ( a, b ))
         |> required "stationShortCode" string
         |> required "stationName"
-            (string
-                |> map
-                    (\a ->
-                        if String.endsWith " asema" a then
-                            String.dropRight 6 a
-
-                        else
-                            a
-                    )
-            )
+            (string |> map (String.replace " asema" ""))
         |> list
         |> andThen (Dict.fromList >> succeed)
 
 
-trainsDecoder : ( String, String ) -> Decoder Trains
+trainsDecoder : Targets -> Decoder Trains
 trainsDecoder targets =
     Json.Decode.succeed TrainRaw
         |> required "trainNumber" int
@@ -112,7 +114,7 @@ trainsDecoder targets =
         |> required "timeTableRows" timetableRowsDecoder
         |> required "runningCurrently" bool
         |> required "cancelled" bool
-        |> andThen (toTrain targets)
+        |> andThen (succeed << toTrain targets)
         |> list
         |> andThen
             (List.filterMap identity
@@ -120,6 +122,32 @@ trainsDecoder targets =
                 >> Dict.fromList
                 >> succeed
             )
+
+
+trainWagonCountDecoder : Decoder TrainWagonCounts
+trainWagonCountDecoder =
+    let
+        wagonCountFromJourneySections : Decoder (Maybe Int)
+        wagonCountFromJourneySections =
+            succeed identity
+                |> required "wagons" wagonCountFromWagons
+                |> list
+                |> map List.minimum
+
+        wagonCountFromWagons : Decoder Int
+        wagonCountFromWagons =
+            list (succeed True)
+                |> andThen (\a -> succeed (List.length a))
+
+        liftMaybe : Int -> Maybe Int -> Maybe ( Int, Int )
+        liftMaybe trainNum maybeCount =
+            maybeCount |> Maybe.andThen (\count -> Just ( trainNum, count ))
+    in
+    succeed liftMaybe
+        |> required "trainNumber" int
+        |> required "journeySections" wagonCountFromJourneySections
+        |> list
+        |> map (List.filterMap (\a -> a) >> Dict.fromList)
 
 
 sortedTrainList : Trains -> List Train
@@ -130,36 +158,36 @@ sortedTrainList trains =
             (\train -> Time.posixToMillis train.homeStationDeparture.scheduledTime)
 
 
-toTrain : ( String, String ) -> TrainRaw -> Decoder (Maybe Train)
-toTrain ( from, to ) { trainNumber, lineId, trainCategory, timetableRows, runningCurrently, cancelled } =
+toTrain : Targets -> TrainRaw -> Maybe Train
+toTrain { from, to } trainRaw =
     let
         stoppingRows =
-            List.filter .trainStopping timetableRows
+            List.filter .trainStopping trainRaw.timetableRows
 
         homeStationDeparture =
             findTimetableRow Departure from stoppingRows
+
+        endStationArrival =
+            findTimetableRow Arrival to (List.reverse trainRaw.timetableRows)
+
+        isValid =
+            trainRaw.trainCategory == "Commuter" && isRightDirection stoppingRows to homeStationDeparture
     in
-    if trainCategory == "Commuter" && isRightDirection stoppingRows to homeStationDeparture then
-        Maybe.map2
-            (\dep end ->
-                { trainNumber = trainNumber
-                , lineId = lineId
-                , runningCurrently = runningCurrently
-                , cancelled = cancelled
-                , currentStation = findCurrentStation timetableRows
+    case ( isValid, homeStationDeparture, endStationArrival ) of
+        ( True, Just dep, Just end ) ->
+            Just
+                { trainNumber = trainRaw.trainNumber
+                , lineId = trainRaw.lineId
+                , runningCurrently = trainRaw.runningCurrently
+                , cancelled = trainRaw.cancelled
+                , currentStation = findCurrentStation trainRaw.timetableRows
                 , homeStationArrival = findTimetableRow Arrival from stoppingRows
                 , homeStationDeparture = dep
                 , endStationArrival = end
                 }
-                    |> Just
-                    |> succeed
-            )
-            homeStationDeparture
-            (findTimetableRow Arrival to (List.reverse timetableRows))
-            |> Maybe.withDefault (succeed Nothing)
 
-    else
-        succeed Nothing
+        _ ->
+            Nothing
 
 
 findTimetableRow : RowType -> String -> List TimetableRow -> Maybe TimetableRow
@@ -223,14 +251,7 @@ timetableRowsDecoder =
 
 dateDecoder : Decoder Posix
 dateDecoder =
-    string
-        |> andThen
-            (\str ->
-                str
-                    |> Iso8601.toTime
-                    |> Result.map succeed
-                    |> Result.withDefault (fail ("Parsing date '" ++ str ++ "' failed"))
-            )
+    Iso8601.decoder
 
 
 rowTypeDecoder : Decoder RowType

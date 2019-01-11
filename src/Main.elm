@@ -1,27 +1,33 @@
-module Main exposing (..)
+module Main exposing (main)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation
+import DateFormat
 import Dict
 import Json.Decode exposing (Decoder)
 import Model exposing (..)
 import RemoteData exposing (..)
 import RemoteData.Http as Http
 import Task
-import Time
+import Time exposing (Posix)
 import Url exposing (Url)
 import Url.Builder
 import Url.Parser exposing ((</>))
 import View exposing (Msg(..), view)
 
 
-init : Int -> Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
-init timestamp url key =
+type alias Flags =
+    { timestamp : Int }
+
+
+init : Flags -> Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
+init { timestamp } url key =
     let
         ( model, trainsCmd ) =
             urlChange
                 { trains = NotAsked
                 , stations = Dict.empty
+                , wagonCounts = Dict.empty
                 , currentTime = Time.millisToPosix timestamp
                 , lastRequestTime = Time.millisToPosix 0
                 , route = SelectDepRoute
@@ -48,7 +54,7 @@ urlChange model url =
         ( trains, trainsCmd ) =
             case route of
                 ScheduleRoute from to ->
-                    ( Loading, getTrains ( from, to ) )
+                    ( Loading, getTrains { from = from, to = to } )
 
                 _ ->
                     ( NotAsked, Cmd.none )
@@ -69,7 +75,7 @@ update msg model =
 
         TimeZoneResponse zone ->
             ( { model | zone = zone }
-            , Cmd.none
+            , getCompositions model.currentTime zone
             )
 
         TrainsResponse webData ->
@@ -83,9 +89,15 @@ update msg model =
             )
 
         StationsResponse _ ->
-            ( model
+            ( model, Cmd.none )
+
+        TrainWagonCountsResponse (Success wagonCounts) ->
+            ( { model | wagonCounts = wagonCounts }
             , Cmd.none
             )
+
+        TrainWagonCountsResponse _ ->
+            ( model, Cmd.none )
 
         LinkClicked urlRequest ->
             case urlRequest of
@@ -108,7 +120,9 @@ updateTime ({ currentTime, route } as model) =
     case route of
         ScheduleRoute from to ->
             if currentMillis - requestMillis >= 10000 then
-                ( { model | lastRequestTime = currentTime }, getTrains ( from, to ) )
+                ( { model | lastRequestTime = currentTime }
+                , getTrains { from = from, to = to }
+                )
 
             else
                 ( model, Cmd.none )
@@ -142,26 +156,43 @@ parseUrl url =
 
 getStations : Cmd Msg
 getStations =
+    get "https://rata.digitraffic.fi/api/v1/metadata/stations"
+        StationsResponse
+        stationsDecoder
+
+
+getCompositions : Posix -> Time.Zone -> Cmd Msg
+getCompositions posix zone =
     let
-        stationsUrl =
-            "https://rata.digitraffic.fi/api/v1/metadata/stations"
+        localDate =
+            DateFormat.format
+                [ DateFormat.yearNumber
+                , DateFormat.text "-"
+                , DateFormat.monthFixed
+                , DateFormat.text "-"
+                , DateFormat.dayOfMonthFixed
+                ]
+                zone
+                posix
     in
-    get stationsUrl StationsResponse stationsDecoder
+    get ("https://rata.digitraffic.fi/api/v1/compositions/" ++ localDate)
+        TrainWagonCountsResponse
+        trainWagonCountDecoder
 
 
-getTrains : ( String, String ) -> Cmd Msg
-getTrains ( from, to ) =
+getTrains : Targets -> Cmd Msg
+getTrains targets =
     let
         trainsUrl =
             Url.Builder.crossOrigin "https://rata.digitraffic.fi/api/v1/live-trains/station/"
-                [ from ]
+                [ targets.from ]
                 [ Url.Builder.int "minutes_before_departure" 120
                 , Url.Builder.int "minutes_after_departure" 0
                 , Url.Builder.int "minutes_before_arrival" 0
                 , Url.Builder.int "minutes_after_arrival" 0
                 ]
     in
-    get trainsUrl TrainsResponse (trainsDecoder ( from, to ))
+    get trainsUrl TrainsResponse (trainsDecoder targets)
 
 
 subscriptions : Model -> Sub Msg
@@ -174,7 +205,7 @@ get =
     Http.getWithConfig Http.defaultConfig
 
 
-main : Program Int Model Msg
+main : Program Flags Model Msg
 main =
     Browser.application
         { init = init

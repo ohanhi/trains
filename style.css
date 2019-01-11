@@ -136,6 +136,8 @@ a:visited {
   color: white;
   padding: 2px 1rem;
   background-color: var(--color-charcoal);
+  display: flex;
+  justify-content: space-between;
 }
 
 .train-status-badge.is-onTime {
@@ -148,6 +150,17 @@ a:visited {
 
 .train-status-badge.is-offSchedule {
   background-color: var(--color-offSchedule);
+}
+
+.train-wagon-count {
+  overflow: hidden;
+  height: 18px;
+}
+
+.train-wagon-count svg {
+  width: 2rem;
+  /* counter the spacing in the icon */
+  margin-top: -7px;
 }
 
 .train-stations {

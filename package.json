@@ -1,7 +1,7 @@
 {
-  "name": "commuter-station-schedule",
+  "name": "trains",
   "version": "1.0.0",
-  "description": "Commuter Train Station Schedule",
+  "description": "Trains.today - Live Helsinki regional train station schedules",
   "main": "index.html",
   "scripts": {
     "test": "elm-test",
@@ -12,12 +12,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ohanhi/commuter-station-schedule.git"
+    "url": "git+https://github.com/ohanhi/trains.git"
   },
   "author": "ohanhi",
   "license": "BSD-3-Clause",
   "bugs": {
-    "url": "https://github.com/ohanhi/commuter-station-schedule/issues"
+    "url": "https://github.com/ohanhi/trains/issues"
   },
-  "homepage": "https://github.com/ohanhi/commuter-station-schedule#readme"
+  "homepage": "https://github.com/ohanhi/trains#readme"
 }
