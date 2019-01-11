@@ -20,6 +20,7 @@ type Msg
     | TimeZoneResponse Time.Zone
     | TrainsResponse (WebData Trains)
     | StationsResponse (WebData Stations)
+    | TrainWagonCountsResponse (WebData TrainWagonCounts)
     | UrlChange Url
     | LinkClicked UrlRequest
 
@@ -73,9 +74,18 @@ view model =
             schedulePage model ( from, to )
 
 
-container : List (Html msg) -> List (Html msg)
-container elements =
-    [ div [ class "container" ] elements ]
+container : Maybe String -> List (Html msg) -> List (Html msg)
+container headingText elements =
+    let
+        heading =
+            case headingText of
+                Just string ->
+                    [ header [] [ h1 [] [ text string ] ] ]
+
+                Nothing ->
+                    []
+    in
+    [ div [ class "container" ] (heading ++ elements) ]
 
 
 selectDepPage : Model -> Document msg
@@ -83,8 +93,8 @@ selectDepPage model =
     { title = "Trains.today - Helsinki region commuter trains"
     , body =
         container
-            [ header [] [ h1 [] [ text "Select departure station" ] ]
-            , ul [ class "stations" ] <|
+            (Just "Select departure station")
+            [ ul [ class "stations" ] <|
                 List.map
                     (\( abbr, name ) ->
                         li [] [ a [ href ("#/" ++ abbr) ] [ text name ] ]
@@ -108,8 +118,8 @@ selectDestPage model dep =
     { title = "Select destination – Trains.today"
     , body =
         container
-            [ header [] [ h1 [] [ text "Select destination station" ] ]
-            , ul [ class "stations" ] <|
+            (Just "Select destination station")
+            [ ul [ class "stations" ] <|
                 List.map
                     (\( abbr, name ) ->
                         li [] [ a [ href (url abbr) ] [ text (linkText name) ] ]
@@ -127,7 +137,7 @@ schedulePage model ( from, to ) =
     in
     { title = heading ++ " – Trains.today"
     , body =
-        container
+        container Nothing
             [ case model.trains of
                 Success trains ->
                     trainsView model ( from, to ) heading trains
@@ -135,10 +145,9 @@ schedulePage model ( from, to ) =
                 Failure err ->
                     div
                         []
-                        [ header [] [ text "Oh noes, an error!" ]
-                        , case err of
+                        [ case err of
                             Http.NetworkError ->
-                                text "It's the network."
+                                text "No connection, trying again soon..."
 
                             Http.Timeout ->
                                 text "Helloooo? (There was no response.)"
@@ -189,11 +198,11 @@ type ArrivalEstimate
 
 
 trainRow :
-    { a | zone : Time.Zone, stations : Stations, currentTime : Posix }
+    { a | zone : Time.Zone, stations : Stations, wagonCounts : TrainWagonCounts, currentTime : Posix }
     -> ( String, String )
     -> Train
     -> Html msg
-trainRow { zone, stations, currentTime } ( from, to ) train =
+trainRow { zone, stations, wagonCounts, currentTime } ( from, to ) train =
     let
         homeStationArrivingIn =
             train.homeStationArrival
@@ -230,10 +239,19 @@ trainRow { zone, stations, currentTime } ( from, to ) train =
                         [ class "train-status-badge"
                         , class ("is-" ++ timelinessColor station.differenceInMinutes)
                         ]
-                        [ text (formatDifference station.differenceInMinutes (stationName stations station.stationShortCode)) ]
+                        [ text (formatDifference station.differenceInMinutes (stationName stations station.stationShortCode))
+                        , wagonCount
+                        ]
 
                 Nothing ->
-                    div [ class "train-status-badge" ] [ text "Not moving" ]
+                    div [ class "train-status-badge" ] [ text "Not moving", wagonCount ]
+
+        wagonCount =
+            Dict.get train.trainNumber wagonCounts
+                |> Maybe.withDefault 0
+                |> (\count ->
+                        div [ class "train-wagon-count" ] (List.repeat count Icons.wagon)
+                   )
     in
     div [ class "train" ]
         [ div [ class "train-content" ]
@@ -327,17 +345,18 @@ stationName stations shortCode =
 formatDifference : Int -> String -> String
 formatDifference n name =
     let
-        suffix =
-            " in " ++ name
+        relative =
+            if n < 0 then
+                "early"
+
+            else
+                "late"
     in
     if abs n <= 1 then
-        "On time" ++ suffix
-
-    else if n < 0 then
-        (String.fromInt (abs n) ++ " min early") ++ suffix
+        "On time in " ++ name
 
     else
-        (String.fromInt n ++ " min late") ++ suffix
+        String.fromInt (abs n) ++ " min " ++ relative ++ " in " ++ name
 
 
 prettyMinutes : Posix -> String

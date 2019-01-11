@@ -1,19 +1,24 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Schedules! Helsinki region commuter trains</title>
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto:300,600"
+      rel="stylesheet"
+    />
+    <link href="style.css" rel="stylesheet" />
+    <script src="elm.js"></script>
+  </head>
 
-<head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width">
-	<title>Schedules! Helsinki region commuter trains</title>
-	<link href="https://fonts.googleapis.com/css?family=Roboto:300,600" rel="stylesheet">
-	<link href="style.css" rel="stylesheet">
-	<script src="elm.js"></script>
-</head>
-
-<body id="page-body">
-	<script>
-		Elm.Main.init({ flags: Date.now() });
-	</script>
-</body>
-
+  <body id="page-body">
+    <script>
+      Elm.Main.init({
+        flags: {
+          timestamp: Date.now()
+        }
+      });
+    </script>
+  </body>
 </html>

@@ -1,4 +1,4 @@
-module Model exposing (CurrentStation, Model, Route(..), RowType(..), Stations, Targets, TimetableRow, Train, Trains, sortedTrainList, stationsDecoder, trainsDecoder)
+module Model exposing (CurrentStation, Model, Route(..), RowType(..), Stations, Targets, TimetableRow, Train, TrainWagonCounts, Trains, sortedTrainList, stationsDecoder, trainWagonCountDecoder, trainsDecoder)
 
 import Browser.Navigation
 import DateFormat
@@ -19,6 +19,7 @@ type Route
 type alias Model =
     { trains : WebData Trains
     , stations : Stations
+    , wagonCounts : TrainWagonCounts
     , currentTime : Posix
     , lastRequestTime : Posix
     , route : Route
@@ -47,6 +48,10 @@ type alias TrainRaw =
     , runningCurrently : Bool
     , cancelled : Bool
     }
+
+
+type alias TrainWagonCounts =
+    Dict Int Int
 
 
 type alias Stations =
@@ -109,7 +114,7 @@ trainsDecoder targets =
         |> required "timeTableRows" timetableRowsDecoder
         |> required "runningCurrently" bool
         |> required "cancelled" bool
-        |> andThen (\raw -> succeed (toTrain targets raw))
+        |> andThen (succeed << toTrain targets)
         |> list
         |> andThen
             (List.filterMap identity
@@ -117,6 +122,32 @@ trainsDecoder targets =
                 >> Dict.fromList
                 >> succeed
             )
+
+
+trainWagonCountDecoder : Decoder TrainWagonCounts
+trainWagonCountDecoder =
+    let
+        wagonCountFromJourneySections : Decoder (Maybe Int)
+        wagonCountFromJourneySections =
+            succeed identity
+                |> required "wagons" wagonCountFromWagons
+                |> list
+                |> map List.minimum
+
+        wagonCountFromWagons : Decoder Int
+        wagonCountFromWagons =
+            list (succeed True)
+                |> andThen (\a -> succeed (List.length a))
+
+        liftMaybe : Int -> Maybe Int -> Maybe ( Int, Int )
+        liftMaybe trainNum maybeCount =
+            maybeCount |> Maybe.andThen (\count -> Just ( trainNum, count ))
+    in
+    succeed liftMaybe
+        |> required "trainNumber" int
+        |> required "journeySections" wagonCountFromJourneySections
+        |> list
+        |> map (List.filterMap (\a -> a) >> Dict.fromList)
 
 
 sortedTrainList : Trains -> List Train
