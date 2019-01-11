@@ -129,7 +129,9 @@ trainWagonCountDecoder =
     let
         wagonCountFromJourneySections : Decoder (Maybe Int)
         wagonCountFromJourneySections =
-            list wagonCountFromWagons
+            succeed identity
+                |> required "wagons" wagonCountFromWagons
+                |> list
                 |> map List.minimum
 
         wagonCountFromWagons : Decoder Int
