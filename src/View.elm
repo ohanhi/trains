@@ -83,7 +83,7 @@ selectDepPage model =
     { title = "Trains.today - Helsinki region commuter trains"
     , body =
         container
-            [ header [] [ h1 [] [ text "Select departure" ] ]
+            [ header [] [ h1 [] [ text "Select departure station" ] ]
             , ul [ class "stations" ] <|
                 List.map
                     (\( abbr, name ) ->
@@ -108,7 +108,7 @@ selectDestPage model dep =
     { title = "Select destination – Trains.today"
     , body =
         container
-            [ header [] [ h1 [] [ text "Select departure" ] ]
+            [ header [] [ h1 [] [ text "Select destination station" ] ]
             , ul [ class "stations" ] <|
                 List.map
                     (\( abbr, name ) ->
