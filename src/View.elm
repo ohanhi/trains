@@ -5,12 +5,15 @@ import DateFormat
 import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events
 import Http
 import Icons
+import Json.Decode
 import Model exposing (..)
 import RemoteData exposing (RemoteData(..), WebData)
 import Stations
 import Time exposing (Posix)
+import Translations exposing (..)
 import Url exposing (Url)
 import Url.Parser
 
@@ -23,6 +26,7 @@ type Msg
     | TrainWagonCountsResponse (WebData TrainWagonCounts)
     | UrlChange Url
     | LinkClicked UrlRequest
+    | SetLanguage Language
 
 
 rem : Float -> Float
@@ -61,21 +65,25 @@ timelinessColor difference =
         "offSchedule"
 
 
-view : Model -> Document msg
+view : Model -> Document Msg
 view model =
+    let
+        t =
+            translate model.language
+    in
     case model.route of
         SelectDepRoute ->
-            selectDepPage model
+            selectDepPage t model
 
         SelectDestRoute dep ->
-            selectDestPage model dep
+            selectDestPage t model dep
 
         ScheduleRoute from to ->
-            schedulePage model ( from, to )
+            schedulePage t model ( from, to )
 
 
-container : Maybe String -> List (Html msg) -> List (Html msg)
-container headingText elements =
+container : Language -> Maybe String -> List (Html Msg) -> List (Html Msg)
+container language headingText elements =
     let
         heading =
             case headingText of
@@ -85,15 +93,35 @@ container headingText elements =
                 Nothing ->
                     []
     in
-    [ div [ class "container" ] (heading ++ elements) ]
+    [ div [ class "container" ] (languageSelect language :: (heading ++ elements)) ]
 
 
-selectDepPage : Model -> Document msg
-selectDepPage model =
-    { title = "Trains.today - Helsinki region commuter trains"
+languageSelect : Language -> Html Msg
+languageSelect currentLanguage =
+    let
+        optionAttrs lang =
+            [ value (languageToString lang)
+            , Html.Events.onClick (SetLanguage lang)
+            , class
+                (if currentLanguage == lang then
+                    "is-current"
+
+                 else
+                    ""
+                )
+            ]
+    in
+    allLanguages
+        |> List.map (\lang -> button (optionAttrs lang) [ text (languageToString lang) ])
+        |> div [ class "language-select" ]
+
+
+selectDepPage : T -> Model -> Document Msg
+selectDepPage t model =
+    { title = t DepPageTitle
     , body =
-        container
-            (Just "Select departure station")
+        container model.language
+            (Just (t DepPageHeading))
             [ ul [ class "stations" ] <|
                 List.map
                     (\( abbr, name ) ->
@@ -104,8 +132,8 @@ selectDepPage model =
     }
 
 
-selectDestPage : Model -> String -> Document msg
-selectDestPage model dep =
+selectDestPage : T -> Model -> String -> Document Msg
+selectDestPage t model dep =
     let
         url dest =
             "#/" ++ dep ++ "/" ++ dest
@@ -115,10 +143,10 @@ selectDestPage model dep =
                 |> Maybe.map (\name -> name ++ "–" ++ dest)
                 |> Maybe.withDefault dest
     in
-    { title = "Select destination – Trains.today"
+    { title = t DestPageTitle
     , body =
-        container
-            (Just "Select destination station")
+        container model.language
+            (Just (t DestPageHeading))
             [ ul [ class "stations" ] <|
                 List.map
                     (\( abbr, name ) ->
@@ -129,41 +157,45 @@ selectDestPage model dep =
     }
 
 
-schedulePage : Model -> ( String, String ) -> Document msg
-schedulePage model ( from, to ) =
+schedulePage : T -> Model -> ( String, String ) -> Document Msg
+schedulePage t model ( from, to ) =
     let
         heading =
             stationName model.stations from ++ "—" ++ stationName model.stations to
+
+        tText =
+            text << t
     in
     { title = heading ++ " – Trains.today"
     , body =
-        container Nothing
+        container model.language
+            Nothing
             [ case model.trains of
                 Success trains ->
-                    trainsView model ( from, to ) heading trains
+                    trainsView t model ( from, to ) heading trains
 
                 Failure err ->
                     div
                         []
                         [ case err of
                             Http.NetworkError ->
-                                text "No connection, trying again soon..."
+                                tText ErrorNetwork
 
                             Http.Timeout ->
-                                text "Helloooo? (There was no response.)"
+                                tText ErrorTimeout
 
-                            Http.BadUrl _ ->
-                                text "It's not you, it's me. I have the server address wrong."
+                            Http.BadUrl url ->
+                                tText ErrorBadUrl
 
-                            Http.BadStatus _ ->
-                                text "Whoops, looks like the server didn't like the request."
+                            Http.BadStatus status ->
+                                tText ErrorBadStatus
 
                             Http.BadPayload _ _ ->
-                                text "Ouch, the server responded with strange contents."
+                                tText ErrorBadPayload
                         ]
 
                 Loading ->
-                    header [] [ text "Loading" ]
+                    header [] [ tText SchedulePageLoading ]
 
                 _ ->
                     text ""
@@ -171,8 +203,8 @@ schedulePage model ( from, to ) =
     }
 
 
-trainsView : Model -> ( String, String ) -> String -> Trains -> Html msg
-trainsView model ( from, to ) heading trains =
+trainsView : T -> Model -> ( String, String ) -> String -> Trains -> Html msg
+trainsView t model ( from, to ) heading trains =
     let
         rightDirection =
             trains
@@ -189,7 +221,7 @@ trainsView model ( from, to ) heading trains =
                 [ Icons.swap ]
             ]
         ]
-            ++ List.map (trainRow model ( from, to )) rightDirection
+            ++ List.map (trainRow t model ( from, to )) rightDirection
 
 
 type ArrivalEstimate
@@ -197,13 +229,12 @@ type ArrivalEstimate
     | ScheduleEstimate String
 
 
-trainRow :
-    { a | zone : Time.Zone, stations : Stations, wagonCounts : TrainWagonCounts, currentTime : Posix }
-    -> ( String, String )
-    -> Train
-    -> Html msg
-trainRow { zone, stations, wagonCounts, currentTime } ( from, to ) train =
+trainRow : T -> Model -> ( String, String ) -> Train -> Html msg
+trainRow t { zone, stations, wagonCounts, currentTime } ( from, to ) train =
     let
+        tText =
+            t >> text
+
         homeStationArrivingIn =
             train.homeStationArrival
                 |> Maybe.andThen prettyBestEstimateFor
@@ -239,12 +270,16 @@ trainRow { zone, stations, wagonCounts, currentTime } ( from, to ) train =
                         [ class "train-status-badge"
                         , class ("is-" ++ timelinessColor station.differenceInMinutes)
                         ]
-                        [ text (formatDifference station.differenceInMinutes (stationName stations station.stationShortCode))
+                        [ { minuteDiff = station.differenceInMinutes
+                          , stationName = stationName stations station.stationShortCode
+                          }
+                            |> SchedulePageTimeDifference
+                            |> tText
                         , wagonCount
                         ]
 
                 Nothing ->
-                    div [ class "train-status-badge" ] [ text "Not moving", wagonCount ]
+                    div [ class "train-status-badge" ] [ tText SchedulePageNotMoving, wagonCount ]
 
         wagonCount =
             Dict.get train.trainNumber wagonCounts
@@ -266,7 +301,7 @@ trainRow { zone, stations, wagonCounts, currentTime } ( from, to ) train =
                 case ( homeStationArrivingIn, homeStationDepartingIn ) of
                     ( Just estimate, _ ) ->
                         [ div [ class "train-status-arriving" ]
-                            [ text "Arrives in" ]
+                            [ tText SchedulePageArrivesIn ]
                         , div [ class "train-status-time" ]
                             [ case estimate of
                                 LiveEstimate time ->
@@ -279,7 +314,7 @@ trainRow { zone, stations, wagonCounts, currentTime } ( from, to ) train =
 
                     ( _, Just estimate ) ->
                         [ div [ class "train-status-arriving" ]
-                            [ text "Departs in" ]
+                            [ tText SchedulePageDepartsIn ]
                         , div [ class "train-status-time" ]
                             [ case estimate of
                                 LiveEstimate time ->
@@ -331,7 +366,7 @@ stationRow zone stations station =
                 div [ class "train-stations-estimate" ]
                     [ text <| prettyTime zone station.scheduledTime ]
         , div [ class "train-stations-name" ] [ text name ]
-        , div [ class "train-stations-track" ] [ text (Maybe.withDefault "-" station.track) ]
+        , div [ class "train-stations-track" ] [ text (Maybe.withDefault "" station.track) ]
         ]
 
 
@@ -340,23 +375,6 @@ stationName stations shortCode =
     stations
         |> Dict.get shortCode
         |> Maybe.withDefault shortCode
-
-
-formatDifference : Int -> String -> String
-formatDifference n name =
-    let
-        relative =
-            if n < 0 then
-                "early"
-
-            else
-                "late"
-    in
-    if abs n <= 1 then
-        "On time in " ++ name
-
-    else
-        String.fromInt (abs n) ++ " min " ++ relative ++ " in " ++ name
 
 
 prettyMinutes : Posix -> String

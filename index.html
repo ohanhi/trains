@@ -4,21 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <title>Schedules! Helsinki region commuter trains</title>
-    <link
-      href="https://fonts.googleapis.com/css?family=Roboto:300,600"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,600" rel="stylesheet" />
     <link href="style.css" rel="stylesheet" />
     <script src="elm.js"></script>
   </head>
 
   <body id="page-body">
     <script>
-      Elm.Main.init({
+      var storedState = localStorage.getItem('trains-today')
+      var startingState = storedState ? JSON.parse(storedState) : { language: 'EN' }
+      var app = Elm.Main.init({
         flags: {
-          timestamp: Date.now()
-        }
-      });
+          timestamp: Date.now(),
+          language: startingState.language,
+        },
+      })
+      app.ports.setStorage.subscribe(function(state) {
+        localStorage.setItem('trains-today', JSON.stringify(state))
+      })
     </script>
   </body>
 </html>
