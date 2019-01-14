@@ -228,7 +228,19 @@ toTrain { from, to } trainRaw =
             findTimetableRow Arrival to (List.reverse trainRaw.timetableRows)
 
         isValid =
-            trainRaw.trainCategory == "Commuter" && isRightDirection stoppingRows to homeStationDeparture
+            (trainRaw.trainCategory == "Commuter")
+                && isRightDirection stoppingRows to homeStationDeparture
+                && not ringTrackFilterApplies
+
+        rowsAfterHomeStation =
+            upcomingRows
+                |> List.map .stationShortCode
+                |> dropUntil ((==) from)
+
+        -- Very special Ring Track handling: PSL and HKI are visited twice.
+        -- We want trains that aren't going via LEN.
+        ringTrackFilterApplies =
+            List.member to [ "PSL", "HKI" ] && List.member "LEN" rowsAfterHomeStation
     in
     case ( isValid, homeStationDeparture, endStationArrival ) of
         ( True, Just dep, Just end ) ->
@@ -326,3 +338,18 @@ rowTypeDecoder =
                     other ->
                         fail ("\"" ++ other ++ "\" is not a valid row type")
             )
+
+
+dropUntil : (a -> Bool) -> List a -> List a
+dropUntil predicate list =
+    case list of
+        [] ->
+            []
+
+        a :: rest ->
+            case predicate a of
+                True ->
+                    rest
+
+                False ->
+                    dropUntil predicate rest
