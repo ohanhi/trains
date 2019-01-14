@@ -5,6 +5,7 @@ import DateFormat
 import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (onClick)
 import Http
 import Icons
 import Model exposing (..)
@@ -24,6 +25,7 @@ type Msg
     | TrainWagonCountsResponse (WebData TrainWagonCounts)
     | UrlChange Url
     | LinkClicked UrlRequest
+    | SetLanguage Language
 
 
 rem : Float -> Float
@@ -62,7 +64,7 @@ timelinessColor difference =
         "offSchedule"
 
 
-view : Model -> Document msg
+view : Model -> Document Msg
 view model =
     let
         t =
@@ -93,19 +95,21 @@ container headingText elements =
     [ div [ class "container" ] (heading ++ elements) ]
 
 
-selectDepPage : T -> Model -> Document msg
+selectDepPage : T -> Model -> Document Msg
 selectDepPage t model =
     { title = t DepPageTitle
     , body =
         container
             (Just (t DepPageHeading))
-            [ ul [ class "stations" ] <|
-                List.map
-                    (\( abbr, name ) ->
-                        li [] [ a [ href ("#/" ++ abbr) ] [ text name ] ]
-                    )
-                    Stations.all
-            ]
+            (List.map (\lang -> button [ onClick (SetLanguage lang) ] [ text (languageToString lang) ]) allLanguages
+                ++ [ ul [ class "stations" ] <|
+                        List.map
+                            (\( abbr, name ) ->
+                                li [] [ a [ href ("#/" ++ abbr) ] [ text name ] ]
+                            )
+                            Stations.all
+                   ]
+            )
     }
 
 

@@ -1,9 +1,39 @@
-module Translations exposing (Language(..), T, TranslationKey(..), translate)
+module Translations exposing (Language(..), T, TranslationKey(..), allLanguages, languageToString, stringToLanguage, translate)
 
 
 type Language
     = Finnish
     | English
+
+
+allLanguages : List Language
+allLanguages =
+    [ Finnish
+    , English
+    ]
+
+
+languageToString : Language -> String
+languageToString language =
+    case language of
+        English ->
+            "EN"
+
+        Finnish ->
+            "FI"
+
+
+stringToLanguage : String -> Maybe Language
+stringToLanguage string =
+    case string of
+        "EN" ->
+            Just English
+
+        "FI" ->
+            Just Finnish
+
+        _ ->
+            Nothing
 
 
 type alias T =

@@ -1,4 +1,4 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation
@@ -17,23 +17,23 @@ import Url.Parser exposing ((</>))
 import View exposing (Msg(..), view)
 
 
-type alias Flags =
-    { timestamp : Int
-    , language : String
+type alias Flags storageModel =
+    { storageModel
+        | timestamp : Int
     }
 
 
-init : Flags -> Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
+type alias StorageModel =
+    { language : String
+    }
+
+
+port setStorage : StorageModel -> Cmd msg
+
+
+init : Flags StorageModel -> Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
-        language =
-            case flags.language of
-                "FI" ->
-                    Translations.Finnish
-
-                _ ->
-                    Translations.English
-
         ( model, trainsCmd ) =
             urlChange
                 { trains = NotAsked
@@ -44,7 +44,9 @@ init flags url key =
                 , route = SelectDepRoute
                 , zone = Time.utc
                 , navKey = key
-                , language = language
+                , language =
+                    Translations.stringToLanguage flags.language
+                        |> Maybe.withDefault Translations.English
                 }
                 url
     in
@@ -118,6 +120,19 @@ update msg model =
 
                 External url ->
                     ( model, Browser.Navigation.load url )
+
+        SetLanguage language ->
+            let
+                nextModel =
+                    { model | language = language }
+            in
+            ( nextModel, setStorage (getStorageModel nextModel) )
+
+
+getStorageModel : Model -> StorageModel
+getStorageModel model =
+    { language = Translations.languageToString model.language
+    }
 
 
 updateTime : Model -> ( Model, Cmd Msg )
@@ -217,7 +232,7 @@ get =
     Http.getWithConfig Http.defaultConfig
 
 
-main : Program Flags Model Msg
+main : Program (Flags StorageModel) Model Msg
 main =
     Browser.application
         { init = init
