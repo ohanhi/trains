@@ -16,12 +16,14 @@
             "elm/svg": "1.0.0",
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
+            "elm-explorations/test": "1.2.0",
             "krisajenkins/remotedata": "5.0.0",
             "ohanhi/remotedata-http": "3.0.0",
             "rtfeldman/elm-iso8601-date-strings": "1.1.2",
             "ryannhg/date-format": "1.0.0"
         },
         "indirect": {
+            "elm/random": "1.0.0",
             "elm/virtual-dom": "1.0.0"
         }
     },

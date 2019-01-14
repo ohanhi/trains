@@ -1,4 +1,4 @@
-module Model exposing (CurrentStation, Model, Route(..), RowType(..), Stations, StoredState, Targets, TimetableRow, Train, TrainWagonCounts, Trains, decodeStoredState, defaultStoredState, encodeStoredState, sortedTrainList, stationsDecoder, trainWagonCountDecoder, trainsDecoder)
+module Model exposing (CurrentStation, Model, Route(..), RowType(..), Stations, StoredState, Targets, TimetableRow, Train, TrainWagonCounts, Trains, decodeStoredState, defaultStoredState, encodeStoredState, sortedTrainList, stationsDecoder, toTrain, trainWagonCountDecoder, trainsDecoder)
 
 import Browser.Navigation
 import DateFormat
