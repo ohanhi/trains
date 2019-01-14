@@ -17,23 +17,23 @@ import Url.Parser exposing ((</>))
 import View exposing (Msg(..), view)
 
 
-type alias Flags storageModel =
-    { storageModel
-        | timestamp : Int
+port setStorage : String -> Cmd msg
+
+
+type alias Flags =
+    { timestamp : Int
+    , storedState : String
     }
 
 
-type alias StorageModel =
-    { language : String
-    }
-
-
-port setStorage : StorageModel -> Cmd msg
-
-
-init : Flags StorageModel -> Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
+init : Flags -> Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
+        storedState =
+            flags.storedState
+                |> decodeStoredState
+                |> Result.withDefault defaultStoredState
+
         ( model, trainsCmd ) =
             urlChange
                 { trains = NotAsked
@@ -44,9 +44,7 @@ init flags url key =
                 , route = SelectDepRoute
                 , zone = Time.utc
                 , navKey = key
-                , language =
-                    Translations.stringToLanguage flags.language
-                        |> Maybe.withDefault Translations.English
+                , language = storedState.language
                 }
                 url
     in
@@ -126,13 +124,7 @@ update msg model =
                 nextModel =
                     { model | language = language }
             in
-            ( nextModel, setStorage (getStorageModel nextModel) )
-
-
-getStorageModel : Model -> StorageModel
-getStorageModel model =
-    { language = Translations.languageToString model.language
-    }
+            ( nextModel, setStorage (encodeStoredState nextModel) )
 
 
 updateTime : Model -> ( Model, Cmd Msg )
@@ -232,7 +224,7 @@ get =
     Http.getWithConfig Http.defaultConfig
 
 
-main : Program (Flags StorageModel) Model Msg
+main : Program Flags Model Msg
 main =
     Browser.application
         { init = init

@@ -11,16 +11,15 @@
 
   <body id="page-body">
     <script>
-      var storedState = localStorage.getItem('trains-today')
-      var startingState = storedState ? JSON.parse(storedState) : { language: 'EN' }
+      var storedState = localStorage.getItem('trains-today') || '{}'
       var app = Elm.Main.init({
         flags: {
           timestamp: Date.now(),
-          language: startingState.language,
+          storedState: storedState,
         },
       })
       app.ports.setStorage.subscribe(function(state) {
-        localStorage.setItem('trains-today', JSON.stringify(state))
+        localStorage.setItem('trains-today', state)
       })
     </script>
   </body>
