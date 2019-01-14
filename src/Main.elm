@@ -18,12 +18,22 @@ import View exposing (Msg(..), view)
 
 
 type alias Flags =
-    { timestamp : Int }
+    { timestamp : Int
+    , language : String
+    }
 
 
 init : Flags -> Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
+        language =
+            case flags.language of
+                "FI" ->
+                    Translations.Finnish
+
+                _ ->
+                    Translations.English
+
         ( model, trainsCmd ) =
             urlChange
                 { trains = NotAsked
@@ -34,7 +44,7 @@ init flags url key =
                 , route = SelectDepRoute
                 , zone = Time.utc
                 , navKey = key
-                , language = Translations.Finnish
+                , language = language
                 }
                 url
     in
