@@ -5,9 +5,10 @@ import DateFormat
 import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick)
+import Html.Events
 import Http
 import Icons
+import Json.Decode
 import Model exposing (..)
 import RemoteData exposing (RemoteData(..), WebData)
 import Stations
@@ -81,8 +82,8 @@ view model =
             schedulePage t model ( from, to )
 
 
-container : Maybe String -> List (Html msg) -> List (Html msg)
-container headingText elements =
+container : Language -> Maybe String -> List (Html Msg) -> List (Html Msg)
+container language headingText elements =
     let
         heading =
             case headingText of
@@ -92,28 +93,46 @@ container headingText elements =
                 Nothing ->
                     []
     in
-    [ div [ class "container" ] (heading ++ elements) ]
+    [ div [ class "container" ] (languageSelect language :: (heading ++ elements)) ]
+
+
+languageSelect : Language -> Html Msg
+languageSelect currentLanguage =
+    let
+        optionAttrs lang =
+            [ value (languageToString lang)
+            , Html.Events.onClick (SetLanguage lang)
+            , class
+                (if currentLanguage == lang then
+                    "is-current"
+
+                 else
+                    ""
+                )
+            ]
+    in
+    allLanguages
+        |> List.map (\lang -> button (optionAttrs lang) [ text (languageToString lang) ])
+        |> div [ class "language-select" ]
 
 
 selectDepPage : T -> Model -> Document Msg
 selectDepPage t model =
     { title = t DepPageTitle
     , body =
-        container
+        container model.language
             (Just (t DepPageHeading))
-            (List.map (\lang -> button [ onClick (SetLanguage lang) ] [ text (languageToString lang) ]) allLanguages
-                ++ [ ul [ class "stations" ] <|
-                        List.map
-                            (\( abbr, name ) ->
-                                li [] [ a [ href ("#/" ++ abbr) ] [ text name ] ]
-                            )
-                            Stations.all
-                   ]
-            )
+            [ ul [ class "stations" ] <|
+                List.map
+                    (\( abbr, name ) ->
+                        li [] [ a [ href ("#/" ++ abbr) ] [ text name ] ]
+                    )
+                    Stations.all
+            ]
     }
 
 
-selectDestPage : T -> Model -> String -> Document msg
+selectDestPage : T -> Model -> String -> Document Msg
 selectDestPage t model dep =
     let
         url dest =
@@ -126,7 +145,7 @@ selectDestPage t model dep =
     in
     { title = t DestPageTitle
     , body =
-        container
+        container model.language
             (Just (t DestPageHeading))
             [ ul [ class "stations" ] <|
                 List.map
@@ -138,7 +157,7 @@ selectDestPage t model dep =
     }
 
 
-schedulePage : T -> Model -> ( String, String ) -> Document msg
+schedulePage : T -> Model -> ( String, String ) -> Document Msg
 schedulePage t model ( from, to ) =
     let
         heading =
@@ -149,7 +168,8 @@ schedulePage t model ( from, to ) =
     in
     { title = heading ++ " – Trains.today"
     , body =
-        container Nothing
+        container model.language
+            Nothing
             [ case model.trains of
                 Success trains ->
                     trainsView t model ( from, to ) heading trains
