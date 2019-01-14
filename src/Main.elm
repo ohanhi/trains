@@ -10,6 +10,7 @@ import RemoteData exposing (..)
 import RemoteData.Http as Http
 import Task
 import Time exposing (Posix)
+import Translations
 import Url exposing (Url)
 import Url.Builder
 import Url.Parser exposing ((</>))
@@ -21,18 +22,19 @@ type alias Flags =
 
 
 init : Flags -> Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
-init { timestamp } url key =
+init flags url key =
     let
         ( model, trainsCmd ) =
             urlChange
                 { trains = NotAsked
                 , stations = Dict.empty
                 , wagonCounts = Dict.empty
-                , currentTime = Time.millisToPosix timestamp
+                , currentTime = Time.millisToPosix flags.timestamp
                 , lastRequestTime = Time.millisToPosix 0
                 , route = SelectDepRoute
                 , zone = Time.utc
                 , navKey = key
+                , language = Translations.Finnish
                 }
                 url
     in

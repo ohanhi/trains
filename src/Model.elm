@@ -8,6 +8,7 @@ import Json.Decode exposing (..)
 import Json.Decode.Pipeline exposing (..)
 import RemoteData exposing (WebData)
 import Time exposing (Posix)
+import Translations
 
 
 type Route
@@ -25,6 +26,7 @@ type alias Model =
     , route : Route
     , zone : Time.Zone
     , navKey : Browser.Navigation.Key
+    , language : Translations.Language
     }
 
 
