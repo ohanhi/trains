@@ -1,4 +1,4 @@
-module Model exposing (CurrentStation, Model, Route(..), RowType(..), Stations, Targets, TimetableRow, Train, TrainWagonCounts, Trains, sortedTrainList, stationsDecoder, trainWagonCountDecoder, trainsDecoder)
+module Model exposing (CurrentStation, Model, Route(..), RowType(..), Stations, StoredState, Targets, TimetableRow, Train, TrainWagonCounts, Trains, decodeStoredState, defaultStoredState, encodeStoredState, sortedTrainList, stationsDecoder, trainWagonCountDecoder, trainsDecoder)
 
 import Browser.Navigation
 import DateFormat
@@ -6,8 +6,61 @@ import Dict exposing (Dict)
 import Iso8601
 import Json.Decode exposing (..)
 import Json.Decode.Pipeline exposing (..)
+import Json.Encode as Enc
 import RemoteData exposing (WebData)
 import Time exposing (Posix)
+import Translations exposing (Language(..))
+import Tuple exposing (pair)
+
+
+storedStateVersion : Int
+storedStateVersion =
+    1
+
+
+type alias StoredState =
+    { version : Int
+    , language : Language
+    }
+
+
+defaultStoredState : StoredState
+defaultStoredState =
+    { version = storedStateVersion
+    , language = Finnish
+    }
+
+
+storedStateDecoder : Json.Decode.Decoder StoredState
+storedStateDecoder =
+    succeed StoredState
+        |> required "version" int
+        |> required "language"
+            (string
+                |> andThen
+                    (\s ->
+                        case Translations.stringToLanguage s of
+                            Just lang ->
+                                succeed lang
+
+                            Nothing ->
+                                fail "invalid language"
+                    )
+            )
+
+
+decodeStoredState : String -> Result Error StoredState
+decodeStoredState =
+    decodeString storedStateDecoder
+
+
+encodeStoredState : { a | language : Language } -> String
+encodeStoredState { language } =
+    [ pair "version" (Enc.int storedStateVersion)
+    , pair "language" (Enc.string (Translations.languageToString language))
+    ]
+        |> Enc.object
+        |> Enc.encode 0
 
 
 type Route
@@ -25,6 +78,7 @@ type alias Model =
     , route : Route
     , zone : Time.Zone
     , navKey : Browser.Navigation.Key
+    , language : Translations.Language
     }
 
 
@@ -164,14 +218,29 @@ toTrain { from, to } trainRaw =
         stoppingRows =
             List.filter .trainStopping trainRaw.timetableRows
 
+        upcomingRows =
+            List.filter (\row -> row.actualTime == Nothing) stoppingRows
+
         homeStationDeparture =
-            findTimetableRow Departure from stoppingRows
+            findTimetableRow Departure from upcomingRows
 
         endStationArrival =
             findTimetableRow Arrival to (List.reverse trainRaw.timetableRows)
 
         isValid =
-            trainRaw.trainCategory == "Commuter" && isRightDirection stoppingRows to homeStationDeparture
+            (trainRaw.trainCategory == "Commuter")
+                && isRightDirection stoppingRows to homeStationDeparture
+                && not ringTrackFilterApplies
+
+        rowsAfterHomeStation =
+            upcomingRows
+                |> List.map .stationShortCode
+                |> dropUntil ((==) from)
+
+        -- Very special Ring Track handling: PSL and HKI are visited twice.
+        -- We want trains that aren't going via LEN.
+        ringTrackFilterApplies =
+            List.member to [ "PSL", "HKI" ] && List.member "LEN" rowsAfterHomeStation
     in
     case ( isValid, homeStationDeparture, endStationArrival ) of
         ( True, Just dep, Just end ) ->
@@ -181,7 +250,7 @@ toTrain { from, to } trainRaw =
                 , runningCurrently = trainRaw.runningCurrently
                 , cancelled = trainRaw.cancelled
                 , currentStation = findCurrentStation trainRaw.timetableRows
-                , homeStationArrival = findTimetableRow Arrival from stoppingRows
+                , homeStationArrival = findTimetableRow Arrival from upcomingRows
                 , homeStationDeparture = dep
                 , endStationArrival = end
                 }
@@ -269,3 +338,18 @@ rowTypeDecoder =
                     other ->
                         fail ("\"" ++ other ++ "\" is not a valid row type")
             )
+
+
+dropUntil : (a -> Bool) -> List a -> List a
+dropUntil predicate list =
+    case list of
+        [] ->
+            []
+
+        a :: rest ->
+            case predicate a of
+                True ->
+                    rest
+
+                False ->
+                    dropUntil predicate rest

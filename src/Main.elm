@@ -1,4 +1,4 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation
@@ -10,29 +10,41 @@ import RemoteData exposing (..)
 import RemoteData.Http as Http
 import Task
 import Time exposing (Posix)
+import Translations
 import Url exposing (Url)
 import Url.Builder
 import Url.Parser exposing ((</>))
 import View exposing (Msg(..), view)
 
 
+port setStorage : String -> Cmd msg
+
+
 type alias Flags =
-    { timestamp : Int }
+    { timestamp : Int
+    , storedState : String
+    }
 
 
 init : Flags -> Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
-init { timestamp } url key =
+init flags url key =
     let
+        storedState =
+            flags.storedState
+                |> decodeStoredState
+                |> Result.withDefault defaultStoredState
+
         ( model, trainsCmd ) =
             urlChange
                 { trains = NotAsked
                 , stations = Dict.empty
                 , wagonCounts = Dict.empty
-                , currentTime = Time.millisToPosix timestamp
+                , currentTime = Time.millisToPosix flags.timestamp
                 , lastRequestTime = Time.millisToPosix 0
                 , route = SelectDepRoute
                 , zone = Time.utc
                 , navKey = key
+                , language = storedState.language
                 }
                 url
     in
@@ -106,6 +118,13 @@ update msg model =
 
                 External url ->
                     ( model, Browser.Navigation.load url )
+
+        SetLanguage language ->
+            let
+                nextModel =
+                    { model | language = language }
+            in
+            ( nextModel, setStorage (encodeStoredState nextModel) )
 
 
 updateTime : Model -> ( Model, Cmd Msg )
