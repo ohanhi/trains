@@ -505,11 +505,11 @@ function _Debug_crash_UNUSED(identifier, fact1, fact2, fact3, fact4)
 
 function _Debug_regionToString(region)
 {
-	if (region.aC.J === region.aR.J)
+	if (region.aR.Q === region.a9.Q)
 	{
-		return 'on line ' + region.aC.J;
+		return 'on line ' + region.aR.Q;
 	}
-	return 'on lines ' + region.aC.J + ' through ' + region.aR.J;
+	return 'on lines ' + region.aR.Q + ' through ' + region.a9.Q;
 }
 
 
@@ -987,21 +987,21 @@ var _Http_toTask = F2(function(request, maybeProgress)
 			callback(_Scheduler_fail(elm$http$Http$Timeout));
 		});
 		xhr.addEventListener('load', function() {
-			callback(_Http_handleResponse(xhr, request.ae.a));
+			callback(_Http_handleResponse(xhr, request.as.a));
 		});
 
 		try
 		{
-			xhr.open(request.ar, request.b0, true);
+			xhr.open(request.aF, request.cP, true);
 		}
 		catch (e)
 		{
-			return callback(_Scheduler_fail(elm$http$Http$BadUrl(request.b0)));
+			return callback(_Scheduler_fail(elm$http$Http$BadUrl(request.cP)));
 		}
 
 		_Http_configureRequest(xhr, request);
 
-		var body = request.ac;
+		var body = request.ap;
 		xhr.send(elm$http$Http$Internal$isStringBody(body)
 			? (xhr.setRequestHeader('Content-Type', body.a), body.b)
 			: body.a
@@ -1024,23 +1024,23 @@ function _Http_configureProgress(xhr, maybeProgress)
 			return;
 		}
 		_Scheduler_rawSpawn(maybeProgress.a({
-			bB: event.loaded,
-			bC: event.total
+			b5: event.loaded,
+			b6: event.total
 		}));
 	});
 }
 
 function _Http_configureRequest(xhr, request)
 {
-	for (var headers = request.V; headers.b; headers = headers.b) // WHILE_CONS
+	for (var headers = request.ae; headers.b; headers = headers.b) // WHILE_CONS
 	{
 		xhr.setRequestHeader(headers.a.a, headers.a.b);
 	}
 
-	xhr.responseType = request.ae.b;
-	xhr.withCredentials = request.aJ;
+	xhr.responseType = request.as.b;
+	xhr.withCredentials = request.a_;
 
-	elm$core$Maybe$isJust(request.aF) && (xhr.timeout = request.aF.a);
+	elm$core$Maybe$isJust(request.aW) && (xhr.timeout = request.aW.a);
 }
 
 
@@ -1072,10 +1072,10 @@ function _Http_handleResponse(xhr, responseToResult)
 function _Http_toResponse(xhr)
 {
 	return {
-		b0: xhr.responseURL,
-		bY: { bE: xhr.status, q: xhr.statusText },
-		V: _Http_parseHeaders(xhr.getAllResponseHeaders()),
-		ac: xhr.response
+		cP: xhr.responseURL,
+		cJ: { b9: xhr.status, x: xhr.statusText },
+		ae: _Http_parseHeaders(xhr.getAllResponseHeaders()),
+		ap: xhr.response
 	};
 }
 
@@ -2023,9 +2023,9 @@ var _Platform_worker = F4(function(impl, flagDecoder, debugMetadata, args)
 	return _Platform_initialize(
 		flagDecoder,
 		args,
-		impl.bM,
-		impl.b$,
-		impl.bZ,
+		impl.cm,
+		impl.cO,
+		impl.cK,
 		function() { return function() {} }
 	);
 });
@@ -3018,9 +3018,9 @@ var _VirtualDom_mapEventTuple = F2(function(func, tuple)
 var _VirtualDom_mapEventRecord = F2(function(func, record)
 {
 	return {
-		q: func(record.q),
-		aD: record.aD,
-		at: record.at
+		x: func(record.x),
+		aS: record.aS,
+		aI: record.aI
 	}
 });
 
@@ -3288,11 +3288,11 @@ function _VirtualDom_makeCallback(eventNode, initialHandler)
 		// 3 = Custom
 
 		var value = result.a;
-		var message = !tag ? value : tag < 3 ? value.a : value.q;
-		var stopPropagation = tag == 1 ? value.b : tag == 3 && value.aD;
+		var message = !tag ? value : tag < 3 ? value.a : value.x;
+		var stopPropagation = tag == 1 ? value.b : tag == 3 && value.aS;
 		var currentEventNode = (
 			stopPropagation && event.stopPropagation(),
-			(tag == 2 ? value.b : tag == 3 && value.at) && event.preventDefault(),
+			(tag == 2 ? value.b : tag == 3 && value.aI) && event.preventDefault(),
 			eventNode
 		);
 		var tagger;
@@ -4238,11 +4238,11 @@ var _Browser_element = _Debugger_element || F4(function(impl, flagDecoder, debug
 	return _Platform_initialize(
 		flagDecoder,
 		args,
-		impl.bM,
-		impl.b$,
-		impl.bZ,
+		impl.cm,
+		impl.cO,
+		impl.cK,
 		function(sendToApp, initialModel) {
-			var view = impl.b1;
+			var view = impl.cQ;
 			/**/
 			var domNode = args['node'];
 			//*/
@@ -4274,12 +4274,12 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 	return _Platform_initialize(
 		flagDecoder,
 		args,
-		impl.bM,
-		impl.b$,
-		impl.bZ,
+		impl.cm,
+		impl.cO,
+		impl.cK,
 		function(sendToApp, initialModel) {
-			var divertHrefToApp = impl.K && impl.K(sendToApp)
-			var view = impl.b1;
+			var divertHrefToApp = impl.T && impl.T(sendToApp)
+			var view = impl.cQ;
 			var title = _VirtualDom_doc.title;
 			var bodyNode = _VirtualDom_doc.body;
 			var currNode = _VirtualDom_virtualize(bodyNode);
@@ -4287,12 +4287,12 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 			{
 				_VirtualDom_divertHrefToApp = divertHrefToApp;
 				var doc = view(model);
-				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.ac);
+				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.ap);
 				var patches = _VirtualDom_diff(currNode, nextNode);
 				bodyNode = _VirtualDom_applyPatches(bodyNode, currNode, patches, sendToApp);
 				currNode = nextNode;
 				_VirtualDom_divertHrefToApp = 0;
-				(title !== doc.aH) && (_VirtualDom_doc.title = title = doc.aH);
+				(title !== doc.aY) && (_VirtualDom_doc.title = title = doc.aY);
 			});
 		}
 	);
@@ -4343,12 +4343,12 @@ function _Browser_makeAnimator(model, draw)
 
 function _Browser_application(impl)
 {
-	var onUrlChange = impl.bR;
-	var onUrlRequest = impl.bS;
+	var onUrlChange = impl.cA;
+	var onUrlRequest = impl.cB;
 	var key = function() { key.a(onUrlChange(_Browser_getUrl())); };
 
 	return _Browser_document({
-		K: function(sendToApp)
+		T: function(sendToApp)
 		{
 			key.a = sendToApp;
 			_Browser_window.addEventListener('popstate', key);
@@ -4364,9 +4364,9 @@ function _Browser_application(impl)
 					var next = elm$url$Url$fromString(href).a;
 					sendToApp(onUrlRequest(
 						(next
-							&& curr.bd === next.bd
-							&& curr.aZ === next.aZ
-							&& curr.a9.a === next.a9.a
+							&& curr.bC === next.bC
+							&& curr.bj === next.bj
+							&& curr.by.a === next.by.a
 						)
 							? elm$browser$Browser$Internal(next)
 							: elm$browser$Browser$External(href)
@@ -4374,13 +4374,13 @@ function _Browser_application(impl)
 				}
 			});
 		},
-		bM: function(flags)
+		cm: function(flags)
 		{
-			return A3(impl.bM, flags, _Browser_getUrl(), key);
+			return A3(impl.cm, flags, _Browser_getUrl(), key);
 		},
-		b1: impl.b1,
-		b$: impl.b$,
-		bZ: impl.bZ
+		cQ: impl.cQ,
+		cO: impl.cO,
+		cK: impl.cK
 	});
 }
 
@@ -4446,17 +4446,17 @@ var _Browser_decodeEvent = F2(function(decoder, event)
 function _Browser_visibilityInfo()
 {
 	return (typeof _VirtualDom_doc.hidden !== 'undefined')
-		? { bK: 'hidden', I: 'visibilitychange' }
+		? { ck: 'hidden', P: 'visibilitychange' }
 		:
 	(typeof _VirtualDom_doc.mozHidden !== 'undefined')
-		? { bK: 'mozHidden', I: 'mozvisibilitychange' }
+		? { ck: 'mozHidden', P: 'mozvisibilitychange' }
 		:
 	(typeof _VirtualDom_doc.msHidden !== 'undefined')
-		? { bK: 'msHidden', I: 'msvisibilitychange' }
+		? { ck: 'msHidden', P: 'msvisibilitychange' }
 		:
 	(typeof _VirtualDom_doc.webkitHidden !== 'undefined')
-		? { bK: 'webkitHidden', I: 'webkitvisibilitychange' }
-		: { bK: 'hidden', I: 'visibilitychange' };
+		? { ck: 'webkitHidden', P: 'webkitvisibilitychange' }
+		: { ck: 'hidden', P: 'visibilitychange' };
 }
 
 
@@ -4537,12 +4537,12 @@ var _Browser_call = F2(function(functionName, id)
 function _Browser_getViewport()
 {
 	return {
-		bj: _Browser_getScene(),
-		bv: {
-			aa: _Browser_window.pageXOffset,
-			ab: _Browser_window.pageYOffset,
-			G: _Browser_doc.documentElement.clientWidth,
-			A: _Browser_doc.documentElement.clientHeight
+		bK: _Browser_getScene(),
+		bZ: {
+			an: _Browser_window.pageXOffset,
+			ao: _Browser_window.pageYOffset,
+			N: _Browser_doc.documentElement.clientWidth,
+			H: _Browser_doc.documentElement.clientHeight
 		}
 	};
 }
@@ -4552,8 +4552,8 @@ function _Browser_getScene()
 	var body = _Browser_doc.body;
 	var elem = _Browser_doc.documentElement;
 	return {
-		G: Math.max(body.scrollWidth, body.offsetWidth, elem.scrollWidth, elem.offsetWidth, elem.clientWidth),
-		A: Math.max(body.scrollHeight, body.offsetHeight, elem.scrollHeight, elem.offsetHeight, elem.clientHeight)
+		N: Math.max(body.scrollWidth, body.offsetWidth, elem.scrollWidth, elem.offsetWidth, elem.clientWidth),
+		H: Math.max(body.scrollHeight, body.offsetHeight, elem.scrollHeight, elem.offsetHeight, elem.clientHeight)
 	};
 }
 
@@ -4576,15 +4576,15 @@ function _Browser_getViewportOf(id)
 	return _Browser_withNode(id, function(node)
 	{
 		return {
-			bj: {
-				G: node.scrollWidth,
-				A: node.scrollHeight
+			bK: {
+				N: node.scrollWidth,
+				H: node.scrollHeight
 			},
-			bv: {
-				aa: node.scrollLeft,
-				ab: node.scrollTop,
-				G: node.clientWidth,
-				A: node.clientHeight
+			bZ: {
+				an: node.scrollLeft,
+				ao: node.scrollTop,
+				N: node.clientWidth,
+				H: node.clientHeight
 			}
 		};
 	});
@@ -4614,18 +4614,18 @@ function _Browser_getElement(id)
 		var x = _Browser_window.pageXOffset;
 		var y = _Browser_window.pageYOffset;
 		return {
-			bj: _Browser_getScene(),
-			bv: {
-				aa: x,
-				ab: y,
-				G: _Browser_doc.documentElement.clientWidth,
-				A: _Browser_doc.documentElement.clientHeight
+			bK: _Browser_getScene(),
+			bZ: {
+				an: x,
+				ao: y,
+				N: _Browser_doc.documentElement.clientWidth,
+				H: _Browser_doc.documentElement.clientHeight
 			},
-			bG: {
-				aa: x + rect.left,
-				ab: y + rect.top,
-				G: rect.width,
-				A: rect.height
+			cc: {
+				an: x + rect.left,
+				ao: y + rect.top,
+				N: rect.width,
+				H: rect.height
 			}
 		};
 	});
@@ -4749,10 +4749,10 @@ var elm$http$Http$Internal$Header = F2(
 var elm$http$Http$header = elm$http$Http$Internal$Header;
 var ohanhi$remotedata_http$RemoteData$Http$acceptJson = A2(elm$http$Http$header, 'Accept', 'application/json');
 var ohanhi$remotedata_http$RemoteData$Http$defaultConfig = {
-	V: _List_fromArray(
+	ae: _List_fromArray(
 		[ohanhi$remotedata_http$RemoteData$Http$acceptJson]),
-	aF: elm$core$Maybe$Nothing,
-	aJ: false
+	aW: elm$core$Maybe$Nothing,
+	a_: false
 };
 var elm$core$Basics$apR = F2(
 	function (x, f) {
@@ -5438,25 +5438,25 @@ var elm$core$Basics$sub = _Basics_sub;
 var elm$core$Elm$JsArray$length = _JsArray_length;
 var elm$core$Array$builderToArray = F2(
 	function (reverseNodeList, builder) {
-		if (!builder.e) {
+		if (!builder.h) {
 			return A4(
 				elm$core$Array$Array_elm_builtin,
-				elm$core$Elm$JsArray$length(builder.i),
+				elm$core$Elm$JsArray$length(builder.j),
 				elm$core$Array$shiftStep,
 				elm$core$Elm$JsArray$empty,
-				builder.i);
+				builder.j);
 		} else {
-			var treeLen = builder.e * elm$core$Array$branchFactor;
+			var treeLen = builder.h * elm$core$Array$branchFactor;
 			var depth = elm$core$Basics$floor(
 				A2(elm$core$Basics$logBase, elm$core$Array$branchFactor, treeLen - 1));
-			var correctNodeList = reverseNodeList ? elm$core$List$reverse(builder.j) : builder.j;
-			var tree = A2(elm$core$Array$treeFromBuilder, correctNodeList, builder.e);
+			var correctNodeList = reverseNodeList ? elm$core$List$reverse(builder.k) : builder.k;
+			var tree = A2(elm$core$Array$treeFromBuilder, correctNodeList, builder.h);
 			return A4(
 				elm$core$Array$Array_elm_builtin,
-				elm$core$Elm$JsArray$length(builder.i) + treeLen,
+				elm$core$Elm$JsArray$length(builder.j) + treeLen,
 				A2(elm$core$Basics$max, 5, depth * elm$core$Array$shiftStep),
 				tree,
-				builder.i);
+				builder.j);
 		}
 	});
 var elm$core$Basics$idiv = _Basics_idiv;
@@ -5469,7 +5469,7 @@ var elm$core$Array$initializeHelp = F5(
 				return A2(
 					elm$core$Array$builderToArray,
 					false,
-					{j: nodeList, e: (len / elm$core$Array$branchFactor) | 0, i: tail});
+					{k: nodeList, h: (len / elm$core$Array$branchFactor) | 0, j: tail});
 			} else {
 				var leaf = elm$core$Array$Leaf(
 					A3(elm$core$Elm$JsArray$initialize, elm$core$Array$branchFactor, fromIndex, fn));
@@ -5709,7 +5709,7 @@ var elm$json$Json$Decode$decodeString = _Json_runOnString;
 var elm$http$Http$expectJson = function (decoder) {
 	return elm$http$Http$expectStringResponse(
 		function (response) {
-			var _n0 = A2(elm$json$Json$Decode$decodeString, decoder, response.ac);
+			var _n0 = A2(elm$json$Json$Decode$decodeString, decoder, response.ap);
 			if (_n0.$ === 1) {
 				var decodeError = _n0.a;
 				return elm$core$Result$Err(
@@ -5729,13 +5729,13 @@ var ohanhi$remotedata_http$RemoteData$Http$createRequest = F5(
 	function (config, method, url, successDecoder, body) {
 		return elm$http$Http$request(
 			{
-				ac: body,
-				ae: elm$http$Http$expectJson(successDecoder),
-				V: config.V,
-				ar: method,
-				aF: config.aF,
-				b0: url,
-				aJ: config.aJ
+				ap: body,
+				as: elm$http$Http$expectJson(successDecoder),
+				ae: config.ae,
+				aF: method,
+				aW: config.aW,
+				cP: url,
+				a_: config.a_
 			});
 	});
 var ohanhi$remotedata_http$RemoteData$Http$getRequest = F3(
@@ -6007,7 +6007,7 @@ var author$project$View$StationsResponse = function (a) {
 var author$project$Main$getStations = A3(author$project$Main$get, 'https://rata.digitraffic.fi/api/v1/metadata/stations', author$project$View$StationsResponse, author$project$Model$stationsDecoder);
 var author$project$Model$TrainRaw = F6(
 	function (trainNumber, lineId, trainCategory, timetableRows, runningCurrently, cancelled) {
-		return {S: cancelled, W: lineId, X: runningCurrently, _: timetableRows, bs: trainCategory, P: trainNumber};
+		return {aa: cancelled, af: lineId, ai: runningCurrently, am: timetableRows, bW: trainCategory, Y: trainNumber};
 	});
 var elm$json$Json$Decode$decodeValue = _Json_run;
 var elm$json$Json$Decode$fail = _Json_fail;
@@ -6059,17 +6059,17 @@ var NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional = F4(
 	});
 var author$project$Model$TimetableRow = F9(
 	function (scheduledTime, trainStopping, stationShortCode, stationUICCode, track, rowType, actualTime, liveEstimateTime, differenceInMinutes) {
-		return {y: actualTime, U: differenceInMinutes, bO: liveEstimateTime, D: rowType, Y: scheduledTime, w: stationShortCode, Z: stationUICCode, b_: track, bt: trainStopping};
+		return {F: actualTime, ac: differenceInMinutes, co: liveEstimateTime, K: rowType, ak: scheduledTime, D: stationShortCode, al: stationUICCode, cN: track, bX: trainStopping};
 	});
 var elm$parser$Parser$deadEndsToString = function (deadEnds) {
 	return 'TODO deadEndsToString';
 };
 var elm$parser$Parser$DeadEnd = F3(
 	function (row, col, problem) {
-		return {aN: col, ba: problem, bi: row};
+		return {a4: col, bz: problem, bH: row};
 	});
 var elm$parser$Parser$problemToDeadEnd = function (p) {
-	return A3(elm$parser$Parser$DeadEnd, p.bi, p.aN, p.ba);
+	return A3(elm$parser$Parser$DeadEnd, p.bH, p.a4, p.bz);
 };
 var elm$parser$Parser$Advanced$bagToList = F2(
 	function (bag, list) {
@@ -6101,7 +6101,7 @@ var elm$parser$Parser$Advanced$run = F2(
 	function (_n0, src) {
 		var parse = _n0;
 		var _n1 = parse(
-			{aN: 1, c: _List_Nil, d: 1, b: 0, bi: 1, a: src});
+			{a4: 1, c: _List_Nil, d: 1, b: 0, bH: 1, a: src});
 		if (!_n1.$) {
 			var value = _n1.b;
 			return elm$core$Result$Ok(value);
@@ -6174,14 +6174,14 @@ var elm$parser$Parser$Advanced$AddRight = F2(
 var elm$parser$Parser$Advanced$Empty = {$: 0};
 var elm$parser$Parser$Advanced$Problem = F4(
 	function (row, col, problem, contextStack) {
-		return {aN: col, bF: contextStack, ba: problem, bi: row};
+		return {a4: col, ca: contextStack, bz: problem, bH: row};
 	});
 var elm$parser$Parser$Advanced$fromState = F2(
 	function (s, x) {
 		return A2(
 			elm$parser$Parser$Advanced$AddRight,
 			elm$parser$Parser$Advanced$Empty,
-			A4(elm$parser$Parser$Advanced$Problem, s.bi, s.aN, x, s.c));
+			A4(elm$parser$Parser$Advanced$Problem, s.bH, s.a4, x, s.c));
 	});
 var elm$parser$Parser$Advanced$end = function (x) {
 	return function (s) {
@@ -6327,7 +6327,7 @@ var elm$parser$Parser$Advanced$token = function (_n0) {
 	var expecting = _n0.b;
 	var progress = !elm$core$String$isEmpty(str);
 	return function (s) {
-		var _n1 = A5(elm$parser$Parser$Advanced$isSubString, str, s.b, s.bi, s.aN, s.a);
+		var _n1 = A5(elm$parser$Parser$Advanced$isSubString, str, s.b, s.bH, s.a4, s.a);
 		var newOffset = _n1.a;
 		var newRow = _n1.b;
 		var newCol = _n1.c;
@@ -6338,7 +6338,7 @@ var elm$parser$Parser$Advanced$token = function (_n0) {
 			elm$parser$Parser$Advanced$Good,
 			progress,
 			0,
-			{aN: newCol, c: s.c, d: s.d, b: newOffset, bi: newRow, a: s.a});
+			{a4: newCol, c: s.c, d: s.d, b: newOffset, bH: newRow, a: s.a});
 	};
 };
 var elm$parser$Parser$Advanced$symbol = elm$parser$Parser$Advanced$token;
@@ -6362,7 +6362,7 @@ var elm$parser$Parser$Advanced$chompWhileHelp = F5(
 					elm$parser$Parser$Advanced$Good,
 					_Utils_cmp(s0.b, offset) < 0,
 					0,
-					{aN: col, c: s0.c, d: s0.d, b: offset, bi: row, a: s0.a});
+					{a4: col, c: s0.c, d: s0.d, b: offset, bH: row, a: s0.a});
 			} else {
 				if (_Utils_eq(newOffset, -2)) {
 					var $temp$isGood = isGood,
@@ -6394,7 +6394,7 @@ var elm$parser$Parser$Advanced$chompWhileHelp = F5(
 	});
 var elm$parser$Parser$Advanced$chompWhile = function (isGood) {
 	return function (s) {
-		return A5(elm$parser$Parser$Advanced$chompWhileHelp, isGood, s.b, s.bi, s.aN, s);
+		return A5(elm$parser$Parser$Advanced$chompWhileHelp, isGood, s.b, s.bH, s.a4, s);
 	};
 };
 var elm$parser$Parser$chompWhile = elm$parser$Parser$Advanced$chompWhile;
@@ -6827,10 +6827,10 @@ var author$project$Model$findCurrentStation = function (rows) {
 				elm$core$Maybe$map2,
 				F2(
 					function (actualTime, differenceInMinutes) {
-						return {y: actualTime, U: differenceInMinutes, D: row.D, w: row.w, Z: row.Z};
+						return {F: actualTime, ac: differenceInMinutes, K: row.K, D: row.D, al: row.al};
 					}),
-				row.y,
-				row.U);
+				row.F,
+				row.ac);
 		},
 		elm$core$List$head(
 			elm$core$List$reverse(
@@ -6839,7 +6839,7 @@ var author$project$Model$findCurrentStation = function (rows) {
 					A2(
 						elm$core$Basics$composeR,
 						function ($) {
-							return $.y;
+							return $.F;
 						},
 						elm$core$Basics$neq(elm$core$Maybe$Nothing)),
 					rows))));
@@ -6850,7 +6850,7 @@ var author$project$Model$findTimetableRow = F3(
 			A2(
 				elm$core$List$filter,
 				function (row) {
-					return _Utils_eq(row.w, shortCode) && _Utils_eq(row.D, rowType);
+					return _Utils_eq(row.D, shortCode) && _Utils_eq(row.K, rowType);
 				},
 				rows));
 	});
@@ -6889,13 +6889,13 @@ var author$project$Model$isRightDirection = F3(
 				elm$core$List$any,
 				function (arr) {
 					return _Utils_cmp(
-						elm$time$Time$posixToMillis(arr.Y),
-						elm$time$Time$posixToMillis(departure.Y)) > 0;
+						elm$time$Time$posixToMillis(arr.ak),
+						elm$time$Time$posixToMillis(departure.ak)) > 0;
 				},
 				A2(
 					elm$core$List$filter,
 					function (row) {
-						return _Utils_eq(row.w, toShortCode) && (row.D === 1);
+						return _Utils_eq(row.D, toShortCode) && (row.K === 1);
 					},
 					rows));
 		}
@@ -6911,18 +6911,18 @@ var elm$core$List$member = F2(
 	});
 var author$project$Model$toTrain = F2(
 	function (_n0, trainRaw) {
-		var from = _n0.af;
-		var to = _n0.bq;
+		var from = _n0.at;
+		var to = _n0.bU;
 		var stoppingRows = A2(
 			elm$core$List$filter,
 			function ($) {
-				return $.bt;
+				return $.bX;
 			},
-			trainRaw._);
+			trainRaw.am);
 		var upcomingRows = A2(
 			elm$core$List$filter,
 			function (row) {
-				return _Utils_eq(row.y, elm$core$Maybe$Nothing);
+				return _Utils_eq(row.F, elm$core$Maybe$Nothing);
 			},
 			stoppingRows);
 		var rowsAfterHomeStation = A2(
@@ -6931,7 +6931,7 @@ var author$project$Model$toTrain = F2(
 			A2(
 				elm$core$List$map,
 				function ($) {
-					return $.w;
+					return $.D;
 				},
 				upcomingRows));
 		var ringTrackFilterApplies = A2(
@@ -6940,26 +6940,26 @@ var author$project$Model$toTrain = F2(
 			_List_fromArray(
 				['PSL', 'HKI'])) && A2(elm$core$List$member, 'LEN', rowsAfterHomeStation);
 		var homeStationDeparture = A3(author$project$Model$findTimetableRow, 0, from, upcomingRows);
-		var isValid = (trainRaw.bs === 'Commuter') && (A3(author$project$Model$isRightDirection, stoppingRows, to, homeStationDeparture) && (!ringTrackFilterApplies));
+		var isValid = (trainRaw.bW === 'Commuter') && (A3(author$project$Model$isRightDirection, stoppingRows, to, homeStationDeparture) && (!ringTrackFilterApplies));
 		var endStationArrival = A3(
 			author$project$Model$findTimetableRow,
 			1,
 			to,
-			elm$core$List$reverse(trainRaw._));
+			elm$core$List$reverse(trainRaw.am));
 		var _n1 = _Utils_Tuple3(isValid, homeStationDeparture, endStationArrival);
 		if ((_n1.a && (!_n1.b.$)) && (!_n1.c.$)) {
 			var dep = _n1.b.a;
 			var end = _n1.c.a;
 			return elm$core$Maybe$Just(
 				{
-					S: trainRaw.S,
-					aO: author$project$Model$findCurrentStation(trainRaw._),
-					aS: end,
-					aY: A3(author$project$Model$findTimetableRow, 1, from, upcomingRows),
-					ah: dep,
-					W: trainRaw.W,
-					X: trainRaw.X,
-					P: trainRaw.P
+					aa: trainRaw.aa,
+					a5: author$project$Model$findCurrentStation(trainRaw.am),
+					ba: end,
+					bi: A3(author$project$Model$findTimetableRow, 1, from, upcomingRows),
+					av: dep,
+					af: trainRaw.af,
+					ai: trainRaw.ai,
+					Y: trainRaw.Y
 				});
 		} else {
 			return elm$core$Maybe$Nothing;
@@ -6993,7 +6993,7 @@ var author$project$Model$trainsDecoder = function (targets) {
 				elm$core$Basics$composeR,
 				elm$core$List$map(
 					function (a) {
-						return _Utils_Tuple2(a.P, a);
+						return _Utils_Tuple2(a.Y, a);
 					}),
 				A2(elm$core$Basics$composeR, elm$core$Dict$fromList, elm$json$Json$Decode$succeed))),
 		elm$json$Json$Decode$list(
@@ -7066,9 +7066,9 @@ var elm$url$Url$Builder$int = F2(
 var author$project$Main$getTrains = function (targets) {
 	var trainsUrl = A3(
 		elm$url$Url$Builder$crossOrigin,
-		'https://rata.digitraffic.fi/api/v1/live-trains/station/',
+		'https://rata.digitraffic.fi/api/v1/live-trains/station',
 		_List_fromArray(
-			[targets.af]),
+			[targets.at]),
 		_List_fromArray(
 			[
 				A2(elm$url$Url$Builder$int, 'minutes_before_departure', 120),
@@ -7102,15 +7102,15 @@ var elm$core$Maybe$withDefault = F2(
 var elm$url$Url$Parser$Parser = elm$core$Basics$identity;
 var elm$url$Url$Parser$State = F5(
 	function (visited, unvisited, params, frag, value) {
-		return {t: frag, v: params, s: unvisited, o: value, x: visited};
+		return {A: frag, C: params, z: unvisited, v: value, E: visited};
 	});
 var elm$url$Url$Parser$mapState = F2(
 	function (func, _n0) {
-		var visited = _n0.x;
-		var unvisited = _n0.s;
-		var params = _n0.v;
-		var frag = _n0.t;
-		var value = _n0.o;
+		var visited = _n0.E;
+		var unvisited = _n0.z;
+		var params = _n0.C;
+		var frag = _n0.A;
+		var value = _n0.v;
 		return A5(
 			elm$url$Url$Parser$State,
 			visited,
@@ -7123,11 +7123,11 @@ var elm$url$Url$Parser$map = F2(
 	function (subValue, _n0) {
 		var parseArg = _n0;
 		return function (_n1) {
-			var visited = _n1.x;
-			var unvisited = _n1.s;
-			var params = _n1.v;
-			var frag = _n1.t;
-			var value = _n1.o;
+			var visited = _n1.E;
+			var unvisited = _n1.z;
+			var params = _n1.C;
+			var frag = _n1.A;
+			var value = _n1.v;
 			return A2(
 				elm$core$List$map,
 				elm$url$Url$Parser$mapState(value),
@@ -7170,12 +7170,12 @@ var elm$url$Url$Parser$getFirstMatch = function (states) {
 		} else {
 			var state = states.a;
 			var rest = states.b;
-			var _n1 = state.s;
+			var _n1 = state.z;
 			if (!_n1.b) {
-				return elm$core$Maybe$Just(state.o);
+				return elm$core$Maybe$Just(state.v);
 			} else {
 				if ((_n1.a === '') && (!_n1.b.b)) {
-					return elm$core$Maybe$Just(state.o);
+					return elm$core$Maybe$Just(state.v);
 				} else {
 					var $temp$states = rest;
 					states = $temp$states;
@@ -7272,9 +7272,9 @@ var elm$url$Url$Parser$parse = F2(
 				A5(
 					elm$url$Url$Parser$State,
 					_List_Nil,
-					elm$url$Url$Parser$preparePath(url.bU),
-					elm$url$Url$Parser$prepareQuery(url.be),
-					url.aW,
+					elm$url$Url$Parser$preparePath(url.cE),
+					elm$url$Url$Parser$prepareQuery(url.bD),
+					url.be,
 					elm$core$Basics$identity)));
 	});
 var elm$url$Url$Parser$slash = F2(
@@ -7291,11 +7291,11 @@ var elm$url$Url$Parser$slash = F2(
 var elm$url$Url$Parser$custom = F2(
 	function (tipe, stringToSomething) {
 		return function (_n0) {
-			var visited = _n0.x;
-			var unvisited = _n0.s;
-			var params = _n0.v;
-			var frag = _n0.t;
-			var value = _n0.o;
+			var visited = _n0.E;
+			var unvisited = _n0.z;
+			var params = _n0.C;
+			var frag = _n0.A;
+			var value = _n0.v;
 			if (!unvisited.b) {
 				return _List_Nil;
 			} else {
@@ -7336,7 +7336,7 @@ var author$project$Main$parseUrl = function (url) {
 				author$project$Model$ScheduleRoute,
 				A2(elm$url$Url$Parser$slash, elm$url$Url$Parser$string, elm$url$Url$Parser$string))
 			]));
-	var _n0 = url.aW;
+	var _n0 = url.be;
 	if (_n0.$ === 1) {
 		return author$project$Model$SelectDepRoute;
 	} else {
@@ -7349,7 +7349,7 @@ var author$project$Main$parseUrl = function (url) {
 				routeParser,
 				_Utils_update(
 					url,
-					{aW: elm$core$Maybe$Nothing, bU: fragment})));
+					{be: elm$core$Maybe$Nothing, cE: fragment})));
 	}
 };
 var elm$core$Platform$Cmd$batch = _Platform_batch;
@@ -7366,7 +7366,7 @@ var author$project$Main$urlChange = F2(
 				return _Utils_Tuple2(
 					krisajenkins$remotedata$RemoteData$Loading,
 					author$project$Main$getTrains(
-						{af: from, bq: to}));
+						{at: from, bU: to}));
 			} else {
 				return _Utils_Tuple2(krisajenkins$remotedata$RemoteData$NotAsked, elm$core$Platform$Cmd$none);
 			}
@@ -7376,12 +7376,12 @@ var author$project$Main$urlChange = F2(
 		return _Utils_Tuple2(
 			_Utils_update(
 				model,
-				{av: route, aI: trains}),
+				{aK: route, aZ: trains}),
 			trainsCmd);
 	});
 var author$project$Model$StoredState = F2(
 	function (version, language) {
-		return {ao: language, bu: version};
+		return {aC: language, bY: version};
 	});
 var author$project$Translations$English = 1;
 var author$project$Translations$Finnish = 0;
@@ -7417,7 +7417,7 @@ var author$project$Model$storedStateDecoder = A3(
 		elm$json$Json$Decode$succeed(author$project$Model$StoredState)));
 var author$project$Model$decodeStoredState = elm$json$Json$Decode$decodeString(author$project$Model$storedStateDecoder);
 var author$project$Model$storedStateVersion = 1;
-var author$project$Model$defaultStoredState = {ao: 0, bu: author$project$Model$storedStateVersion};
+var author$project$Model$defaultStoredState = {aC: 0, bY: author$project$Model$storedStateVersion};
 var author$project$View$TimeZoneResponse = function (a) {
 	return {$: 1, a: a};
 };
@@ -7453,19 +7453,19 @@ var author$project$Main$init = F3(
 		var storedState = A2(
 			elm$core$Result$withDefault,
 			author$project$Model$defaultStoredState,
-			author$project$Model$decodeStoredState(flags.aE));
+			author$project$Model$decodeStoredState(flags.aT));
 		var _n0 = A2(
 			author$project$Main$urlChange,
 			{
-				T: elm$time$Time$millisToPosix(flags.aG),
-				ao: storedState.ao,
-				ap: elm$time$Time$millisToPosix(0),
-				a6: key,
-				av: author$project$Model$SelectDepRoute,
-				bn: elm$core$Dict$empty,
-				aI: krisajenkins$remotedata$RemoteData$NotAsked,
-				bw: elm$core$Dict$empty,
-				bz: elm$time$Time$utc
+				ab: elm$time$Time$millisToPosix(flags.aX),
+				aC: storedState.aC,
+				aD: elm$time$Time$millisToPosix(0),
+				bu: key,
+				aK: author$project$Model$SelectDepRoute,
+				bP: elm$core$Dict$empty,
+				aZ: krisajenkins$remotedata$RemoteData$NotAsked,
+				b_: elm$core$Dict$empty,
+				b1: elm$time$Time$utc
 			},
 			url);
 		var model = _n0.a;
@@ -7489,7 +7489,7 @@ var elm$time$Time$Every = F2(
 	});
 var elm$time$Time$State = F2(
 	function (taggers, processes) {
-		return {bc: processes, bp: taggers};
+		return {bB: processes, bT: taggers};
 	});
 var elm$time$Time$init = elm$core$Task$succeed(
 	A2(elm$time$Time$State, elm$core$Dict$empty, elm$core$Dict$empty));
@@ -7628,7 +7628,7 @@ var elm$time$Time$spawnHelp = F3(
 	});
 var elm$time$Time$onEffects = F3(
 	function (router, subs, _n0) {
-		var processes = _n0.bc;
+		var processes = _n0.bB;
 		var rightStep = F3(
 			function (_n6, id, _n7) {
 				var spawns = _n7.a;
@@ -7695,7 +7695,7 @@ var elm$time$Time$onEffects = F3(
 var elm$time$Time$now = _Time_now(elm$time$Time$millisToPosix);
 var elm$time$Time$onSelfMsg = F3(
 	function (router, interval, state) {
-		var _n0 = A2(elm$core$Dict$get, interval, state.bp);
+		var _n0 = A2(elm$core$Dict$get, interval, state.bT);
 		if (_n0.$ === 1) {
 			return elm$core$Task$succeed(state);
 		} else {
@@ -7808,7 +7808,7 @@ var ryannhg$date_format$DateFormat$DayOfMonthFixed = {$: 7};
 var ryannhg$date_format$DateFormat$dayOfMonthFixed = ryannhg$date_format$DateFormat$DayOfMonthFixed;
 var ryannhg$date_format$DateFormat$FormatOptions = F2(
 	function (fullMonthName, dayOfWeekName) {
-		return {ad: dayOfWeekName, ag: fullMonthName};
+		return {aq: dayOfWeekName, au: fullMonthName};
 	});
 var ryannhg$date_format$DateFormat$dayOfWeekName = function (weekday) {
 	switch (weekday) {
@@ -7884,7 +7884,7 @@ var elm$time$Time$toAdjustedMinutesHelp = F3(
 			} else {
 				var era = eras.a;
 				var olderEras = eras.b;
-				if (_Utils_cmp(era.aC, posixMinutes) < 0) {
+				if (_Utils_cmp(era.aR, posixMinutes) < 0) {
 					return posixMinutes + era.b;
 				} else {
 					var $temp$defaultOffset = defaultOffset,
@@ -7951,15 +7951,15 @@ var elm$time$Time$toCivil = function (minutes) {
 	var month = mp + ((mp < 10) ? 3 : (-9));
 	var year = yearOfEra + (era * 400);
 	return {
-		aP: (dayOfYear - ((((153 * mp) + 2) / 5) | 0)) + 1,
-		a4: month,
-		bx: year + ((month <= 2) ? 1 : 0)
+		a6: (dayOfYear - ((((153 * mp) + 2) / 5) | 0)) + 1,
+		bs: month,
+		b$: year + ((month <= 2) ? 1 : 0)
 	};
 };
 var elm$time$Time$toMonth = F2(
 	function (zone, time) {
 		var _n0 = elm$time$Time$toCivil(
-			A2(elm$time$Time$toAdjustedMinutes, zone, time)).a4;
+			A2(elm$time$Time$toAdjustedMinutes, zone, time)).bs;
 		switch (_n0) {
 			case 1:
 				return 0;
@@ -8037,7 +8037,7 @@ var ryannhg$date_format$DateFormat$amPm = F2(
 var elm$time$Time$toDay = F2(
 	function (zone, time) {
 		return elm$time$Time$toCivil(
-			A2(elm$time$Time$toAdjustedMinutes, zone, time)).aP;
+			A2(elm$time$Time$toAdjustedMinutes, zone, time)).a6;
 	});
 var ryannhg$date_format$DateFormat$dayOfMonth = elm$time$Time$toDay;
 var ryannhg$date_format$DateFormat$days = _List_fromArray(
@@ -8200,7 +8200,7 @@ var elm$core$List$take = F2(
 var elm$time$Time$toYear = F2(
 	function (zone, time) {
 		return elm$time$Time$toCivil(
-			A2(elm$time$Time$toAdjustedMinutes, zone, time)).bx;
+			A2(elm$time$Time$toAdjustedMinutes, zone, time)).b$;
 	});
 var ryannhg$date_format$DateFormat$isLeapYear = function (year_) {
 	return A2(elm$core$Basics$modBy, 4, year_) ? false : (A2(elm$core$Basics$modBy, 100, year_) ? true : (A2(elm$core$Basics$modBy, 400, year_) ? false : true));
@@ -8368,10 +8368,10 @@ var ryannhg$date_format$DateFormat$piece = F4(
 				return A2(
 					elm$core$String$left,
 					num,
-					options.ag(
+					options.au(
 						A2(elm$time$Time$toMonth, zone, posix)));
 			case 4:
-				return options.ag(
+				return options.au(
 					A2(elm$time$Time$toMonth, zone, posix));
 			case 17:
 				return elm$core$String$fromInt(
@@ -8412,10 +8412,10 @@ var ryannhg$date_format$DateFormat$piece = F4(
 				return A2(
 					elm$core$String$left,
 					num,
-					options.ad(
+					options.aq(
 						A2(elm$time$Time$toWeekday, zone, posix)));
 			case 14:
-				return options.ad(
+				return options.aq(
 					A2(elm$time$Time$toWeekday, zone, posix));
 			case 19:
 				return elm$core$String$fromInt(
@@ -8521,14 +8521,20 @@ var author$project$Main$getCompositions = F2(
 				]),
 			zone,
 			posix);
-		return A3(author$project$Main$get, 'https://rata.digitraffic.fi/api/v1/compositions/' + localDate, author$project$View$TrainWagonCountsResponse, author$project$Model$trainWagonCountDecoder);
+		var url = A3(
+			elm$url$Url$Builder$crossOrigin,
+			'https://rata.digitraffic.fi/api/v1/compositions',
+			_List_fromArray(
+				[localDate]),
+			_List_Nil);
+		return A3(author$project$Main$get, url, author$project$View$TrainWagonCountsResponse, author$project$Model$trainWagonCountDecoder);
 	});
 var elm$json$Json$Encode$string = _Json_wrap;
 var author$project$Main$setStorage = _Platform_outgoingPort('setStorage', elm$json$Json$Encode$string);
 var author$project$Main$updateTime = function (model) {
-	var currentTime = model.T;
-	var route = model.av;
-	var requestMillis = elm$time$Time$posixToMillis(model.ap);
+	var currentTime = model.ab;
+	var route = model.aK;
+	var requestMillis = elm$time$Time$posixToMillis(model.aD);
 	var currentMillis = elm$time$Time$posixToMillis(currentTime);
 	if (route.$ === 2) {
 		var from = route.a;
@@ -8536,9 +8542,9 @@ var author$project$Main$updateTime = function (model) {
 		return ((currentMillis - requestMillis) >= 10000) ? _Utils_Tuple2(
 			_Utils_update(
 				model,
-				{ap: currentTime}),
+				{aD: currentTime}),
 			author$project$Main$getTrains(
-				{af: from, bq: to})) : _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
+				{at: from, bU: to})) : _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
 	} else {
 		return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
 	}
@@ -8569,7 +8575,7 @@ var elm$json$Json$Encode$object = function (pairs) {
 			pairs));
 };
 var author$project$Model$encodeStoredState = function (_n0) {
-	var language = _n0.ao;
+	var language = _n0.aC;
 	return A2(
 		elm$json$Json$Encode$encode,
 		0,
@@ -8630,7 +8636,7 @@ var elm$core$String$indexes = _String_indexes;
 var elm$core$String$contains = _String_contains;
 var elm$url$Url$Url = F6(
 	function (protocol, host, port_, path, query, fragment) {
-		return {aW: fragment, aZ: host, bU: path, a9: port_, bd: protocol, be: query};
+		return {be: fragment, bj: host, cE: path, by: port_, bC: protocol, bD: query};
 	});
 var elm$url$Url$chompBeforePath = F5(
 	function (protocol, path, params, frag, str) {
@@ -8758,7 +8764,7 @@ var elm$url$Url$addPrefixed = F3(
 	});
 var elm$url$Url$toString = function (url) {
 	var http = function () {
-		var _n0 = url.bd;
+		var _n0 = url.bC;
 		if (!_n0) {
 			return 'http://';
 		} else {
@@ -8768,17 +8774,17 @@ var elm$url$Url$toString = function (url) {
 	return A3(
 		elm$url$Url$addPrefixed,
 		'#',
-		url.aW,
+		url.be,
 		A3(
 			elm$url$Url$addPrefixed,
 			'?',
-			url.be,
+			url.bD,
 			_Utils_ap(
 				A2(
 					elm$url$Url$addPort,
-					url.a9,
-					_Utils_ap(http, url.aZ)),
-				url.bU)));
+					url.by,
+					_Utils_ap(http, url.bj)),
+				url.cE)));
 };
 var author$project$Main$update = F2(
 	function (msg, model) {
@@ -8791,20 +8797,20 @@ var author$project$Main$update = F2(
 				return author$project$Main$updateTime(
 					_Utils_update(
 						model,
-						{T: time}));
+						{ab: time}));
 			case 1:
 				var zone = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{bz: zone}),
-					A2(author$project$Main$getCompositions, model.T, zone));
+						{b1: zone}),
+					A2(author$project$Main$getCompositions, model.ab, zone));
 			case 2:
 				var webData = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{aI: webData}),
+						{aZ: webData}),
 					elm$core$Platform$Cmd$none);
 			case 3:
 				if (msg.a.$ === 3) {
@@ -8812,7 +8818,7 @@ var author$project$Main$update = F2(
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{bn: stations}),
+							{bP: stations}),
 						elm$core$Platform$Cmd$none);
 				} else {
 					return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
@@ -8823,7 +8829,7 @@ var author$project$Main$update = F2(
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{bw: wagonCounts}),
+							{b_: wagonCounts}),
 						elm$core$Platform$Cmd$none);
 				} else {
 					return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
@@ -8836,7 +8842,7 @@ var author$project$Main$update = F2(
 						model,
 						A2(
 							elm$browser$Browser$Navigation$pushUrl,
-							model.a6,
+							model.bu,
 							elm$url$Url$toString(url)));
 				} else {
 					var url = urlRequest.a;
@@ -8848,7 +8854,7 @@ var author$project$Main$update = F2(
 				var language = msg.a;
 				var nextModel = _Utils_update(
 					model,
-					{ao: language});
+					{aC: language});
 				return _Utils_Tuple2(
 					nextModel,
 					author$project$Main$setStorage(
@@ -8868,8 +8874,8 @@ var elm$core$Basics$abs = function (n) {
 	return (n < 0) ? (-n) : n;
 };
 var author$project$Translations$timeDifferenceTranslationSet = function (_n0) {
-	var minuteDiff = _n0.bP;
-	var stationName = _n0.bX;
+	var minuteDiff = _n0.cp;
+	var stationName = _n0.cI;
 	var absDiff = elm$core$Basics$abs(minuteDiff);
 	var absDiffString = elm$core$String$fromInt(absDiff);
 	return (absDiff <= 1) ? {
@@ -8912,8 +8918,16 @@ var author$project$Translations$translationSetFor = function (translationKey) {
 		case 12:
 			var facts = translationKey.a;
 			return author$project$Translations$timeDifferenceTranslationSet(facts);
+		case 13:
+			return {f: 'Not moving', g: 'Ei vielä liikkeellä'};
+		case 14:
+			return {f: 'Only direct trains departing in 2 hours are displayed.', g: 'Vain suorat 2 tunnin kuluessa lähtevät junat näytetään.'};
+		case 15:
+			return {f: 'Settings', g: 'Asetukset'};
+		case 16:
+			return {f: 'Settings', g: 'Asetukset'};
 		default:
-			return {f: 'Not moving', g: 'Ei liikenteessä'};
+			return {f: 'Select language', g: 'Valitse kieli'};
 	}
 };
 var author$project$Translations$translate = F2(
@@ -9090,10 +9104,11 @@ var author$project$Model$sortedTrainList = function (trains) {
 	return A2(
 		elm$core$List$sortBy,
 		function (train) {
-			return elm$time$Time$posixToMillis(train.ah.Y);
+			return elm$time$Time$posixToMillis(train.av.ak);
 		},
 		elm$core$Dict$values(trains));
 };
+var author$project$Translations$SchedulePageEndOfListNote = {$: 14};
 var author$project$Icons$wagon = A2(
 	elm$svg$Svg$svg,
 	_List_fromArray(
@@ -9159,7 +9174,7 @@ var author$project$View$timelinessColor = function (difference) {
 };
 var author$project$View$stationRow = F3(
 	function (zone, stations, station) {
-		var name = A2(author$project$View$stationName, stations, station.w);
+		var name = A2(author$project$View$stationName, stations, station.D);
 		return A2(
 			elm$html$Html$div,
 			_List_fromArray(
@@ -9169,7 +9184,7 @@ var author$project$View$stationRow = F3(
 			_List_fromArray(
 				[
 					function () {
-					var _n0 = _Utils_Tuple2(station.bO, station.U);
+					var _n0 = _Utils_Tuple2(station.co, station.ac);
 					if ((!_n0.a.$) && (!_n0.b.$)) {
 						var estimate = _n0.a.a;
 						var n = _n0.b.a;
@@ -9203,7 +9218,7 @@ var author$project$View$stationRow = F3(
 									_List_fromArray(
 										[
 											elm$html$Html$text(
-											A2(author$project$View$prettyTime, zone, station.Y))
+											A2(author$project$View$prettyTime, zone, station.ak))
 										])) : elm$html$Html$text('')
 								]));
 					} else {
@@ -9216,7 +9231,7 @@ var author$project$View$stationRow = F3(
 							_List_fromArray(
 								[
 									elm$html$Html$text(
-									A2(author$project$View$prettyTime, zone, station.Y))
+									A2(author$project$View$prettyTime, zone, station.ak))
 								]));
 					}
 				}(),
@@ -9239,7 +9254,7 @@ var author$project$View$stationRow = F3(
 					_List_fromArray(
 						[
 							elm$html$Html$text(
-							A2(elm$core$Maybe$withDefault, '', station.b_))
+							A2(elm$core$Maybe$withDefault, '', station.cN))
 						]))
 				]));
 	});
@@ -9290,10 +9305,10 @@ var elm$html$Html$Attributes$classList = function (classes) {
 };
 var author$project$View$trainRow = F4(
 	function (t, _n0, _n1, train) {
-		var zone = _n0.bz;
-		var stations = _n0.bn;
-		var wagonCounts = _n0.bw;
-		var currentTime = _n0.T;
+		var zone = _n0.b1;
+		var stations = _n0.bP;
+		var wagonCounts = _n0.b_;
+		var currentTime = _n0.ab;
 		var from = _n1.a;
 		var to = _n1.b;
 		var wagonCount = function (count) {
@@ -9308,10 +9323,10 @@ var author$project$View$trainRow = F4(
 			A2(
 				elm$core$Maybe$withDefault,
 				0,
-				A2(elm$core$Dict$get, train.P, wagonCounts)));
+				A2(elm$core$Dict$get, train.Y, wagonCounts)));
 		var tText = A2(elm$core$Basics$composeR, t, elm$html$Html$text);
 		var statusInfoBadge = function () {
-			var _n6 = train.aO;
+			var _n6 = train.a5;
 			if (!_n6.$) {
 				var station = _n6.a;
 				return A2(
@@ -9320,15 +9335,15 @@ var author$project$View$trainRow = F4(
 						[
 							elm$html$Html$Attributes$class('train-status-badge'),
 							elm$html$Html$Attributes$class(
-							'is-' + author$project$View$timelinessColor(station.U))
+							'is-' + author$project$View$timelinessColor(station.ac))
 						]),
 					_List_fromArray(
 						[
 							tText(
 							author$project$Translations$SchedulePageTimeDifference(
 								{
-									bP: station.U,
-									bX: A2(author$project$View$stationName, stations, station.w)
+									cp: station.ac,
+									cI: A2(author$project$View$stationName, stations, station.D)
 								})),
 							wagonCount
 						]));
@@ -9360,7 +9375,7 @@ var author$project$View$trainRow = F4(
 					elm$time$Time$posixToMillis(date) - elm$time$Time$posixToMillis(currentTime)));
 		};
 		var prettyBestEstimateFor = function (timetableRow) {
-			var _n5 = timetableRow.bO;
+			var _n5 = timetableRow.co;
 			if (!_n5.$) {
 				var estimate = _n5.a;
 				return A2(
@@ -9371,11 +9386,11 @@ var author$project$View$trainRow = F4(
 				return A2(
 					elm$core$Maybe$map,
 					author$project$View$ScheduleEstimate,
-					prettyDiff(timetableRow.Y));
+					prettyDiff(timetableRow.ak));
 			}
 		};
-		var homeStationDepartingIn = prettyBestEstimateFor(train.ah);
-		var homeStationArrivingIn = A2(elm$core$Maybe$andThen, prettyBestEstimateFor, train.aY);
+		var homeStationDepartingIn = prettyBestEstimateFor(train.av);
+		var homeStationArrivingIn = A2(elm$core$Maybe$andThen, prettyBestEstimateFor, train.bi);
 		return A2(
 			elm$html$Html$div,
 			_List_fromArray(
@@ -9400,12 +9415,12 @@ var author$project$View$trainRow = F4(
 									_List_fromArray(
 										[
 											_Utils_Tuple2('train-name', true),
-											_Utils_Tuple2('is-running', train.X)
+											_Utils_Tuple2('is-running', train.ai)
 										]))
 								]),
 							_List_fromArray(
 								[
-									elm$html$Html$text(train.W)
+									elm$html$Html$text(train.af)
 								])),
 							A2(
 							elm$html$Html$div,
@@ -9415,7 +9430,7 @@ var author$project$View$trainRow = F4(
 								]),
 							_List_fromArray(
 								[
-									A3(author$project$View$stationRow, zone, stations, train.ah),
+									A3(author$project$View$stationRow, zone, stations, train.av),
 									A2(
 									elm$html$Html$div,
 									_List_fromArray(
@@ -9426,7 +9441,7 @@ var author$project$View$trainRow = F4(
 										[
 											elm$html$Html$text('︙')
 										])),
-									A3(author$project$View$stationRow, zone, stations, train.aS)
+									A3(author$project$View$stationRow, zone, stations, train.ba)
 								])),
 							A2(
 							elm$html$Html$div,
@@ -9513,6 +9528,7 @@ var author$project$View$trainRow = F4(
 				]));
 	});
 var elm$html$Html$a = _VirtualDom_node('a');
+var elm$html$Html$main_ = _VirtualDom_node('main');
 var elm$html$Html$Attributes$href = function (url) {
 	return A2(
 		elm$html$Html$Attributes$stringProperty,
@@ -9530,67 +9546,80 @@ var author$project$View$trainsView = F5(
 				[
 					elm$html$Html$Attributes$class('trains')
 				]),
-			_Utils_ap(
-				_List_fromArray(
-					[
-						A2(
-						elm$html$Html$header,
-						_List_Nil,
-						_List_fromArray(
-							[
-								A2(
-								elm$html$Html$a,
-								_List_fromArray(
-									[
-										elm$html$Html$Attributes$class('back-link'),
-										elm$html$Html$Attributes$href('#/')
-									]),
-								_List_fromArray(
-									[
-										elm$html$Html$text('‹')
-									])),
-								A2(
-								elm$html$Html$h1,
-								_List_Nil,
-								_List_fromArray(
-									[
-										elm$html$Html$text(heading)
-									])),
-								A2(
-								elm$html$Html$a,
-								_List_fromArray(
-									[
-										elm$html$Html$Attributes$class('swap-link'),
-										elm$html$Html$Attributes$href('#/' + (to + ('/' + from)))
-									]),
-								_List_fromArray(
-									[author$project$Icons$swap]))
-							]))
-					]),
-				A2(
-					elm$core$List$map,
-					A3(
-						author$project$View$trainRow,
-						t,
-						model,
-						_Utils_Tuple2(from, to)),
-					rightDirection)));
+			_List_fromArray(
+				[
+					A2(
+					elm$html$Html$header,
+					_List_Nil,
+					_List_fromArray(
+						[
+							A2(
+							elm$html$Html$a,
+							_List_fromArray(
+								[
+									elm$html$Html$Attributes$class('back-link'),
+									elm$html$Html$Attributes$href('#/')
+								]),
+							_List_fromArray(
+								[
+									elm$html$Html$text('‹')
+								])),
+							A2(
+							elm$html$Html$h1,
+							_List_Nil,
+							_List_fromArray(
+								[
+									elm$html$Html$text(heading)
+								])),
+							A2(
+							elm$html$Html$a,
+							_List_fromArray(
+								[
+									elm$html$Html$Attributes$class('swap-link'),
+									elm$html$Html$Attributes$href('#/' + (to + ('/' + from)))
+								]),
+							_List_fromArray(
+								[author$project$Icons$swap]))
+						])),
+					A2(
+					elm$html$Html$main_,
+					_List_Nil,
+					A2(
+						elm$core$List$map,
+						A3(
+							author$project$View$trainRow,
+							t,
+							model,
+							_Utils_Tuple2(from, to)),
+						rightDirection)),
+					A2(
+					elm$html$Html$div,
+					_List_fromArray(
+						[
+							elm$html$Html$Attributes$class('trains-end-of-list')
+						]),
+					_List_fromArray(
+						[
+							elm$html$Html$text(
+							t(author$project$Translations$SchedulePageEndOfListNote))
+						]))
+				]));
 	});
 var author$project$View$schedulePage = F3(
 	function (t, model, _n0) {
 		var from = _n0.a;
 		var to = _n0.b;
 		var tText = A2(elm$core$Basics$composeL, elm$html$Html$text, t);
-		var heading = A2(author$project$View$stationName, model.bn, from) + ('—' + A2(author$project$View$stationName, model.bn, to));
+		var heading = A2(author$project$View$stationName, model.bP, from) + ('—' + A2(author$project$View$stationName, model.bP, to));
 		return {
-			ac: A3(
+			ap: A3(
 				author$project$View$container,
-				model.ao,
+				model.aC,
 				elm$core$Maybe$Nothing,
 				_List_fromArray(
 					[
 						function () {
-						var _n1 = model.aI;
+						var _n1 = model.aZ;
 						switch (_n1.$) {
 							case 3:
 								var trains = _n1.a;
@@ -9638,7 +9667,7 @@ var author$project$View$schedulePage = F3(
 						}
 					}()
 					])),
-			aH: heading + ' – Trains.today'
+			aY: heading + ' – Trains.today'
 		};
 	});
 var author$project$Stations$common = _List_fromArray(
@@ -9760,9 +9789,9 @@ var elm$html$Html$ul = _VirtualDom_node('ul');
 var author$project$View$selectDepPage = F2(
 	function (t, model) {
 		return {
-			ac: A3(
+			ap: A3(
 				author$project$View$container,
-				model.ao,
+				model.aC,
 				elm$core$Maybe$Just(
 					t(author$project$Translations$DepPageHeading)),
 				_List_fromArray(
@@ -9797,7 +9826,7 @@ var author$project$View$selectDepPage = F2(
 							},
 							author$project$Stations$all))
 					])),
-			aH: t(author$project$Translations$DepPageTitle)
+			aY: t(author$project$Translations$DepPageTitle)
 		};
 	});
 var author$project$Stations$findName = function (abbreviation) {
@@ -9856,9 +9885,9 @@ var author$project$View$selectDestPage = F3(
 					author$project$Stations$findName(dep)));
 		};
 		return {
-			ac: A3(
+			ap: A3(
 				author$project$View$container,
-				model.ao,
+				model.aC,
 				elm$core$Maybe$Just(
 					t(author$project$Translations$DestPageHeading)),
 				_List_fromArray(
@@ -9895,12 +9924,12 @@ var author$project$View$selectDestPage = F3(
 							},
 							author$project$Stations$matching(dep)))
 					])),
-			aH: t(author$project$Translations$DestPageTitle)
+			aY: t(author$project$Translations$DestPageTitle)
 		};
 	});
 var author$project$View$view = function (model) {
-	var t = author$project$Translations$translate(model.ao);
-	var _n0 = model.av;
+	var t = author$project$Translations$translate(model.aC);
+	var _n0 = model.aK;
 	switch (_n0.$) {
 		case 0:
 			return A2(author$project$View$selectDepPage, t, model);
@@ -9919,7 +9948,7 @@ var author$project$View$view = function (model) {
 };
 var elm$browser$Browser$application = _Browser_application;
 var author$project$Main$main = elm$browser$Browser$application(
-	{bM: author$project$Main$init, bR: author$project$View$UrlChange, bS: author$project$View$LinkClicked, bZ: author$project$Main$subscriptions, b$: author$project$Main$update, b1: author$project$View$view});
+	{cm: author$project$Main$init, cA: author$project$View$UrlChange, cB: author$project$View$LinkClicked, cK: author$project$Main$subscriptions, cO: author$project$Main$update, cQ: author$project$View$view});
 _Platform_export({'Main':{'init':author$project$Main$main(
 	A2(
 		elm$json$Json$Decode$andThen,
@@ -9928,7 +9957,7 @@ _Platform_export({'Main':{'init':author$project$Main$main(
 				elm$json$Json$Decode$andThen,
 				function (storedState) {
 					return elm$json$Json$Decode$succeed(
-						{aE: storedState, aG: timestamp});
+						{aT: storedState, aX: timestamp});
 				},
 				A2(elm$json$Json$Decode$field, 'storedState', elm$json$Json$Decode$string));
 		},
