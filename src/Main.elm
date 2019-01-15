@@ -193,17 +193,20 @@ getCompositions posix zone =
                 ]
                 zone
                 posix
+
+        url =
+            Url.Builder.crossOrigin "https://rata.digitraffic.fi/api/v1/compositions"
+                [ localDate ]
+                []
     in
-    get ("https://rata.digitraffic.fi/api/v1/compositions/" ++ localDate)
-        TrainWagonCountsResponse
-        trainWagonCountDecoder
+    get url TrainWagonCountsResponse trainWagonCountDecoder
 
 
 getTrains : Targets -> Cmd Msg
 getTrains targets =
     let
         trainsUrl =
-            Url.Builder.crossOrigin "https://rata.digitraffic.fi/api/v1/live-trains/station/"
+            Url.Builder.crossOrigin "https://rata.digitraffic.fi/api/v1/live-trains/station"
                 [ targets.from ]
                 [ Url.Builder.int "minutes_before_departure" 120
                 , Url.Builder.int "minutes_after_departure" 0

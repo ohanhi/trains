@@ -55,6 +55,10 @@ type TranslationKey
     | SchedulePageDepartsIn
     | SchedulePageTimeDifference { minuteDiff : Int, stationName : String }
     | SchedulePageNotMoving
+    | SchedulePageEndOfListNote
+    | SettingsPageTitle
+    | SettingsPageHeading
+    | SettingsPageSelectLanguage
 
 
 type alias TranslationSet =
@@ -145,7 +149,27 @@ translationSetFor translationKey =
 
         SchedulePageNotMoving ->
             { english = "Not moving"
-            , finnish = "Ei liikenteessä"
+            , finnish = "Ei vielä liikkeellä"
+            }
+
+        SchedulePageEndOfListNote ->
+            { english = "Only direct trains departing in 2 hours are displayed."
+            , finnish = "Vain suorat 2 tunnin kuluessa lähtevät junat näytetään."
+            }
+
+        SettingsPageTitle ->
+            { english = "Settings"
+            , finnish = "Asetukset"
+            }
+
+        SettingsPageHeading ->
+            { english = "Settings"
+            , finnish = "Asetukset"
+            }
+
+        SettingsPageSelectLanguage ->
+            { english = "Select language"
+            , finnish = "Valitse kieli"
             }
 
 

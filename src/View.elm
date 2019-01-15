@@ -220,8 +220,9 @@ trainsView t model ( from, to ) heading trains =
                 [ class "swap-link", href ("#/" ++ to ++ "/" ++ from) ]
                 [ Icons.swap ]
             ]
+        , main_ [] (List.map (trainRow t model ( from, to )) rightDirection)
+        , div [ class "trains-end-of-list" ] [ text (t SchedulePageEndOfListNote) ]
         ]
-            ++ List.map (trainRow t model ( from, to )) rightDirection
 
 
 type ArrivalEstimate
