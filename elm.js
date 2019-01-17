@@ -7099,6 +7099,7 @@ var elm$core$Maybe$withDefault = F2(
 			return _default;
 		}
 	});
+var elm$url$Url$percentDecode = _Url_percentDecode;
 var elm$url$Url$Parser$Parser = elm$core$Basics$identity;
 var elm$url$Url$Parser$State = F5(
 	function (visited, unvisited, params, frag, value) {
@@ -7211,7 +7212,6 @@ var elm$url$Url$Parser$preparePath = function (path) {
 		return elm$url$Url$Parser$removeFinalEmpty(segments);
 	}
 };
-var elm$url$Url$percentDecode = _Url_percentDecode;
 var elm$url$Url$Parser$addToParametersHelp = F2(
 	function (value, maybeList) {
 		if (maybeList.$ === 1) {
@@ -7349,7 +7349,13 @@ var author$project$Main$parseUrl = function (url) {
 				routeParser,
 				_Utils_update(
 					url,
-					{be: elm$core$Maybe$Nothing, cE: fragment})));
+					{
+						be: elm$core$Maybe$Nothing,
+						cE: A2(
+							elm$core$Maybe$withDefault,
+							'',
+							elm$url$Url$percentDecode(fragment))
+					})));
 	}
 };
 var elm$core$Platform$Cmd$batch = _Platform_batch;
