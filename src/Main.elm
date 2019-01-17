@@ -1,4 +1,4 @@
-port module Main exposing (main)
+port module Main exposing (main, parseUrl)
 
 import Browser exposing (UrlRequest(..))
 import Browser.Navigation
@@ -168,7 +168,11 @@ parseUrl url =
             SelectDepRoute
 
         Just fragment ->
-            { url | path = fragment, fragment = Nothing }
+            { url
+              -- The station shortcodes may include ÅÄÖ
+                | path = Url.percentDecode fragment |> Maybe.withDefault ""
+                , fragment = Nothing
+            }
                 |> Url.Parser.parse routeParser
                 |> Maybe.withDefault SelectDepRoute
 
