@@ -178,6 +178,10 @@ a:visited {
   background-color: var(--color-offSchedule);
 }
 
+.train-status-badge.is-cancelled {
+  background-color: var(--color-offSchedule);
+}
+
 .train-wagon-count {
   overflow: hidden;
   height: 18px;
