@@ -92,8 +92,23 @@ container language headingText elements =
 
                 Nothing ->
                     []
+
+        footerContent =
+            footer []
+                [ p []
+                    [ text "Made with "
+                    , span [ class "pink" ] [ text "♥" ]
+                    , text " by "
+                    , a [ href "https://twitter.com/ohanhi" ] [ text "@ohanhi" ]
+                    , text " – "
+                    , text "Open Source on "
+                    , a [ href "https://github.com/ohanhi/trains" ] [ text "GitHub" ]
+                    ]
+                ]
     in
-    [ div [ class "container" ] (languageSelect language :: (heading ++ elements)) ]
+    [ div [ class "container" ] (languageSelect language :: (heading ++ elements))
+    , footerContent
+    ]
 
 
 languageSelect : Language -> Html Msg

@@ -18,6 +18,7 @@
   --color-black: rgb(14, 16, 17);
   --color-blue: rgb(114, 159, 207);
   --color-purple: rgb(173, 127, 168);
+  --color-pink: rgb(255, 95, 196);
   --type-scale--2: 0.563rem;
   --type-scale--1: 0.75rem;
   --type-scale-0: 1rem;
@@ -110,6 +111,7 @@ a:visited {
   width: 100%;
   max-width: 30rem;
   box-sizing: border-box;
+  min-height: 100vh;
 }
 
 .train {
@@ -241,4 +243,17 @@ a:visited {
   margin-top: 2rem;
   font-weight: 300;
   text-align: center;
+}
+
+footer {
+  margin: 2rem 0 0;
+  background: var(--color-black);
+  padding: 1rem;
+  text-align: center;
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+footer .pink {
+  color: var(--color-pink);
 }
