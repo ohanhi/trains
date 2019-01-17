@@ -8879,64 +8879,66 @@ var author$project$Translations$timeDifferenceTranslationSet = function (_n0) {
 	var absDiff = elm$core$Basics$abs(minuteDiff);
 	var absDiffString = elm$core$String$fromInt(absDiff);
 	return (absDiff <= 1) ? {
-		f: 'On time in ' + stationName,
-		g: 'Ajallaan ' + author$project$Translations$finnishInessive(stationName)
+		e: 'On time in ' + stationName,
+		f: 'Ajallaan ' + author$project$Translations$finnishInessive(stationName)
 	} : ((minuteDiff < 0) ? {
-		f: absDiffString + (' min early in ' + stationName),
-		g: absDiffString + (' min ajoissa ' + author$project$Translations$finnishInessive(stationName))
+		e: absDiffString + (' min early in ' + stationName),
+		f: absDiffString + (' min ajoissa ' + author$project$Translations$finnishInessive(stationName))
 	} : {
-		f: absDiffString + (' min late in ' + stationName),
-		g: absDiffString + (' min myöhässä ' + author$project$Translations$finnishInessive(stationName))
+		e: absDiffString + (' min late in ' + stationName),
+		f: absDiffString + (' min myöhässä ' + author$project$Translations$finnishInessive(stationName))
 	});
 };
 var author$project$Translations$translationSetFor = function (translationKey) {
 	switch (translationKey.$) {
 		case 0:
-			return {f: 'Trains.today - Helsinki region commuter trains', g: 'Trains.today - Helsingin seudun lähijunat'};
+			return {e: 'Trains.today - Helsinki region commuter trains', f: 'Trains.today - Helsingin seudun lähijunat'};
 		case 1:
-			return {f: 'Select departure station', g: 'Valitse lähtöasema'};
+			return {e: 'Select departure station', f: 'Valitse lähtöasema'};
 		case 2:
-			return {f: 'Select destination – Trains.today', g: 'Valitse pääteasema – Trains.today'};
+			return {e: 'Select destination – Trains.today', f: 'Valitse pääteasema – Trains.today'};
 		case 3:
-			return {f: 'Select destination station', g: 'Valitse pääteasema'};
+			return {e: 'Select destination station', f: 'Valitse pääteasema'};
 		case 4:
-			return {f: 'No connection, trying again soon...', g: 'Ei yhteyttä, yritetään pian uudestaan...'};
+			return {e: 'No connection, trying again soon...', f: 'Ei yhteyttä, yritetään pian uudestaan...'};
 		case 5:
-			return {f: 'Network timed out', g: 'Vastaus aikakatkaistiin'};
+			return {e: 'Network timed out', f: 'Vastaus aikakatkaistiin'};
 		case 6:
-			return {f: 'It\'s not you, it\'s me. I have the server address wrong.', g: 'Vika on minussa. Palvelimen osoite on väärä.'};
+			return {e: 'It\'s not you, it\'s me. I have the server address wrong.', f: 'Vika on minussa. Palvelimen osoite on väärä.'};
 		case 7:
-			return {f: 'The server didn\'t like the request (bad status).', g: 'Palvelin ei tykännyt pyynnöstä (virheellinen status).'};
+			return {e: 'The server didn\'t like the request (bad status).', f: 'Palvelin ei tykännyt pyynnöstä (virheellinen status).'};
 		case 8:
-			return {f: 'Ouch, the server responded with strange contents.', g: 'Auts, palvelin vastasi oudolla sisällöllä.'};
+			return {e: 'Ouch, the server responded with strange contents.', f: 'Auts, palvelin vastasi oudolla sisällöllä.'};
 		case 9:
-			return {f: 'Loading', g: 'Ladataan'};
+			return {e: 'Loading', f: 'Ladataan'};
 		case 10:
-			return {f: 'Arrives in', g: 'Saapumiseen'};
+			return {e: 'Arrives in', f: 'Saapumiseen'};
 		case 11:
-			return {f: 'Departs in', g: 'Lähtöön'};
+			return {e: 'Departs in', f: 'Lähtöön'};
 		case 12:
 			var facts = translationKey.a;
 			return author$project$Translations$timeDifferenceTranslationSet(facts);
 		case 13:
-			return {f: 'Not moving', g: 'Ei vielä liikkeellä'};
+			return {e: 'Not moving', f: 'Ei vielä liikkeellä'};
 		case 14:
-			return {f: 'Only direct trains departing in 2 hours are displayed.', g: 'Vain suorat 2 tunnin kuluessa lähtevät junat näytetään.'};
+			return {e: 'Cancelled', f: 'Peruttu'};
 		case 15:
-			return {f: 'Settings', g: 'Asetukset'};
+			return {e: 'Only direct trains departing in 2 hours are displayed.', f: 'Vain suorat 2 tunnin kuluessa lähtevät junat näytetään.'};
 		case 16:
-			return {f: 'Settings', g: 'Asetukset'};
+			return {e: 'Settings', f: 'Asetukset'};
+		case 17:
+			return {e: 'Settings', f: 'Asetukset'};
 		default:
-			return {f: 'Select language', g: 'Valitse kieli'};
+			return {e: 'Select language', f: 'Valitse kieli'};
 	}
 };
 var author$project$Translations$translate = F2(
 	function (language, translationKey) {
 		var translationSet = author$project$Translations$translationSetFor(translationKey);
 		if (!language) {
-			return translationSet.g;
-		} else {
 			return translationSet.f;
+		} else {
+			return translationSet.e;
 		}
 	});
 var author$project$Translations$ErrorBadPayload = {$: 8};
@@ -9108,7 +9110,7 @@ var author$project$Model$sortedTrainList = function (trains) {
 		},
 		elm$core$Dict$values(trains));
 };
-var author$project$Translations$SchedulePageEndOfListNote = {$: 14};
+var author$project$Translations$SchedulePageEndOfListNote = {$: 15};
 var author$project$Icons$wagon = A2(
 	elm$svg$Svg$svg,
 	_List_fromArray(
@@ -9127,6 +9129,7 @@ var author$project$Icons$wagon = A2(
 			_List_Nil)
 		]));
 var author$project$Translations$SchedulePageArrivesIn = {$: 10};
+var author$project$Translations$SchedulePageCancelled = {$: 14};
 var author$project$Translations$SchedulePageDepartsIn = {$: 11};
 var author$project$Translations$SchedulePageNotMoving = {$: 13};
 var author$project$Translations$SchedulePageTimeDifference = function (a) {
@@ -9326,37 +9329,52 @@ var author$project$View$trainRow = F4(
 				A2(elm$core$Dict$get, train.Y, wagonCounts)));
 		var tText = A2(elm$core$Basics$composeR, t, elm$html$Html$text);
 		var statusInfoBadge = function () {
-			var _n6 = train.a5;
-			if (!_n6.$) {
-				var station = _n6.a;
-				return A2(
-					elm$html$Html$div,
-					_List_fromArray(
-						[
-							elm$html$Html$Attributes$class('train-status-badge'),
-							elm$html$Html$Attributes$class(
-							'is-' + author$project$View$timelinessColor(station.ac))
-						]),
-					_List_fromArray(
-						[
-							tText(
-							author$project$Translations$SchedulePageTimeDifference(
-								{
-									cp: station.ac,
-									cI: A2(author$project$View$stationName, stations, station.D)
-								})),
-							wagonCount
-						]));
+			var _n6 = _Utils_Tuple2(train.aa, train.a5);
+			if (!_n6.a) {
+				if (!_n6.b.$) {
+					var station = _n6.b.a;
+					return A2(
+						elm$html$Html$div,
+						_List_fromArray(
+							[
+								elm$html$Html$Attributes$class('train-status-badge'),
+								elm$html$Html$Attributes$class(
+								'is-' + author$project$View$timelinessColor(station.ac))
+							]),
+						_List_fromArray(
+							[
+								tText(
+								author$project$Translations$SchedulePageTimeDifference(
+									{
+										cp: station.ac,
+										cI: A2(author$project$View$stationName, stations, station.D)
+									})),
+								wagonCount
+							]));
+				} else {
+					var _n7 = _n6.b;
+					return A2(
+						elm$html$Html$div,
+						_List_fromArray(
+							[
+								elm$html$Html$Attributes$class('train-status-badge')
+							]),
+						_List_fromArray(
+							[
+								tText(author$project$Translations$SchedulePageNotMoving),
+								wagonCount
+							]));
+				}
 			} else {
 				return A2(
 					elm$html$Html$div,
 					_List_fromArray(
 						[
-							elm$html$Html$Attributes$class('train-status-badge')
+							elm$html$Html$Attributes$class('train-status-badge is-cancelled')
 						]),
 					_List_fromArray(
 						[
-							tText(author$project$Translations$SchedulePageNotMoving),
+							tText(author$project$Translations$SchedulePageCancelled),
 							wagonCount
 						]));
 			}
@@ -9450,78 +9468,86 @@ var author$project$View$trainRow = F4(
 									elm$html$Html$Attributes$class('train-status')
 								]),
 							function () {
-								var _n2 = _Utils_Tuple2(homeStationArrivingIn, homeStationDepartingIn);
-								if (!_n2.a.$) {
-									var estimate = _n2.a.a;
-									return _List_fromArray(
-										[
-											A2(
-											elm$html$Html$div,
-											_List_fromArray(
+								var _n2 = _Utils_Tuple3(train.aa, homeStationArrivingIn, homeStationDepartingIn);
+								_n2$2:
+								while (true) {
+									if (!_n2.a) {
+										if (!_n2.b.$) {
+											var estimate = _n2.b.a;
+											return _List_fromArray(
 												[
-													elm$html$Html$Attributes$class('train-status-arriving')
-												]),
-											_List_fromArray(
-												[
-													tText(author$project$Translations$SchedulePageArrivesIn)
-												])),
-											A2(
-											elm$html$Html$div,
-											_List_fromArray(
-												[
-													elm$html$Html$Attributes$class('train-status-time')
-												]),
-											_List_fromArray(
-												[
-													function () {
-													if (!estimate.$) {
-														var time = estimate.a;
-														return elm$html$Html$text(time);
-													} else {
-														var time = estimate.a;
-														return elm$html$Html$text('~' + time);
-													}
-												}()
-												]))
-										]);
-								} else {
-									if (!_n2.b.$) {
-										var estimate = _n2.b.a;
-										return _List_fromArray(
-											[
-												A2(
-												elm$html$Html$div,
-												_List_fromArray(
+													A2(
+													elm$html$Html$div,
+													_List_fromArray(
+														[
+															elm$html$Html$Attributes$class('train-status-arriving')
+														]),
+													_List_fromArray(
+														[
+															tText(author$project$Translations$SchedulePageArrivesIn)
+														])),
+													A2(
+													elm$html$Html$div,
+													_List_fromArray(
+														[
+															elm$html$Html$Attributes$class('train-status-time')
+														]),
+													_List_fromArray(
+														[
+															function () {
+															if (!estimate.$) {
+																var time = estimate.a;
+																return elm$html$Html$text(time);
+															} else {
+																var time = estimate.a;
+																return elm$html$Html$text('~' + time);
+															}
+														}()
+														]))
+												]);
+										} else {
+											if (!_n2.c.$) {
+												var estimate = _n2.c.a;
+												return _List_fromArray(
 													[
-														elm$html$Html$Attributes$class('train-status-arriving')
-													]),
-												_List_fromArray(
-													[
-														tText(author$project$Translations$SchedulePageDepartsIn)
-													])),
-												A2(
-												elm$html$Html$div,
-												_List_fromArray(
-													[
-														elm$html$Html$Attributes$class('train-status-time')
-													]),
-												_List_fromArray(
-													[
-														function () {
-														if (!estimate.$) {
-															var time = estimate.a;
-															return elm$html$Html$text(time);
-														} else {
-															var time = estimate.a;
-															return elm$html$Html$text('~' + time);
-														}
-													}()
-													]))
-											]);
+														A2(
+														elm$html$Html$div,
+														_List_fromArray(
+															[
+																elm$html$Html$Attributes$class('train-status-arriving')
+															]),
+														_List_fromArray(
+															[
+																tText(author$project$Translations$SchedulePageDepartsIn)
+															])),
+														A2(
+														elm$html$Html$div,
+														_List_fromArray(
+															[
+																elm$html$Html$Attributes$class('train-status-time')
+															]),
+														_List_fromArray(
+															[
+																function () {
+																if (!estimate.$) {
+																	var time = estimate.a;
+																	return elm$html$Html$text(time);
+																} else {
+																	var time = estimate.a;
+																	return elm$html$Html$text('~' + time);
+																}
+															}()
+															]))
+													]);
+											} else {
+												break _n2$2;
+											}
+										}
 									} else {
-										return _List_Nil;
+										break _n2$2;
 									}
 								}
+								return _List_Nil;
 							}())
 						])),
 					statusInfoBadge
