@@ -2,7 +2,6 @@ module Decoders exposing (suite)
 
 import Dict
 import Expect exposing (Expectation)
-import Fuzz exposing (Fuzzer, int, list, string)
 import Json.Decode
 import Model
 import Test exposing (..)
