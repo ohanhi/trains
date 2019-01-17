@@ -265,8 +265,8 @@ trainRow t { zone, stations, wagonCounts, currentTime } ( from, to ) train =
                    )
 
         statusInfoBadge =
-            case train.currentStation of
-                Just station ->
+            case ( train.cancelled, train.currentStation ) of
+                ( False, Just station ) ->
                     div
                         [ class "train-status-badge"
                         , class ("is-" ++ timelinessColor station.differenceInMinutes)
@@ -279,8 +279,11 @@ trainRow t { zone, stations, wagonCounts, currentTime } ( from, to ) train =
                         , wagonCount
                         ]
 
-                Nothing ->
+                ( False, Nothing ) ->
                     div [ class "train-status-badge" ] [ tText SchedulePageNotMoving, wagonCount ]
+
+                ( True, _ ) ->
+                    div [ class "train-status-badge is-cancelled" ] [ tText SchedulePageCancelled, wagonCount ]
 
         wagonCount =
             Dict.get train.trainNumber wagonCounts
@@ -299,8 +302,8 @@ trainRow t { zone, stations, wagonCounts, currentTime } ( from, to ) train =
                 , stationRow zone stations train.endStationArrival
                 ]
             , div [ class "train-status" ] <|
-                case ( homeStationArrivingIn, homeStationDepartingIn ) of
-                    ( Just estimate, _ ) ->
+                case ( train.cancelled, homeStationArrivingIn, homeStationDepartingIn ) of
+                    ( False, Just estimate, _ ) ->
                         [ div [ class "train-status-arriving" ]
                             [ tText SchedulePageArrivesIn ]
                         , div [ class "train-status-time" ]
@@ -313,7 +316,7 @@ trainRow t { zone, stations, wagonCounts, currentTime } ( from, to ) train =
                             ]
                         ]
 
-                    ( _, Just estimate ) ->
+                    ( False, _, Just estimate ) ->
                         [ div [ class "train-status-arriving" ]
                             [ tText SchedulePageDepartsIn ]
                         , div [ class "train-status-time" ]

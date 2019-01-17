@@ -55,6 +55,7 @@ type TranslationKey
     | SchedulePageDepartsIn
     | SchedulePageTimeDifference { minuteDiff : Int, stationName : String }
     | SchedulePageNotMoving
+    | SchedulePageCancelled
     | SchedulePageEndOfListNote
     | SettingsPageTitle
     | SettingsPageHeading
@@ -150,6 +151,11 @@ translationSetFor translationKey =
         SchedulePageNotMoving ->
             { english = "Not moving"
             , finnish = "Ei vielä liikkeellä"
+            }
+
+        SchedulePageCancelled ->
+            { english = "Cancelled"
+            , finnish = "Peruttu"
             }
 
         SchedulePageEndOfListNote ->
