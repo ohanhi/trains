@@ -10,10 +10,6 @@ import TestData
 import Time
 
 
-timestamp =
-    Time.millisToPosix 1547708964003
-
-
 suite : Test
 suite =
     describe "JSON Decoders"
@@ -41,24 +37,32 @@ suite =
 
                 Ok trains ->
                     case Model.sortedTrainList trains of
-                        first :: second :: third :: rest ->
+                        trainU1 :: trainA1 :: trainE :: trainA2 :: trainU2 :: rest ->
                             Test.concat
-                                [ test "First train is moving" <|
-                                    \_ -> Expect.true "Is moving" first.runningCurrently
-                                , test "First train is late" <|
-                                    \_ -> Expect.equal (Just 4) first.homeStationDeparture.differenceInMinutes
-                                , test "Second train is not moving" <|
-                                    \_ -> Expect.false "Is not moving" second.runningCurrently
-                                , test "Second train is on time" <|
-                                    \_ -> Expect.equal Nothing second.homeStationDeparture.differenceInMinutes
-                                , test "Third train is not moving" <|
-                                    \_ -> Expect.false "Is not moving" third.runningCurrently
-                                , test "Third train is late" <|
-                                    \_ -> Expect.equal (Just 2) third.homeStationDeparture.differenceInMinutes
+                                [ test "Trains are the expected lines" <|
+                                    \_ ->
+                                        Expect.equalLists [ "U", "A", "E", "A", "U" ]
+                                            (List.map .lineId [ trainU1, trainA1, trainE, trainA2, trainU2 ])
+                                , test "First train (U) is moving" <|
+                                    \_ -> Expect.true "is not moving" trainU1.runningCurrently
+                                , test "First train (U) is late" <|
+                                    \_ -> Expect.equal (Just 4) trainU1.homeStationDeparture.differenceInMinutes
+                                , test "Second train (A) is not moving" <|
+                                    \_ -> Expect.false "is moving" trainA1.runningCurrently
+                                , test "Second train (A) is cancelled" <|
+                                    \_ -> Expect.true "is not cancelled" trainA1.cancelled
+                                , test "Third train (E) is not moving" <|
+                                    \_ -> Expect.false "is moving" trainE.runningCurrently
+                                , test "Third train (E) is late" <|
+                                    \_ -> Expect.equal (Just 2) trainE.homeStationDeparture.differenceInMinutes
+                                , test "Fifth train (U) is moving" <|
+                                    \_ -> Expect.true "is not moving" trainU2.runningCurrently
+                                , test "Fifth train (U) is on time" <|
+                                    \_ -> Expect.equal (Just 0) trainU2.homeStationDeparture.differenceInMinutes
                                 ]
 
                         _ ->
-                            test "List doesn't have 3 trains" (\_ -> Expect.fail "Yes")
+                            test "List doesn't have enough trains" (\_ -> Expect.fail "Yes")
             ]
         ]
 
