@@ -9020,8 +9020,18 @@ var author$project$View$languageSelect = function (currentLanguage) {
 			},
 			author$project$Translations$allLanguages));
 };
+var elm$html$Html$a = _VirtualDom_node('a');
+var elm$html$Html$footer = _VirtualDom_node('footer');
 var elm$html$Html$h1 = _VirtualDom_node('h1');
 var elm$html$Html$header = _VirtualDom_node('header');
+var elm$html$Html$p = _VirtualDom_node('p');
+var elm$html$Html$span = _VirtualDom_node('span');
+var elm$html$Html$Attributes$href = function (url) {
+	return A2(
+		elm$html$Html$Attributes$stringProperty,
+		'href',
+		_VirtualDom_noJavaScriptUri(url));
+};
 var author$project$View$container = F3(
 	function (language, headingText, elements) {
 		var heading = function () {
@@ -9047,6 +9057,52 @@ var author$project$View$container = F3(
 				return _List_Nil;
 			}
 		}();
+		var footerContent = A2(
+			elm$html$Html$footer,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					elm$html$Html$p,
+					_List_Nil,
+					_List_fromArray(
+						[
+							elm$html$Html$text('Made with '),
+							A2(
+							elm$html$Html$span,
+							_List_fromArray(
+								[
+									elm$html$Html$Attributes$class('pink')
+								]),
+							_List_fromArray(
+								[
+									elm$html$Html$text('♥')
+								])),
+							elm$html$Html$text(' by '),
+							A2(
+							elm$html$Html$a,
+							_List_fromArray(
+								[
+									elm$html$Html$Attributes$href('https://twitter.com/ohanhi')
+								]),
+							_List_fromArray(
+								[
+									elm$html$Html$text('@ohanhi')
+								])),
+							elm$html$Html$text(' – '),
+							elm$html$Html$text('Open Source on '),
+							A2(
+							elm$html$Html$a,
+							_List_fromArray(
+								[
+									elm$html$Html$Attributes$href('https://github.com/ohanhi/trains')
+								]),
+							_List_fromArray(
+								[
+									elm$html$Html$text('GitHub')
+								]))
+						]))
+				]));
 		return _List_fromArray(
 			[
 				A2(
@@ -9058,7 +9114,8 @@ var author$project$View$container = F3(
 				A2(
 					elm$core$List$cons,
 					author$project$View$languageSelect(language),
-					_Utils_ap(heading, elements)))
+					_Utils_ap(heading, elements))),
+				footerContent
 			]);
 	});
 var author$project$View$stationName = F2(
@@ -9559,14 +9616,7 @@ var author$project$View$trainRow = F4(
 					statusInfoBadge
 				]));
 	});
-var elm$html$Html$a = _VirtualDom_node('a');
 var elm$html$Html$main_ = _VirtualDom_node('main');
-var elm$html$Html$Attributes$href = function (url) {
-	return A2(
-		elm$html$Html$Attributes$stringProperty,
-		'href',
-		_VirtualDom_noJavaScriptUri(url));
-};
 var author$project$View$trainsView = F5(
 	function (t, model, _n0, heading, trains) {
 		var from = _n0.a;
