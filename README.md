@@ -1,4 +1,4 @@
-Trains.today - Live Helsinki regional train station schedules
+Trains.today - Live Helsinki regional train station schedules [![Build Status](https://travis-ci.org/ohanhi/trains.svg?branch=master)](https://travis-ci.org/ohanhi/trains)
 ===============================
 
 Quick overview for a single station using live data from [rata.digitraffic.fi](https://rata.digitraffic.fi/api/v1/doc/index.html#LiikennepaikansaapuvatjalahtevatjunatAikavali).
