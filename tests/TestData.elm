@@ -1,4 +1,4 @@
-module TestData exposing (..)
+module TestData exposing (json, timestamp)
 
 import Time
 
