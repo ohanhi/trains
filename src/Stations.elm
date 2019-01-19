@@ -14,6 +14,7 @@ all =
         |> List.concat
         |> Dict.fromList
         |> Dict.toList
+        |> List.sortBy Tuple.second
 
 
 findName : String -> Maybe String
@@ -36,10 +37,11 @@ matching abbreviation =
                     |> Maybe.withDefault False
             )
         |> List.concat
-        -- TODO: redo this bit
+        -- Dict eliminates duplicates
         |> Dict.fromList
         |> Dict.remove abbreviation
         |> Dict.toList
+        |> List.sortBy Tuple.second
 
 
 commuterStations : List StationList
