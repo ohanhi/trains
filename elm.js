@@ -9861,9 +9861,12 @@ var author$project$Stations$commuterStations = _List_fromArray(
 		_Utils_ap(author$project$Stations$common, author$project$Stations$directionTampere),
 		_Utils_ap(author$project$Stations$common, author$project$Stations$directionLahti)
 	]);
-var author$project$Stations$all = elm$core$Dict$toList(
-	elm$core$Dict$fromList(
-		elm$core$List$concat(author$project$Stations$commuterStations)));
+var author$project$Stations$all = A2(
+	elm$core$List$sortBy,
+	elm$core$Tuple$second,
+	elm$core$Dict$toList(
+		elm$core$Dict$fromList(
+			elm$core$List$concat(author$project$Stations$commuterStations))));
 var author$project$Translations$DepPageHeading = {$: 1};
 var author$project$Translations$DepPageTitle = {$: 0};
 var elm$html$Html$li = _VirtualDom_node('li');
@@ -9919,34 +9922,37 @@ var author$project$Stations$findName = function (abbreviation) {
 			elm$core$List$concat(author$project$Stations$commuterStations)));
 };
 var author$project$Stations$matching = function (abbreviation) {
-	return elm$core$Dict$toList(
-		A2(
-			elm$core$Dict$remove,
-			abbreviation,
-			elm$core$Dict$fromList(
-				elm$core$List$concat(
-					A2(
-						elm$core$List$filter,
-						function (track) {
-							return A2(
-								elm$core$Maybe$withDefault,
-								false,
-								A2(
-									elm$core$Maybe$map,
-									function (_n1) {
-										return true;
-									},
-									elm$core$List$head(
-										A2(
-											elm$core$List$filter,
-											function (_n0) {
-												var abbr = _n0.a;
-												var name = _n0.b;
-												return _Utils_eq(abbreviation, abbr);
-											},
-											track))));
-						},
-						author$project$Stations$commuterStations)))));
+	return A2(
+		elm$core$List$sortBy,
+		elm$core$Tuple$second,
+		elm$core$Dict$toList(
+			A2(
+				elm$core$Dict$remove,
+				abbreviation,
+				elm$core$Dict$fromList(
+					elm$core$List$concat(
+						A2(
+							elm$core$List$filter,
+							function (track) {
+								return A2(
+									elm$core$Maybe$withDefault,
+									false,
+									A2(
+										elm$core$Maybe$map,
+										function (_n1) {
+											return true;
+										},
+										elm$core$List$head(
+											A2(
+												elm$core$List$filter,
+												function (_n0) {
+													var abbr = _n0.a;
+													var name = _n0.b;
+													return _Utils_eq(abbreviation, abbr);
+												},
+												track))));
+							},
+							author$project$Stations$commuterStations))))));
 };
 var author$project$Translations$DestPageHeading = {$: 3};
 var author$project$Translations$DestPageTitle = {$: 2};
