@@ -1,5 +1,6 @@
 module Translations exposing (HtmlTranslationKey(..), Language(..), T, TranslationKey(..), allLanguages, htmlTranslate, languageToString, stringToLanguage, translate)
 
+import FinnishConjugation
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
@@ -307,5 +308,9 @@ timeDifferenceTranslationSet { minuteDiff, stationName } =
 
 finnishInessive : String -> String
 finnishInessive stationName =
-    -- TODO
-    "- " ++ stationName
+    case FinnishConjugation.conjugate stationName of
+        Just { in_ } ->
+            in_
+
+        Nothing ->
+            "- " ++ stationName
