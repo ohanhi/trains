@@ -136,6 +136,8 @@ ruleset =
       { endings = [ "nki Lentoasema" ], offset = 14, from = "ngin Lentoasemalta", in_ = "ngin Lentoasemalla", to = "ngin Lentoasemalle" }
     , -- Turenki
       { endings = [ "Turenki" ], offset = 2, from = "gista", in_ = "gissa", to = "kiin" }
+    , -- Arolampi, Lahnaslampi
+      { endings = ["lampi"], offset = 2, from = "mista", in_ = "missa", to = "mille" }
     ]
 
 
