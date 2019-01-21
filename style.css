@@ -257,3 +257,8 @@ footer {
 footer .pink {
   color: var(--color-pink);
 }
+
+footer .small {
+  margin-top: 0;
+  font-size: var(--type-scale--1);
+}

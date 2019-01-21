@@ -104,6 +104,10 @@ container language headingText elements =
                     , text "Open Source on "
                     , a [ href "https://github.com/ohanhi/trains" ] [ text "GitHub" ]
                     ]
+                , p [ class "small" ]
+                    [ text "Data provided by "
+                    , a [ href "https://rata.digitraffic.fi/" ] [ text "Digitraffic" ]
+                    ]
                 ]
     in
     [ div [ class "container" ] (languageSelect language :: (heading ++ elements))
