@@ -1,4 +1,4 @@
-module Model exposing (CurrentStation, Model, Route(..), RowType(..), Stations, StoredState, Targets, TimetableRow, Train, TrainWagonCounts, Trains, decodeStoredState, defaultStoredState, encodeStoredState, sortedTrainList, stationsDecoder, toTrain, trainWagonCountDecoder, trainsDecoder)
+module Model exposing (CurrentStation, Model, Route(..), RowType(..), Stations, StoredState, Targets, TimetableRow, Train, TrainWagonCounts, Trains, decodeStoredState, defaultStoredState, encodeStoredState, mostAccurateTime, sortedTrainList, stationsDecoder, toTrain, trainWagonCountDecoder, trainsDecoder)
 
 import Browser.Navigation
 import DateFormat
@@ -91,6 +91,7 @@ type alias Train =
     , homeStationArrival : Maybe TimetableRow
     , homeStationDeparture : TimetableRow
     , endStationArrival : TimetableRow
+    , durationMinutes : Int
     }
 
 
@@ -147,6 +148,13 @@ type alias Targets =
     { from : String
     , to : String
     }
+
+
+mostAccurateTime : TimetableRow -> Posix
+mostAccurateTime timetableRow =
+    Just timetableRow.actualTime
+        |> Maybe.withDefault timetableRow.liveEstimateTime
+        |> Maybe.withDefault timetableRow.scheduledTime
 
 
 stationsDecoder : Decoder Stations
@@ -253,10 +261,24 @@ toTrain { from, to } trainRaw =
                 , homeStationArrival = findTimetableRow Arrival from upcomingRows
                 , homeStationDeparture = dep
                 , endStationArrival = end
+                , durationMinutes = toDuration dep end
                 }
 
         _ ->
             Nothing
+
+
+toDuration : TimetableRow -> TimetableRow -> Int
+toDuration homeStationDeparture endStationArrival =
+    let
+        homeTime =
+            mostAccurateTime homeStationDeparture
+
+        endTime =
+            mostAccurateTime endStationArrival
+    in
+    (Time.posixToMillis endTime - Time.posixToMillis homeTime)
+        // 60000
 
 
 findTimetableRow : RowType -> String -> List TimetableRow -> Maybe TimetableRow

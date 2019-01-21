@@ -211,6 +211,12 @@ trainsView t model ( from, to ) heading trains =
         rightDirection =
             trains
                 |> Model.sortedTrainList
+
+        longestDuration =
+            rightDirection
+                |> List.map .durationMinutes
+                |> List.maximum
+                |> Maybe.withDefault 120
     in
     div [ class "trains" ] <|
         [ header []
@@ -222,7 +228,7 @@ trainsView t model ( from, to ) heading trains =
                 [ class "swap-link", href ("#/" ++ to ++ "/" ++ from) ]
                 [ Icons.swap ]
             ]
-        , main_ [] (List.map (trainRow t model ( from, to )) rightDirection)
+        , main_ [] (List.map (trainRow t model ( from, to ) longestDuration) rightDirection)
         , div [ class "trains-end-of-list" ] [ text (t SchedulePageEndOfListNote) ]
         ]
 
@@ -232,8 +238,8 @@ type ArrivalEstimate
     | ScheduleEstimate String
 
 
-trainRow : T -> Model -> ( String, String ) -> Train -> Html msg
-trainRow t { zone, stations, wagonCounts, currentTime } ( from, to ) train =
+trainRow : T -> Model -> ( String, String ) -> Int -> Train -> Html msg
+trainRow t { zone, stations, wagonCounts, currentTime } ( from, to ) longestDuration train =
     let
         tText =
             t >> text
