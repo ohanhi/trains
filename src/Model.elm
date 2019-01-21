@@ -92,6 +92,7 @@ type alias Train =
     , homeStationDeparture : TimetableRow
     , endStationArrival : TimetableRow
     , durationMinutes : Int
+    , stopsBetween : Int
     }
 
 
@@ -245,6 +246,11 @@ toTrain { from, to } trainRaw =
                 |> List.map .stationShortCode
                 |> dropUntil ((==) from)
 
+        stopsBetween =
+            rowsAfterHomeStation
+                |> takeUntil ((==) to)
+                |> List.length
+
         -- Very special Ring Track handling: PSL and HKI are visited twice.
         -- We want trains that aren't going via LEN.
         ringTrackFilterApplies =
@@ -262,6 +268,7 @@ toTrain { from, to } trainRaw =
                 , homeStationDeparture = dep
                 , endStationArrival = end
                 , durationMinutes = toDuration dep end
+                , stopsBetween = stopsBetween
                 }
 
         _ ->
@@ -375,3 +382,23 @@ dropUntil predicate list =
 
                 False ->
                     dropUntil predicate rest
+
+
+takeUntil : (a -> Bool) -> List a -> List a
+takeUntil =
+    takeUntilHelp []
+
+
+takeUntilHelp : List a -> (a -> Bool) -> List a -> List a
+takeUntilHelp acc predicate list =
+    case list of
+        [] ->
+            []
+
+        a :: rest ->
+            case predicate a of
+                True ->
+                    acc
+
+                False ->
+                    takeUntilHelp (a :: acc) predicate rest

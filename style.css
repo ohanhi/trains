@@ -239,6 +239,30 @@ a:visited {
   font-weight: bold;
 }
 
+.train-duration {
+  color: var(--color-grey);
+  font-size: var(--type-scale--1);
+  font-weight: bold;
+}
+
+.train-duration-text {
+  margin: 0 1rem;
+}
+
+.train-duration-line {
+  height: 2px;
+  background: var(--color-light-grey);
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.train-duration-station {
+  height: 100%;
+  width: 2px;
+  background: var(--color-black);
+}
+
 .trains-end-of-list {
   margin-top: 2rem;
   font-weight: 300;

@@ -301,7 +301,8 @@ trainRow t { zone, stations, wagonCounts, currentTime } ( from, to ) longestDura
                    )
     in
     div [ class "train" ]
-        [ div [ class "train-content" ]
+        [ durationVisual { current = train.durationMinutes, maximum = longestDuration, stopsBetween = train.stopsBetween }
+        , div [ class "train-content" ]
             [ div [ classList [ ( "train-name", True ), ( "is-running", train.runningCurrently ) ] ]
                 [ text train.lineId ]
             , div [ class "train-stations" ]
@@ -341,6 +342,17 @@ trainRow t { zone, stations, wagonCounts, currentTime } ( from, to ) longestDura
                         []
             ]
         , statusInfoBadge
+        ]
+
+
+durationVisual { current, maximum, stopsBetween } =
+    div
+        [ class "train-duration"
+        , style "width" (String.fromInt (100 * current // maximum) ++ "%")
+        ]
+        [ div [ class "train-duration-line" ]
+            (List.repeat (stopsBetween + 2) (div [ class "train-duration-station" ] []))
+        , div [ class "train-duration-text" ] [ text <| String.fromInt current ++ " min" ]
         ]
 
 
