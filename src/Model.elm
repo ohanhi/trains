@@ -245,6 +245,7 @@ toTrain { from, to } trainRaw =
             upcomingRows
                 |> List.map .stationShortCode
                 |> dropUntil ((==) from)
+                |> List.filter ((/=) from)
 
         stopsBetween =
             rowsAfterHomeStation

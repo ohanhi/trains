@@ -301,13 +301,19 @@ trainRow t { zone, stations, wagonCounts, currentTime } ( from, to ) longestDura
                    )
     in
     div [ class "train" ]
-        [ durationVisual { current = train.durationMinutes, maximum = longestDuration, stopsBetween = train.stopsBetween }
-        , div [ class "train-content" ]
+        [ div [ class "train-content" ]
             [ div [ classList [ ( "train-name", True ), ( "is-running", train.runningCurrently ) ] ]
                 [ text train.lineId ]
             , div [ class "train-stations" ]
                 [ stationRow zone stations train.homeStationDeparture
-                , div [ class "train-stations-separator" ] [ text "︙" ]
+                , div [ class "train-stations-row" ]
+                    [ div [ class "train-stations-separator" ]
+                        [ text "︙" ]
+                    , div [ class "train-stations-duration" ]
+                        [ tText
+                            (SchedulePageJourneyDuration { durationMinutes = train.durationMinutes, stopsBetween = train.stopsBetween })
+                        ]
+                    ]
                 , stationRow zone stations train.endStationArrival
                 ]
             , div [ class "train-status" ] <|
@@ -342,17 +348,6 @@ trainRow t { zone, stations, wagonCounts, currentTime } ( from, to ) longestDura
                         []
             ]
         , statusInfoBadge
-        ]
-
-
-durationVisual { current, maximum, stopsBetween } =
-    div
-        [ class "train-duration"
-        , style "width" (String.fromInt (100 * current // maximum) ++ "%")
-        ]
-        [ div [ class "train-duration-line" ]
-            (List.repeat (stopsBetween + 2) (div [ class "train-duration-station" ] []))
-        , div [ class "train-duration-text" ] [ text <| String.fromInt current ++ " min" ]
         ]
 
 

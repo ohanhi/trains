@@ -203,6 +203,7 @@ a:visited {
   display: flex;
   flex-direction: row;
   font-weight: normal;
+  line-height: var(--type-scale-1);
 }
 
 .train-stations-estimate,
@@ -232,6 +233,7 @@ a:visited {
   text-decoration: line-through;
   color: var(--color-grey);
   font-size: var(--type-scale--1);
+  line-height: var(--type-scale--1);
 }
 
 .train-stations-track {
@@ -239,22 +241,9 @@ a:visited {
   font-weight: bold;
 }
 
-.train-duration {
+.train-stations-duration {
   color: var(--color-grey);
   font-size: var(--type-scale--1);
-  font-weight: bold;
-}
-
-.train-duration-text {
-  margin: 0 1rem;
-}
-
-.train-duration-line {
-  height: 2px;
-  background: var(--color-light-grey);
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
 }
 
 .train-duration-station {
