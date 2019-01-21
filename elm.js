@@ -6101,7 +6101,7 @@ var elm$parser$Parser$Advanced$run = F2(
 	function (_n0, src) {
 		var parse = _n0;
 		var _n1 = parse(
-			{a4: 1, c: _List_Nil, d: 1, b: 0, bH: 1, a: src});
+			{a4: 1, c: _List_Nil, f: 1, b: 0, bH: 1, a: src});
 		if (!_n1.$) {
 			var value = _n1.b;
 			return elm$core$Result$Ok(value);
@@ -6338,7 +6338,7 @@ var elm$parser$Parser$Advanced$token = function (_n0) {
 			elm$parser$Parser$Advanced$Good,
 			progress,
 			0,
-			{a4: newCol, c: s.c, d: s.d, b: newOffset, bH: newRow, a: s.a});
+			{a4: newCol, c: s.c, f: s.f, b: newOffset, bH: newRow, a: s.a});
 	};
 };
 var elm$parser$Parser$Advanced$symbol = elm$parser$Parser$Advanced$token;
@@ -6362,7 +6362,7 @@ var elm$parser$Parser$Advanced$chompWhileHelp = F5(
 					elm$parser$Parser$Advanced$Good,
 					_Utils_cmp(s0.b, offset) < 0,
 					0,
-					{a4: col, c: s0.c, d: s0.d, b: offset, bH: row, a: s0.a});
+					{a4: col, c: s0.c, f: s0.f, b: offset, bH: row, a: s0.a});
 			} else {
 				if (_Utils_eq(newOffset, -2)) {
 					var $temp$isGood = isGood,
@@ -8885,66 +8885,66 @@ var author$project$Translations$timeDifferenceTranslationSet = function (_n0) {
 	var absDiff = elm$core$Basics$abs(minuteDiff);
 	var absDiffString = elm$core$String$fromInt(absDiff);
 	return (absDiff <= 1) ? {
-		e: 'On time in ' + stationName,
-		f: 'Ajallaan ' + author$project$Translations$finnishInessive(stationName)
+		d: 'On time in ' + stationName,
+		e: 'Ajallaan ' + author$project$Translations$finnishInessive(stationName)
 	} : ((minuteDiff < 0) ? {
-		e: absDiffString + (' min early in ' + stationName),
-		f: absDiffString + (' min ajoissa ' + author$project$Translations$finnishInessive(stationName))
+		d: absDiffString + (' min early in ' + stationName),
+		e: absDiffString + (' min ajoissa ' + author$project$Translations$finnishInessive(stationName))
 	} : {
-		e: absDiffString + (' min late in ' + stationName),
-		f: absDiffString + (' min myöhässä ' + author$project$Translations$finnishInessive(stationName))
+		d: absDiffString + (' min late in ' + stationName),
+		e: absDiffString + (' min myöhässä ' + author$project$Translations$finnishInessive(stationName))
 	});
 };
 var author$project$Translations$translationSetFor = function (translationKey) {
 	switch (translationKey.$) {
 		case 0:
-			return {e: 'Trains.today - Helsinki region commuter trains', f: 'Trains.today - Helsingin seudun lähijunat'};
+			return {d: 'Trains.today - Helsinki region commuter trains', e: 'Trains.today - Helsingin seudun lähijunat'};
 		case 1:
-			return {e: 'Select departure station', f: 'Valitse lähtöasema'};
+			return {d: 'Select departure station', e: 'Valitse lähtöasema'};
 		case 2:
-			return {e: 'Select destination – Trains.today', f: 'Valitse pääteasema – Trains.today'};
+			return {d: 'Select destination – Trains.today', e: 'Valitse pääteasema – Trains.today'};
 		case 3:
-			return {e: 'Select destination station', f: 'Valitse pääteasema'};
+			return {d: 'Select destination station', e: 'Valitse pääteasema'};
 		case 4:
-			return {e: 'No connection, trying again soon...', f: 'Ei yhteyttä, yritetään pian uudestaan...'};
+			return {d: 'No connection, trying again soon...', e: 'Ei yhteyttä, yritetään pian uudestaan...'};
 		case 5:
-			return {e: 'Network timed out', f: 'Vastaus aikakatkaistiin'};
+			return {d: 'Network timed out', e: 'Vastaus aikakatkaistiin'};
 		case 6:
-			return {e: 'It\'s not you, it\'s me. I have the server address wrong.', f: 'Vika on minussa. Palvelimen osoite on väärä.'};
+			return {d: 'It\'s not you, it\'s me. I have the server address wrong.', e: 'Vika on minussa. Palvelimen osoite on väärä.'};
 		case 7:
-			return {e: 'The server didn\'t like the request (bad status).', f: 'Palvelin ei tykännyt pyynnöstä (virheellinen status).'};
+			return {d: 'The server didn\'t like the request (bad status).', e: 'Palvelin ei tykännyt pyynnöstä (virheellinen status).'};
 		case 8:
-			return {e: 'Ouch, the server responded with strange contents.', f: 'Auts, palvelin vastasi oudolla sisällöllä.'};
+			return {d: 'Ouch, the server responded with strange contents.', e: 'Auts, palvelin vastasi oudolla sisällöllä.'};
 		case 9:
-			return {e: 'Loading', f: 'Ladataan'};
+			return {d: 'Loading', e: 'Ladataan'};
 		case 10:
-			return {e: 'Arrives in', f: 'Saapumiseen'};
+			return {d: 'Arrives in', e: 'Saapumiseen'};
 		case 11:
-			return {e: 'Departs in', f: 'Lähtöön'};
+			return {d: 'Departs in', e: 'Lähtöön'};
 		case 12:
 			var facts = translationKey.a;
 			return author$project$Translations$timeDifferenceTranslationSet(facts);
 		case 13:
-			return {e: 'Not moving', f: 'Ei vielä liikkeellä'};
+			return {d: 'Not moving', e: 'Ei vielä liikkeellä'};
 		case 14:
-			return {e: 'Cancelled', f: 'Peruttu'};
+			return {d: 'Cancelled', e: 'Peruttu'};
 		case 15:
-			return {e: 'Only direct trains departing in 2 hours are displayed.', f: 'Vain suorat 2 tunnin kuluessa lähtevät junat näytetään.'};
+			return {d: 'Only direct trains departing in 2 hours are displayed.', e: 'Vain suorat 2 tunnin kuluessa lähtevät junat näytetään.'};
 		case 16:
-			return {e: 'Settings', f: 'Asetukset'};
+			return {d: 'Settings', e: 'Asetukset'};
 		case 17:
-			return {e: 'Settings', f: 'Asetukset'};
+			return {d: 'Settings', e: 'Asetukset'};
 		default:
-			return {e: 'Select language', f: 'Valitse kieli'};
+			return {d: 'Select language', e: 'Valitse kieli'};
 	}
 };
 var author$project$Translations$translate = F2(
 	function (language, translationKey) {
 		var translationSet = author$project$Translations$translationSetFor(translationKey);
 		if (!language) {
-			return translationSet.f;
-		} else {
 			return translationSet.e;
+		} else {
+			return translationSet.d;
 		}
 	});
 var author$project$Translations$ErrorBadPayload = {$: 8};
@@ -8953,13 +8953,11 @@ var author$project$Translations$ErrorBadUrl = {$: 6};
 var author$project$Translations$ErrorNetwork = {$: 4};
 var author$project$Translations$ErrorTimeout = {$: 5};
 var author$project$Translations$SchedulePageLoading = {$: 9};
-var author$project$Translations$allLanguages = _List_fromArray(
-	[0, 1]);
-var author$project$View$SetLanguage = function (a) {
-	return {$: 7, a: a};
-};
-var elm$html$Html$button = _VirtualDom_node('button');
-var elm$html$Html$div = _VirtualDom_node('div');
+var author$project$Translations$PageFooter = 0;
+var elm$html$Html$a = _VirtualDom_node('a');
+var elm$html$Html$footer = _VirtualDom_node('footer');
+var elm$html$Html$p = _VirtualDom_node('p');
+var elm$html$Html$span = _VirtualDom_node('span');
 var elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var elm$html$Html$text = elm$virtual_dom$VirtualDom$text;
 var elm$html$Html$Attributes$stringProperty = F2(
@@ -8970,6 +8968,164 @@ var elm$html$Html$Attributes$stringProperty = F2(
 			elm$json$Json$Encode$string(string));
 	});
 var elm$html$Html$Attributes$class = elm$html$Html$Attributes$stringProperty('className');
+var elm$html$Html$Attributes$href = function (url) {
+	return A2(
+		elm$html$Html$Attributes$stringProperty,
+		'href',
+		_VirtualDom_noJavaScriptUri(url));
+};
+var author$project$Translations$htmlTranslationSetFor = function (key) {
+	return {
+		d: A2(
+			elm$html$Html$footer,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					elm$html$Html$p,
+					_List_Nil,
+					_List_fromArray(
+						[
+							elm$html$Html$text('Made with '),
+							A2(
+							elm$html$Html$span,
+							_List_fromArray(
+								[
+									elm$html$Html$Attributes$class('pink')
+								]),
+							_List_fromArray(
+								[
+									elm$html$Html$text('♥')
+								])),
+							elm$html$Html$text(' by '),
+							A2(
+							elm$html$Html$a,
+							_List_fromArray(
+								[
+									elm$html$Html$Attributes$href('https://twitter.com/ohanhi')
+								]),
+							_List_fromArray(
+								[
+									elm$html$Html$text('@ohanhi')
+								])),
+							elm$html$Html$text(' – '),
+							elm$html$Html$text('Open Source on '),
+							A2(
+							elm$html$Html$a,
+							_List_fromArray(
+								[
+									elm$html$Html$Attributes$href('https://github.com/ohanhi/trains')
+								]),
+							_List_fromArray(
+								[
+									elm$html$Html$text('GitHub')
+								]))
+						])),
+					A2(
+					elm$html$Html$p,
+					_List_fromArray(
+						[
+							elm$html$Html$Attributes$class('small')
+						]),
+					_List_fromArray(
+						[
+							elm$html$Html$text('Data provided by '),
+							A2(
+							elm$html$Html$a,
+							_List_fromArray(
+								[
+									elm$html$Html$Attributes$href('https://rata.digitraffic.fi/')
+								]),
+							_List_fromArray(
+								[
+									elm$html$Html$text('Digitraffic')
+								]))
+						]))
+				])),
+		e: A2(
+			elm$html$Html$footer,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					elm$html$Html$p,
+					_List_Nil,
+					_List_fromArray(
+						[
+							elm$html$Html$text('Palvelun tehnyt '),
+							A2(
+							elm$html$Html$span,
+							_List_fromArray(
+								[
+									elm$html$Html$Attributes$class('pink')
+								]),
+							_List_fromArray(
+								[
+									elm$html$Html$text('♥')
+								])),
+							elm$html$Html$text(' '),
+							A2(
+							elm$html$Html$a,
+							_List_fromArray(
+								[
+									elm$html$Html$Attributes$href('https://twitter.com/ohanhi')
+								]),
+							_List_fromArray(
+								[
+									elm$html$Html$text('@ohanhi')
+								])),
+							elm$html$Html$text(' – '),
+							elm$html$Html$text('Avoin lähdekoodi '),
+							A2(
+							elm$html$Html$a,
+							_List_fromArray(
+								[
+									elm$html$Html$Attributes$href('https://github.com/ohanhi/trains')
+								]),
+							_List_fromArray(
+								[
+									elm$html$Html$text('GitHubissa')
+								]))
+						])),
+					A2(
+					elm$html$Html$p,
+					_List_fromArray(
+						[
+							elm$html$Html$Attributes$class('small')
+						]),
+					_List_fromArray(
+						[
+							elm$html$Html$text('Tiedot tarjoaa '),
+							A2(
+							elm$html$Html$a,
+							_List_fromArray(
+								[
+									elm$html$Html$Attributes$href('https://rata.digitraffic.fi/')
+								]),
+							_List_fromArray(
+								[
+									elm$html$Html$text('Digitraffic')
+								]))
+						]))
+				]))
+	};
+};
+var author$project$Translations$htmlTranslate = F2(
+	function (language, key) {
+		var translationSet = author$project$Translations$htmlTranslationSetFor(key);
+		if (!language) {
+			return translationSet.e;
+		} else {
+			return translationSet.d;
+		}
+	});
+var author$project$Translations$allLanguages = _List_fromArray(
+	[0, 1]);
+var author$project$View$SetLanguage = function (a) {
+	return {$: 7, a: a};
+};
+var elm$html$Html$button = _VirtualDom_node('button');
+var elm$html$Html$div = _VirtualDom_node('div');
 var elm$html$Html$Attributes$value = elm$html$Html$Attributes$stringProperty('value');
 var elm$virtual_dom$VirtualDom$Normal = function (a) {
 	return {$: 0, a: a};
@@ -9020,18 +9176,8 @@ var author$project$View$languageSelect = function (currentLanguage) {
 			},
 			author$project$Translations$allLanguages));
 };
-var elm$html$Html$a = _VirtualDom_node('a');
-var elm$html$Html$footer = _VirtualDom_node('footer');
 var elm$html$Html$h1 = _VirtualDom_node('h1');
 var elm$html$Html$header = _VirtualDom_node('header');
-var elm$html$Html$p = _VirtualDom_node('p');
-var elm$html$Html$span = _VirtualDom_node('span');
-var elm$html$Html$Attributes$href = function (url) {
-	return A2(
-		elm$html$Html$Attributes$stringProperty,
-		'href',
-		_VirtualDom_noJavaScriptUri(url));
-};
 var author$project$View$container = F3(
 	function (language, headingText, elements) {
 		var heading = function () {
@@ -9057,52 +9203,6 @@ var author$project$View$container = F3(
 				return _List_Nil;
 			}
 		}();
-		var footerContent = A2(
-			elm$html$Html$footer,
-			_List_Nil,
-			_List_fromArray(
-				[
-					A2(
-					elm$html$Html$p,
-					_List_Nil,
-					_List_fromArray(
-						[
-							elm$html$Html$text('Made with '),
-							A2(
-							elm$html$Html$span,
-							_List_fromArray(
-								[
-									elm$html$Html$Attributes$class('pink')
-								]),
-							_List_fromArray(
-								[
-									elm$html$Html$text('♥')
-								])),
-							elm$html$Html$text(' by '),
-							A2(
-							elm$html$Html$a,
-							_List_fromArray(
-								[
-									elm$html$Html$Attributes$href('https://twitter.com/ohanhi')
-								]),
-							_List_fromArray(
-								[
-									elm$html$Html$text('@ohanhi')
-								])),
-							elm$html$Html$text(' – '),
-							elm$html$Html$text('Open Source on '),
-							A2(
-							elm$html$Html$a,
-							_List_fromArray(
-								[
-									elm$html$Html$Attributes$href('https://github.com/ohanhi/trains')
-								]),
-							_List_fromArray(
-								[
-									elm$html$Html$text('GitHub')
-								]))
-						]))
-				]));
 		return _List_fromArray(
 			[
 				A2(
@@ -9115,7 +9215,7 @@ var author$project$View$container = F3(
 					elm$core$List$cons,
 					author$project$View$languageSelect(language),
 					_Utils_ap(heading, elements))),
-				footerContent
+				A2(author$project$Translations$htmlTranslate, language, 0)
 			]);
 	});
 var author$project$View$stationName = F2(
