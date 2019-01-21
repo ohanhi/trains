@@ -1,4 +1,7 @@
-module Translations exposing (Language(..), T, TranslationKey(..), allLanguages, languageToString, stringToLanguage, translate)
+module Translations exposing (HtmlTranslationKey(..), Language(..), T, TranslationKey(..), allLanguages, htmlTranslate, languageToString, stringToLanguage, translate)
+
+import Html exposing (..)
+import Html.Attributes exposing (..)
 
 
 type Language
@@ -176,6 +179,69 @@ translationSetFor translationKey =
         SettingsPageSelectLanguage ->
             { english = "Select language"
             , finnish = "Valitse kieli"
+            }
+
+
+type HtmlTranslationKey
+    = PageFooter
+
+
+type alias HtmlTranslationSet msg =
+    { english : Html msg
+    , finnish : Html msg
+    }
+
+
+htmlTranslate : Language -> HtmlTranslationKey -> Html msg
+htmlTranslate language key =
+    let
+        translationSet =
+            htmlTranslationSetFor key
+    in
+    case language of
+        Finnish ->
+            translationSet.finnish
+
+        English ->
+            translationSet.english
+
+
+htmlTranslationSetFor : HtmlTranslationKey -> HtmlTranslationSet msg
+htmlTranslationSetFor key =
+    case key of
+        PageFooter ->
+            { english =
+                Html.footer []
+                    [ p []
+                        [ text "Made with "
+                        , span [ class "pink" ] [ text "♥" ]
+                        , text " by "
+                        , a [ href "https://twitter.com/ohanhi" ] [ text "@ohanhi" ]
+                        , text " – "
+                        , text "Open Source on "
+                        , a [ href "https://github.com/ohanhi/trains" ] [ text "GitHub" ]
+                        ]
+                    , p [ class "small" ]
+                        [ text "Data provided by "
+                        , a [ href "https://rata.digitraffic.fi/" ] [ text "Digitraffic" ]
+                        ]
+                    ]
+            , finnish =
+                Html.footer []
+                    [ p []
+                        [ text "Palvelun tehnyt "
+                        , span [ class "pink" ] [ text "♥" ]
+                        , text " "
+                        , a [ href "https://twitter.com/ohanhi" ] [ text "@ohanhi" ]
+                        , text " – "
+                        , text "Avoin lähdekoodi "
+                        , a [ href "https://github.com/ohanhi/trains" ] [ text "GitHubissa" ]
+                        ]
+                    , p [ class "small" ]
+                        [ text "Tiedot tarjoaa "
+                        , a [ href "https://rata.digitraffic.fi/" ] [ text "Digitraffic" ]
+                        ]
+                    ]
             }
 
 

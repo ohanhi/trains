@@ -92,26 +92,9 @@ container language headingText elements =
 
                 Nothing ->
                     []
-
-        footerContent =
-            footer []
-                [ p []
-                    [ text "Made with "
-                    , span [ class "pink" ] [ text "♥" ]
-                    , text " by "
-                    , a [ href "https://twitter.com/ohanhi" ] [ text "@ohanhi" ]
-                    , text " – "
-                    , text "Open Source on "
-                    , a [ href "https://github.com/ohanhi/trains" ] [ text "GitHub" ]
-                    ]
-                , p [ class "small" ]
-                    [ text "Data provided by "
-                    , a [ href "https://rata.digitraffic.fi/" ] [ text "Digitraffic" ]
-                    ]
-                ]
     in
     [ div [ class "container" ] (languageSelect language :: (heading ++ elements))
-    , footerContent
+    , htmlTranslate language PageFooter
     ]
 
 
