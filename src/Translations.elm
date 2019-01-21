@@ -1,5 +1,6 @@
 module Translations exposing (HtmlTranslationKey(..), Language(..), T, TranslationKey(..), allLanguages, htmlTranslate, languageToString, stringToLanguage, translate)
 
+import FinnishConjugation
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
@@ -54,6 +55,7 @@ type TranslationKey
     | ErrorBadStatus
     | ErrorBadPayload
     | SchedulePageLoading
+    | SchedulePageJourneyDuration { durationMinutes : Int, stopsBetween : Int }
     | SchedulePageArrivesIn
     | SchedulePageDepartsIn
     | SchedulePageTimeDifference { minuteDiff : Int, stationName : String }
@@ -137,6 +139,9 @@ translationSetFor translationKey =
             { english = "Loading"
             , finnish = "Ladataan"
             }
+
+        SchedulePageJourneyDuration params ->
+            journeyDurationTranslationSet params
 
         SchedulePageArrivesIn ->
             { english = "Arrives in"
@@ -245,6 +250,37 @@ htmlTranslationSetFor key =
             }
 
 
+journeyDurationTranslationSet : { durationMinutes : Int, stopsBetween : Int } -> TranslationSet
+journeyDurationTranslationSet { durationMinutes, stopsBetween } =
+    { english =
+        String.fromInt durationMinutes
+            ++ " min · "
+            ++ (case String.fromInt stopsBetween of
+                    "0" ->
+                        "nonstop"
+
+                    "1" ->
+                        "1 stop"
+
+                    n ->
+                        n ++ " stops"
+               )
+    , finnish =
+        String.fromInt durationMinutes
+            ++ " min · "
+            ++ (case String.fromInt stopsBetween of
+                    "0" ->
+                        "ei pysähdyksiä"
+
+                    "1" ->
+                        "1 pysähdys"
+
+                    n ->
+                        n ++ " pysähdystä"
+               )
+    }
+
+
 timeDifferenceTranslationSet : { minuteDiff : Int, stationName : String } -> TranslationSet
 timeDifferenceTranslationSet { minuteDiff, stationName } =
     let
@@ -272,5 +308,9 @@ timeDifferenceTranslationSet { minuteDiff, stationName } =
 
 finnishInessive : String -> String
 finnishInessive stationName =
-    -- TODO
-    "- " ++ stationName
+    case FinnishConjugation.conjugate stationName of
+        Just { in_ } ->
+            in_
+
+        Nothing ->
+            "- " ++ stationName

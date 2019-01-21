@@ -203,6 +203,7 @@ a:visited {
   display: flex;
   flex-direction: row;
   font-weight: normal;
+  line-height: var(--type-scale-1);
 }
 
 .train-stations-estimate,
@@ -232,11 +233,23 @@ a:visited {
   text-decoration: line-through;
   color: var(--color-grey);
   font-size: var(--type-scale--1);
+  line-height: var(--type-scale--1);
 }
 
 .train-stations-track {
   margin-left: 0.5rem;
   font-weight: bold;
+}
+
+.train-stations-duration {
+  color: var(--color-grey);
+  font-size: var(--type-scale--1);
+}
+
+.train-duration-station {
+  height: 100%;
+  width: 2px;
+  background: var(--color-black);
 }
 
 .trains-end-of-list {
