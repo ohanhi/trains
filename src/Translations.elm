@@ -8,12 +8,14 @@ import Html.Attributes exposing (..)
 type Language
     = Finnish
     | English
+    | Swedish
 
 
 allLanguages : List Language
 allLanguages =
     [ Finnish
     , English
+    , Swedish
     ]
 
 
@@ -26,6 +28,9 @@ languageToString language =
         Finnish ->
             "FI"
 
+        Swedish ->
+            "SV"
+
 
 stringToLanguage : String -> Maybe Language
 stringToLanguage string =
@@ -35,6 +40,9 @@ stringToLanguage string =
 
         "FI" ->
             Just Finnish
+
+        "SV" ->
+            Just Swedish
 
         _ ->
             Nothing
@@ -70,6 +78,7 @@ type TranslationKey
 type alias TranslationSet =
     { english : String
     , finnish : String
+    , swedish : String
     }
 
 
@@ -86,6 +95,9 @@ translate language translationKey =
         English ->
             translationSet.english
 
+        Swedish ->
+            translationSet.swedish
+
 
 translationSetFor : TranslationKey -> TranslationSet
 translationSetFor translationKey =
@@ -93,51 +105,61 @@ translationSetFor translationKey =
         DepPageTitle ->
             { english = "Trains.today - Helsinki region commuter trains"
             , finnish = "Trains.today - Helsingin seudun lähijunat"
+            , swedish = "Trains.today - Helsingfors regions närtåg"
             }
 
         DepPageHeading ->
             { english = "Select departure station"
             , finnish = "Valitse lähtöasema"
+            , swedish = "Välj startstation"
             }
 
         DestPageTitle ->
             { english = "Select destination – Trains.today"
             , finnish = "Valitse pääteasema – Trains.today"
+            , swedish = "Välj slutstation - Trains.today"
             }
 
         DestPageHeading ->
             { english = "Select destination station"
             , finnish = "Valitse pääteasema"
+            , swedish = "Välj slutstation"
             }
 
         ErrorNetwork ->
             { english = "No connection, trying again soon..."
             , finnish = "Ei yhteyttä, yritetään pian uudestaan..."
+            , swedish = "Ingen anslutning, försöker pånytt snart..."
             }
 
         ErrorTimeout ->
             { english = "Network timed out"
             , finnish = "Vastaus aikakatkaistiin"
+            , swedish = "Svaret tidsavbröts"
             }
 
         ErrorBadUrl ->
             { english = "It's not you, it's me. I have the server address wrong."
             , finnish = "Vika on minussa. Palvelimen osoite on väärä."
+            , swedish = "Det är mitt fel. Serverns adress är felaktig."
             }
 
         ErrorBadStatus ->
             { english = "The server didn't like the request (bad status)."
             , finnish = "Palvelin ei tykännyt pyynnöstä (virheellinen status)."
+            , swedish = "Servern tyckte inte om förfrågan (bad request)."
             }
 
         ErrorBadPayload ->
             { english = "Ouch, the server responded with strange contents."
             , finnish = "Auts, palvelin vastasi oudolla sisällöllä."
+            , swedish = "Aj, servern svarade med något konstigt."
             }
 
         SchedulePageLoading ->
             { english = "Loading"
             , finnish = "Ladataan"
+            , swedish = "Laddar"
             }
 
         SchedulePageJourneyDuration params ->
@@ -146,11 +168,13 @@ translationSetFor translationKey =
         SchedulePageArrivesIn ->
             { english = "Arrives in"
             , finnish = "Saapumiseen"
+            , swedish = "Ankommer om"
             }
 
         SchedulePageDepartsIn ->
             { english = "Departs in"
             , finnish = "Lähtöön"
+            , swedish = "Avgår om"
             }
 
         SchedulePageTimeDifference facts ->
@@ -159,31 +183,37 @@ translationSetFor translationKey =
         SchedulePageNotMoving ->
             { english = "Not moving"
             , finnish = "Ei vielä liikkeellä"
+            , swedish = "Stillastående"
             }
 
         SchedulePageCancelled ->
             { english = "Cancelled"
             , finnish = "Peruttu"
+            , swedish = "Inhiberat"
             }
 
         SchedulePageEndOfListNote ->
             { english = "Only direct trains departing in 2 hours are displayed."
             , finnish = "Vain suorat 2 tunnin kuluessa lähtevät junat näytetään."
+            , swedish = "Bara direkta tåg som avgår inom 2 timmar visas."
             }
 
         SettingsPageTitle ->
             { english = "Settings"
             , finnish = "Asetukset"
+            , swedish = "Inställningar"
             }
 
         SettingsPageHeading ->
             { english = "Settings"
             , finnish = "Asetukset"
+            , swedish = "Inställningar"
             }
 
         SettingsPageSelectLanguage ->
             { english = "Select language"
             , finnish = "Valitse kieli"
+            , swedish = "Välj språk"
             }
 
 
@@ -194,6 +224,7 @@ type HtmlTranslationKey
 type alias HtmlTranslationSet msg =
     { english : Html msg
     , finnish : Html msg
+    , swedish : Html msg
     }
 
 
@@ -209,6 +240,9 @@ htmlTranslate language key =
 
         English ->
             translationSet.english
+
+        Swedish ->
+            translationSet.swedish
 
 
 htmlTranslationSetFor : HtmlTranslationKey -> HtmlTranslationSet msg
@@ -247,6 +281,22 @@ htmlTranslationSetFor key =
                         , a [ href "https://rata.digitraffic.fi/" ] [ text "Digitraffic" ]
                         ]
                     ]
+            , swedish =
+                Html.footer []
+                    [ p []
+                        [ text "Servicen gjord med "
+                        , span [ class "pink" ] [ text "♥" ]
+                        , text " av "
+                        , a [ href "https://twitter.com/ohanhi" ] [ text "@ohanhi" ]
+                        , text " – "
+                        , text "Öppen källkod på "
+                        , a [ href "https://github.com/ohanhi/trains" ] [ text "GitHub" ]
+                        ]
+                    , p [ class "small" ]
+                        [ text "Data från "
+                        , a [ href "https://rata.digitraffic.fi/" ] [ text "Digitraffic" ]
+                        ]
+                    ]
             }
 
 
@@ -278,6 +328,16 @@ journeyDurationTranslationSet { durationMinutes, stopsBetween } =
                     n ->
                         n ++ " pysähdystä"
                )
+    , swedish =
+        String.fromInt durationMinutes
+            ++ " min · "
+            ++ (case String.fromInt stopsBetween of
+                    "0" ->
+                        "Utan stopp"
+
+                    n ->
+                        n ++ " stopp"
+               )
     }
 
 
@@ -293,16 +353,19 @@ timeDifferenceTranslationSet { minuteDiff, stationName } =
     if absDiff <= 1 then
         { english = "On time in " ++ stationName
         , finnish = "Ajallaan " ++ finnishInessive stationName
+        , swedish = "Enligt tidtabell i " ++ stationName
         }
 
     else if minuteDiff < 0 then
         { english = absDiffString ++ " min early in " ++ stationName
         , finnish = absDiffString ++ " min ajoissa " ++ finnishInessive stationName
+        , swedish = absDiffString ++ " min i förtid i " ++ stationName
         }
 
     else
         { english = absDiffString ++ " min late in " ++ stationName
         , finnish = absDiffString ++ " min myöhässä " ++ finnishInessive stationName
+        , swedish = absDiffString ++ " min sen i " ++ stationName
         }
 
 
