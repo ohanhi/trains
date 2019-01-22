@@ -47,7 +47,6 @@ ruleset =
     , { endings = [ "y" ], offset = 0, from = "stä", in_ = "ssä", to = "yn" }
     , { endings = [ "ä" ], offset = 0, from = "stä", in_ = "ssä", to = "än" }
     , { endings = [ "ö" ], offset = 0, from = "stä", in_ = "ssä", to = "ön" }
-    , { endings = [ "haka" ], offset = 2, from = "sta", in_ = "ssa", to = "kaan" }
     , ---ri -erityiset: pori, meri etc. + kajaani yms
       { endings = [ "pori", "uri", "ari", "ani" ], offset = 0, from = "sta", in_ = "ssa", to = "in" }
     , { endings = [ "meri", "veri" ], offset = 1, from = "essä", in_ = "estä", to = "ereen" }
@@ -64,8 +63,8 @@ ruleset =
       { endings = [ "lta" ], offset = 2, from = "lasta", in_ = "lassa", to = "taan" }
     , ---he, like Raahe
       { endings = [ "he" ], offset = 0, from = "sta", in_ = "ssa", to = "en" }
-    , -- -kka
-      { endings = [ "kka" ], offset = 2, from = "asta", in_ = "assa", to = "kaan" }
+    , -- -kka, -haka
+      { endings = [ "kka", "haka" ], offset = 2, from = "asta", in_ = "assa", to = "kaan" }
     , { endings = [ "kkä" ], offset = 2, from = "ästä", in_ = "ässä", to = "kään" }
     , ---nta, esim. maalaiskunta, lappeenranta
       { endings = [ "nta" ], offset = 2, from = "nasta", in_ = "nassa", to = "taan" }
@@ -137,7 +136,7 @@ ruleset =
     , -- Turenki
       { endings = [ "Turenki" ], offset = 2, from = "gista", in_ = "gissa", to = "kiin" }
     , -- Arolampi, Lahnaslampi
-      { endings = ["lampi"], offset = 2, from = "mista", in_ = "missa", to = "mille" }
+      { endings = [ "lampi" ], offset = 2, from = "mista", in_ = "missa", to = "mille" }
     ]
 
 
