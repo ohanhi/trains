@@ -212,11 +212,15 @@ trainsView t model ( from, to ) heading trains =
             trains
                 |> Model.sortedTrainList
 
-        longestDuration =
-            rightDirection
-                |> List.map .durationMinutes
-                |> List.maximum
-                |> Maybe.withDefault 120
+        trainRowData =
+            { zone = model.zone
+            , stations = model.stations
+            , wagonCounts = model.wagonCounts
+            , currentTime = model.currentTime
+            , from = from
+            , to = to
+            , allTrains = rightDirection
+            }
     in
     div [ class "trains" ] <|
         [ header []
@@ -228,7 +232,7 @@ trainsView t model ( from, to ) heading trains =
                 [ class "swap-link", href ("#/" ++ to ++ "/" ++ from) ]
                 [ Icons.swap ]
             ]
-        , main_ [] (List.map (trainRow t model ( from, to ) longestDuration) rightDirection)
+        , main_ [] (List.map (trainRow t trainRowData) rightDirection)
         , div [ class "trains-end-of-list" ] [ text (t SchedulePageEndOfListNote) ]
         ]
 
@@ -238,8 +242,19 @@ type ArrivalEstimate
     | ScheduleEstimate String
 
 
-trainRow : T -> Model -> ( String, String ) -> Int -> Train -> Html msg
-trainRow t { zone, stations, wagonCounts, currentTime } ( from, to ) longestDuration train =
+type alias TrainRowData =
+    { zone : Time.Zone
+    , stations : Stations
+    , wagonCounts : TrainWagonCounts
+    , currentTime : Posix
+    , from : String
+    , to : String
+    , allTrains : List Train
+    }
+
+
+trainRow : T -> TrainRowData -> Train -> Html msg
+trainRow t data train =
     let
         tText =
             t >> text
@@ -262,7 +277,7 @@ trainRow t { zone, stations, wagonCounts, currentTime } ( from, to ) longestDura
                         |> Maybe.map ScheduleEstimate
 
         prettyDiff date =
-            (Time.posixToMillis date - Time.posixToMillis currentTime)
+            (Time.posixToMillis date - Time.posixToMillis data.currentTime)
                 |> Basics.max 0
                 |> (\millis ->
                         if millis < minutesToMillis 30 then
@@ -280,41 +295,29 @@ trainRow t { zone, stations, wagonCounts, currentTime } ( from, to ) longestDura
                         , class ("is-" ++ timelinessColor station.differenceInMinutes)
                         ]
                         [ { minuteDiff = station.differenceInMinutes
-                          , stationName = stationName stations station.stationShortCode
+                          , stationName = stationName data.stations station.stationShortCode
                           }
                             |> SchedulePageTimeDifference
                             |> tText
-                        , wagonCount
                         ]
 
                 ( False, Nothing ) ->
-                    div [ class "train-status-badge" ] [ tText SchedulePageNotMoving, wagonCount ]
+                    div [ class "train-status-badge" ] [ tText SchedulePageNotMoving ]
 
                 ( True, _ ) ->
-                    div [ class "train-status-badge is-cancelled" ] [ tText SchedulePageCancelled, wagonCount ]
-
-        wagonCount =
-            Dict.get train.trainNumber wagonCounts
-                |> Maybe.withDefault 0
-                |> (\count ->
-                        div [ class "train-wagon-count" ] (List.repeat count Icons.wagon)
-                   )
+                    div [ class "train-status-badge is-cancelled" ] [ tText SchedulePageCancelled ]
     in
     div [ class "train" ]
         [ div [ class "train-content" ]
             [ div [ classList [ ( "train-name", True ), ( "is-running", train.runningCurrently ) ] ]
                 [ text train.lineId ]
             , div [ class "train-stations" ]
-                [ stationRow zone stations train.homeStationDeparture
+                [ stationRow data.zone data.stations train.homeStationDeparture
                 , div [ class "train-stations-row" ]
                     [ div [ class "train-stations-separator" ]
                         [ text "︙" ]
-                    , div [ class "train-stations-duration" ]
-                        [ tText
-                            (SchedulePageJourneyDuration { durationMinutes = train.durationMinutes, stopsBetween = train.stopsBetween })
-                        ]
                     ]
-                , stationRow zone stations train.endStationArrival
+                , stationRow data.zone data.stations train.endStationArrival
                 ]
             , div [ class "train-status" ] <|
                 case ( train.cancelled, homeStationArrivingIn, homeStationDepartingIn ) of
@@ -348,6 +351,59 @@ trainRow t { zone, stations, wagonCounts, currentTime } ( from, to ) longestDura
                         []
             ]
         , statusInfoBadge
+        , duration t data train
+        ]
+
+
+duration : T -> TrainRowData -> Train -> Html msg
+duration t data current =
+    let
+        ( fastest, slowest ) =
+            data.allTrains
+                |> List.sortBy .durationMinutes
+                |> (\list ->
+                        ( list |> List.head |> Maybe.withDefault current
+                        , list |> List.reverse |> List.head |> Maybe.withDefault current
+                        )
+                   )
+
+        relativeWidth n =
+            style "flex-basis" (String.fromFloat ((toFloat n / toFloat slowest.durationMinutes) * 100) ++ "%")
+
+        referenceClass =
+            if current.durationMinutes - fastest.durationMinutes < 4 then
+                "is-fast"
+
+            else
+                "is-slower"
+
+        wagonCount =
+            Dict.get current.trainNumber data.wagonCounts
+                |> Maybe.withDefault 0
+                |> (\count ->
+                        span [ class "train-wagon-count" ] (List.repeat count Icons.wagon)
+                   )
+    in
+    div [ class "duration", class referenceClass ]
+        [ SchedulePageJourneyDuration
+            { durationMinutes = current.durationMinutes
+            , slowerBy = current.durationMinutes - fastest.durationMinutes
+            , fastestName = fastest.lineId
+            }
+            |> (\key -> [ span [ class "duration-text-content" ] [ text (t key) ], wagonCount ])
+            |> div [ class "duration-text" ]
+        , div [ class "duration-bar" ]
+            [ div
+                [ class "duration-bar-reference"
+                , relativeWidth fastest.durationMinutes
+                ]
+                []
+            , div
+                [ class "duration-bar-diff"
+                , relativeWidth (current.durationMinutes - fastest.durationMinutes)
+                ]
+                []
+            ]
         ]
 
 
