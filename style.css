@@ -121,8 +121,7 @@ a:visited {
 }
 
 .train {
-  background-color: var(--color-black);
-  margin-bottom: 1rem;
+  margin-bottom: 2rem;
 }
 
 .train-content {
@@ -130,6 +129,7 @@ a:visited {
   display: flex;
   flex-wrap: wrap;
   flex-direction: row;
+  background-color: var(--color-black);
 }
 
 .train-name {

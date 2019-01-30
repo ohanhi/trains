@@ -308,10 +308,9 @@ trainRow t data train =
                     div [ class "train-status-badge is-cancelled" ] [ tText SchedulePageCancelled ]
     in
     div [ class "train" ]
-        [ div [ class "train-content" ]
-            [ div [ classList [ ( "train-name", True ), ( "is-running", train.runningCurrently ) ] ]
-                [ text train.lineId ]
-            , div [ class "train-stations" ]
+        [ metaDataRow t data train
+        , div [ class "train-content" ]
+            [ div [ class "train-stations" ]
                 [ stationRow data.zone data.stations train.homeStationDeparture
                 , div [ class "train-stations-row" ]
                     [ div [ class "train-stations-separator" ]
@@ -351,12 +350,11 @@ trainRow t data train =
                         []
             ]
         , statusInfoBadge
-        , duration t data train
         ]
 
 
-duration : T -> TrainRowData -> Train -> Html msg
-duration t data current =
+metaDataRow : T -> TrainRowData -> Train -> Html msg
+metaDataRow t data current =
     let
         ( fastest, slowest ) =
             data.allTrains
@@ -390,7 +388,14 @@ duration t data current =
             , slowerBy = current.durationMinutes - fastest.durationMinutes
             , fastestName = fastest.lineId
             }
-            |> (\key -> [ span [ class "duration-text-content" ] [ text (t key) ], wagonCount ])
+            |> (\key ->
+                    [ span [ class "duration-text-content" ]
+                        [ strong [] [ text (current.lineId ++ " · ") ]
+                        , text (t key)
+                        ]
+                    , wagonCount
+                    ]
+               )
             |> div [ class "duration-text" ]
         , div [ class "duration-bar" ]
             [ div
