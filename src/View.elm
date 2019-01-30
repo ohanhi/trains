@@ -192,7 +192,7 @@ schedulePage t model ( from, to ) =
                             Http.BadStatus status ->
                                 tText ErrorBadStatus
 
-                            Http.BadPayload _ _ ->
+                            Http.BadBody _ ->
                                 tText ErrorBadPayload
                         ]
 
