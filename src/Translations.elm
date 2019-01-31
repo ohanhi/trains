@@ -63,7 +63,7 @@ type TranslationKey
     | ErrorBadStatus
     | ErrorBadPayload
     | SchedulePageLoading
-    | SchedulePageJourneyDuration { durationMinutes : Int, stopsBetween : Int }
+    | SchedulePageJourneyDuration { durationMinutes : Int, slowerBy : Int, fastestName : String }
     | SchedulePageArrivesIn
     | SchedulePageDepartsIn
     | SchedulePageTimeDifference { minuteDiff : Int, stationName : String }
@@ -300,45 +300,26 @@ htmlTranslationSetFor key =
             }
 
 
-journeyDurationTranslationSet : { durationMinutes : Int, stopsBetween : Int } -> TranslationSet
-journeyDurationTranslationSet { durationMinutes, stopsBetween } =
-    { english =
-        String.fromInt durationMinutes
-            ++ " min · "
-            ++ (case String.fromInt stopsBetween of
-                    "0" ->
-                        "nonstop"
+journeyDurationTranslationSet : { durationMinutes : Int, slowerBy : Int, fastestName : String } -> TranslationSet
+journeyDurationTranslationSet { durationMinutes, slowerBy, fastestName } =
+    let
+        dMin =
+            String.fromInt durationMinutes ++ " min"
 
-                    "1" ->
-                        "1 stop"
+        slowerPrefix =
+            dMin ++ " · " ++ String.fromInt slowerBy ++ " min "
+    in
+    if slowerBy < 4 then
+        { english = dMin ++ " · fast"
+        , finnish = dMin ++ " · nopea"
+        , swedish = dMin ++ " · snabbt"
+        }
 
-                    n ->
-                        n ++ " stops"
-               )
-    , finnish =
-        String.fromInt durationMinutes
-            ++ " min · "
-            ++ (case String.fromInt stopsBetween of
-                    "0" ->
-                        "ei pysähdyksiä"
-
-                    "1" ->
-                        "1 pysähdys"
-
-                    n ->
-                        n ++ " pysähdystä"
-               )
-    , swedish =
-        String.fromInt durationMinutes
-            ++ " min · "
-            ++ (case String.fromInt stopsBetween of
-                    "0" ->
-                        "Utan stopp"
-
-                    n ->
-                        n ++ " stopp"
-               )
-    }
+    else
+        { english = slowerPrefix ++ "slower than " ++ fastestName
+        , finnish = slowerPrefix ++ "hitaampi kuin " ++ fastestName
+        , swedish = slowerPrefix ++ "långsammare än " ++ fastestName
+        }
 
 
 timeDifferenceTranslationSet : { minuteDiff : Int, stationName : String } -> TranslationSet
