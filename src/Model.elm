@@ -15,37 +15,60 @@ import Tuple exposing (pair)
 
 storedStateVersion : Int
 storedStateVersion =
-    1
+    2
 
 
 type alias StoredState =
-    { version : Int
-    , language : Language
+    { language : Language
+    , showTrainsViaAirport : Bool
     }
 
 
 defaultStoredState : StoredState
 defaultStoredState =
-    { version = storedStateVersion
-    , language = Finnish
+    { language = Finnish
+    , showTrainsViaAirport = False
     }
 
 
-storedStateDecoder : Json.Decode.Decoder StoredState
+storedStateDecoder : Decoder StoredState
 storedStateDecoder =
-    succeed StoredState
-        |> required "version" int
-        |> required "language"
-            (string
-                |> andThen
-                    (\s ->
-                        case Translations.stringToLanguage s of
-                            Just lang ->
-                                succeed lang
+    field "version" int
+        |> andThen
+            (\version ->
+                case version of
+                    2 ->
+                        storedStateDecoderV2
 
-                            Nothing ->
-                                fail "invalid language"
-                    )
+                    _ ->
+                        storedStateDecoderV1
+            )
+
+
+storedStateDecoderV2 : Decoder StoredState
+storedStateDecoderV2 =
+    succeed StoredState
+        |> required "language" languageDecoder
+        |> required "showTrainsViaAirport" bool
+
+
+storedStateDecoderV1 : Decoder StoredState
+storedStateDecoderV1 =
+    succeed (\lang -> { defaultStoredState | language = lang })
+        |> required "language" languageDecoder
+
+
+languageDecoder : Decoder Language
+languageDecoder =
+    string
+        |> andThen
+            (\s ->
+                case Translations.stringToLanguage s of
+                    Just lang ->
+                        succeed lang
+
+                    Nothing ->
+                        fail "invalid language"
             )
 
 
@@ -54,10 +77,11 @@ decodeStoredState =
     decodeString storedStateDecoder
 
 
-encodeStoredState : { a | language : Language } -> String
-encodeStoredState { language } =
+encodeStoredState : Model -> String
+encodeStoredState model =
     [ pair "version" (Enc.int storedStateVersion)
-    , pair "language" (Enc.string (Translations.languageToString language))
+    , pair "language" (Enc.string (Translations.languageToString model.language))
+    , pair "showTrainsViaAirport" (Enc.bool model.showTrainsViaAirport)
     ]
         |> Enc.object
         |> Enc.encode 0
@@ -79,6 +103,7 @@ type alias Model =
     , zone : Time.Zone
     , navKey : Browser.Navigation.Key
     , language : Translations.Language
+    , showTrainsViaAirport : Bool
     }
 
 
@@ -93,6 +118,7 @@ type alias Train =
     , endStationArrival : TimetableRow
     , durationMinutes : Int
     , stopsBetween : Int
+    , viaAirport : Bool
     }
 
 
@@ -239,10 +265,14 @@ toTrain { from, to } trainRaw =
         isValid =
             (trainRaw.trainCategory == "Commuter")
                 && isRightDirection stoppingRows to homeStationDeparture
-                && not ringTrackFilterApplies
+
+        viaAirport =
+            List.member "LEN" (List.map .stationShortCode stoppingRows)
+                && (List.member to [ "PSL", "HKI" ] || List.member from [ "PSL", "HKI" ])
+                && isRightDirection stoppingRows "LEN" homeStationDeparture
 
         rowsAfterHomeStation =
-            upcomingRows
+            stoppingRows
                 |> List.map .stationShortCode
                 |> dropUntil ((==) from)
                 |> List.filter ((/=) from)
@@ -251,11 +281,6 @@ toTrain { from, to } trainRaw =
             rowsAfterHomeStation
                 |> takeUntil ((==) to)
                 |> List.length
-
-        -- Very special Ring Track handling: PSL and HKI are visited twice.
-        -- We want trains that aren't going via LEN.
-        ringTrackFilterApplies =
-            List.member to [ "PSL", "HKI" ] && List.member "LEN" rowsAfterHomeStation
     in
     case ( isValid, homeStationDeparture, endStationArrival ) of
         ( True, Just dep, Just end ) ->
@@ -270,6 +295,7 @@ toTrain { from, to } trainRaw =
                 , endStationArrival = end
                 , durationMinutes = toDuration dep end
                 , stopsBetween = stopsBetween
+                , viaAirport = viaAirport
                 }
 
         _ ->

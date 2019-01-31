@@ -45,6 +45,7 @@ init flags url key =
                 , zone = Time.utc
                 , navKey = key
                 , language = storedState.language
+                , showTrainsViaAirport = storedState.showTrainsViaAirport
                 }
                 url
     in
@@ -123,6 +124,13 @@ update msg model =
             let
                 nextModel =
                     { model | language = language }
+            in
+            ( nextModel, setStorage (encodeStoredState nextModel) )
+
+        SetShowTrainsViaAirport value ->
+            let
+                nextModel =
+                    { model | showTrainsViaAirport = value }
             in
             ( nextModel, setStorage (encodeStoredState nextModel) )
 

@@ -27,6 +27,7 @@ type Msg
     | UrlChange Url
     | LinkClicked UrlRequest
     | SetLanguage Language
+    | SetShowTrainsViaAirport Bool
 
 
 rem : Float -> Float
@@ -199,18 +200,19 @@ schedulePage t model ( from, to ) =
                 Loading ->
                     header [] [ tText SchedulePageLoading ]
 
-                _ ->
+                NotAsked ->
                     text ""
             ]
     }
 
 
-trainsView : T -> Model -> ( String, String ) -> String -> Trains -> Html msg
-trainsView t model ( from, to ) heading trains =
+trainsView : T -> Model -> ( String, String ) -> String -> Trains -> Html Msg
+trainsView t model ( from, to ) heading trainsDict =
     let
-        rightDirection =
-            trains
+        trains =
+            trainsDict
                 |> Model.sortedTrainList
+                |> List.filter (\train -> model.showTrainsViaAirport || not train.viaAirport)
 
         trainRowData =
             { zone = model.zone
@@ -219,8 +221,25 @@ trainsView t model ( from, to ) heading trains =
             , currentTime = model.currentTime
             , from = from
             , to = to
-            , allTrains = rightDirection
+            , allTrains = trains
             }
+
+        scheduleSettings =
+            if List.any .viaAirport trains then
+                div [ class "schedule-settings" ]
+                    [ label []
+                        [ input
+                            [ type_ "checkbox"
+                            , checked model.showTrainsViaAirport
+                            , Html.Events.onCheck SetShowTrainsViaAirport
+                            ]
+                            []
+                        , text (t SettingShowTrainsViaAirport)
+                        ]
+                    ]
+
+            else
+                text ""
     in
     div [ class "trains" ] <|
         [ header []
@@ -232,7 +251,7 @@ trainsView t model ( from, to ) heading trains =
                 [ class "swap-link", href ("#/" ++ to ++ "/" ++ from) ]
                 [ Icons.swap ]
             ]
-        , main_ [] (List.map (trainRow t trainRowData) rightDirection)
+        , main_ [] (List.map (trainRow t trainRowData) trains)
         , div [ class "trains-end-of-list" ] [ text (t SchedulePageEndOfListNote) ]
         ]
 
@@ -307,7 +326,7 @@ trainRow t data train =
                 ( True, _ ) ->
                     div [ class "train-status-badge is-cancelled" ] [ tText SchedulePageCancelled ]
     in
-    div [ class "train" ]
+    div [ class "train", id ("train-" ++ String.fromInt train.trainNumber) ]
         [ metaDataRow t data train
         , div [ class "train-content" ]
             [ div [ class "train-stations" ]

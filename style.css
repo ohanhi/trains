@@ -278,6 +278,10 @@ a:visited {
   background: var(--color-slightly-off-schedule-light);
 }
 
+.schedule-settings {
+  text-align: center;
+}
+
 .trains-end-of-list {
   margin-top: 2rem;
   font-weight: 300;
