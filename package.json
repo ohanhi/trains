@@ -4,7 +4,8 @@
   "description": "Trains.today - Live Helsinki regional train station schedules",
   "main": "index.html",
   "scripts": {
-    "test": "elm-test",
+    "start": "elm-live src/Main.elm -- --output=elm.js",
+    "test": "elm-format . --validate && elm-test",
     "serve": "python -m SimpleHTTPServer 8000",
     "build": "elm make src/Main.elm --output=elm.js --optimize",
     "build-dev": "elm make src/Main.elm --output=elm.js",
