@@ -56,13 +56,13 @@ whenJust value toHtml =
 
 timelinessColor difference =
     if abs difference <= 1 then
-        "onTime"
+        "on-time"
 
     else if abs difference <= 5 then
-        "slightlyOffSchedule"
+        "slightly-off-schedule"
 
     else
-        "offSchedule"
+        "off-schedule"
 
 
 view : Model -> Document Msg
