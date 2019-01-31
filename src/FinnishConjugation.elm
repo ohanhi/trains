@@ -80,7 +80,7 @@ ruleset =
     , { endings = [ "ii" ], offset = 0, from = "stä", in_ = "ssä", to = "hin" }
     , { endings = [ "uu" ], offset = 0, from = "sta", in_ = "ssa", to = "hun" }
     , { endings = [ "aa", "oo" ], offset = 0, from = "sta", in_ = "ssa", to = "seen" }
-    , { endings = [ "maa", "taa", "ria", "pua", "uma", "tra", "ava", "jaa", "ruu", "kia" ], offset = 0, from = "lta", in_ = "lla", to = "lle" }
+    , { endings = [ "maa", "taa", "ria", "pua", "uma", "tra", "ava", "jaa", "ruu", "kia", "suo" ], offset = 0, from = "lta", in_ = "lla", to = "lle" }
     , { endings = [ "iä", "kää", "pää" ], offset = 0, from = "ltä", in_ = "llä", to = "lle" }
     , { endings = [ "vik" ], offset = 0, from = "istä", in_ = "issä", to = "iin" }
     , --mm. savio

@@ -153,6 +153,7 @@ testCases =
     , Positive "XY Motelli" "XY Motellista" "XY Motellissa" "XY Motelliin"
     , Positive "Turenki" "Turengista" "Turengissa" "Turenkiin"
     , Positive "Arolampi" "Arolammista" "Arolammissa" "Arolammille"
+    , Positive "Leteensuo" "Leteensuolta" "Leteensuolla" "Leteensuolle"
     , Negative "XYZ"
     , Negative "Plop"
     ]
