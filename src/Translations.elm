@@ -73,6 +73,7 @@ type TranslationKey
     | SettingsPageTitle
     | SettingsPageHeading
     | SettingsPageSelectLanguage
+    | SettingShowTrainsViaAirport
 
 
 type alias TranslationSet =
@@ -214,6 +215,12 @@ translationSetFor translationKey =
             { english = "Select language"
             , finnish = "Valitse kieli"
             , swedish = "Välj språk"
+            }
+
+        SettingShowTrainsViaAirport ->
+            { english = "Show trains going via the Airport"
+            , finnish = "Näytä Lentoaseman kautta kulkevat junat"
+            , swedish = "Se tåg som går via Flygplatsen"
             }
 
 
