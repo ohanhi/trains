@@ -225,7 +225,7 @@ trainsView t model ( from, to ) heading trainsDict =
             }
 
         scheduleSettings =
-            if List.any .viaAirport trains then
+            if List.any .viaAirport (Model.sortedTrainList trainsDict) then
                 div [ class "schedule-settings" ]
                     [ label []
                         [ input
@@ -252,6 +252,7 @@ trainsView t model ( from, to ) heading trainsDict =
                 [ Icons.swap ]
             ]
         , main_ [] (List.map (trainRow t trainRowData) trains)
+        , scheduleSettings
         , div [ class "trains-end-of-list" ] [ text (t SchedulePageEndOfListNote) ]
         ]
 
