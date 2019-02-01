@@ -309,6 +309,21 @@ trainRow t data train =
                             Nothing
                    )
 
+        timeDiffTranslation station =
+            case station.stoppingType of
+                Stopping ->
+                    SchedulePageTimeDifference
+                        { minuteDiff = station.differenceInMinutes
+                        , stationName = stationName data.stations station.currentShortCode
+                        }
+
+                NonStopping { prevStopShortCode, nextStopShortCode } ->
+                    SchedulePageTimeDifferenceNonStopping
+                        { minuteDiff = station.differenceInMinutes
+                        , prevStationName = stationName data.stations prevStopShortCode
+                        , nextStationName = stationName data.stations nextStopShortCode
+                        }
+
         statusInfoBadge =
             case ( train.cancelled, train.currentStation ) of
                 ( False, Just station ) ->
@@ -316,12 +331,7 @@ trainRow t data train =
                         [ class "train-status-badge"
                         , class ("is-" ++ timelinessColor station.differenceInMinutes)
                         ]
-                        [ { minuteDiff = station.differenceInMinutes
-                          , stationName = stationName data.stations station.stationShortCode
-                          }
-                            |> SchedulePageTimeDifference
-                            |> tText
-                        ]
+                        [ tText (timeDiffTranslation station) ]
 
                 ( False, Nothing ) ->
                     div [ class "train-status-badge" ] [ tText SchedulePageNotMoving ]

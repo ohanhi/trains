@@ -67,6 +67,7 @@ type TranslationKey
     | SchedulePageArrivesIn
     | SchedulePageDepartsIn
     | SchedulePageTimeDifference { minuteDiff : Int, stationName : String }
+    | SchedulePageTimeDifferenceNonStopping { minuteDiff : Int, prevStationName : String, nextStationName : String }
     | SchedulePageNotMoving
     | SchedulePageCancelled
     | SchedulePageEndOfListNote
@@ -116,8 +117,8 @@ translationSetFor translationKey =
             }
 
         DestPageTitle ->
-            { english = "Select destination – Trains.today"
-            , finnish = "Valitse pääteasema – Trains.today"
+            { english = "Select destination - Trains.today"
+            , finnish = "Valitse pääteasema - Trains.today"
             , swedish = "Välj slutstation - Trains.today"
             }
 
@@ -179,7 +180,10 @@ translationSetFor translationKey =
             }
 
         SchedulePageTimeDifference facts ->
-            timeDifferenceTranslationSet facts
+            timeDifferenceTranslationSetStopping facts
+
+        SchedulePageTimeDifferenceNonStopping facts ->
+            timeDifferenceTranslationSetNonStopping facts
 
         SchedulePageNotMoving ->
             { english = "Not moving"
@@ -329,8 +333,32 @@ journeyDurationTranslationSet { durationMinutes, slowerBy, fastestName } =
         }
 
 
-timeDifferenceTranslationSet : { minuteDiff : Int, stationName : String } -> TranslationSet
-timeDifferenceTranslationSet { minuteDiff, stationName } =
+timeDifferenceTranslationSetNonStopping : { minuteDiff : Int, prevStationName : String, nextStationName : String } -> TranslationSet
+timeDifferenceTranslationSetNonStopping { minuteDiff, prevStationName, nextStationName } =
+    timeDifferenceTranslationSet
+        { minuteDiff = minuteDiff
+        , suffixes =
+            { english = "between " ++ prevStationName ++ " and " ++ nextStationName
+            , finnish = "välillä " ++ prevStationName ++ "–" ++ nextStationName
+            , swedish = "mellan " ++ prevStationName ++ " och " ++ nextStationName
+            }
+        }
+
+
+timeDifferenceTranslationSetStopping : { minuteDiff : Int, stationName : String } -> TranslationSet
+timeDifferenceTranslationSetStopping { minuteDiff, stationName } =
+    timeDifferenceTranslationSet
+        { minuteDiff = minuteDiff
+        , suffixes =
+            { english = "in " ++ stationName
+            , finnish = finnishInessive stationName
+            , swedish = "i " ++ stationName
+            }
+        }
+
+
+timeDifferenceTranslationSet : { minuteDiff : Int, suffixes : TranslationSet } -> TranslationSet
+timeDifferenceTranslationSet { minuteDiff, suffixes } =
     let
         absDiff =
             abs minuteDiff
@@ -339,21 +367,21 @@ timeDifferenceTranslationSet { minuteDiff, stationName } =
             String.fromInt absDiff
     in
     if absDiff <= 1 then
-        { english = "On time in " ++ stationName
-        , finnish = "Ajallaan " ++ finnishInessive stationName
-        , swedish = "Enligt tidtabell i " ++ stationName
+        { english = "On time " ++ suffixes.english
+        , finnish = "Ajallaan " ++ suffixes.finnish
+        , swedish = "Enligt tidtabell " ++ suffixes.swedish
         }
 
     else if minuteDiff < 0 then
-        { english = absDiffString ++ " min early in " ++ stationName
-        , finnish = absDiffString ++ " min ajoissa " ++ finnishInessive stationName
-        , swedish = absDiffString ++ " min i förtid i " ++ stationName
+        { english = absDiffString ++ " min early " ++ suffixes.english
+        , finnish = absDiffString ++ " min ajoissa " ++ suffixes.finnish
+        , swedish = absDiffString ++ " min i förtid " ++ suffixes.swedish
         }
 
     else
-        { english = absDiffString ++ " min late in " ++ stationName
-        , finnish = absDiffString ++ " min myöhässä " ++ finnishInessive stationName
-        , swedish = absDiffString ++ " min sen i " ++ stationName
+        { english = absDiffString ++ " min late " ++ suffixes.english
+        , finnish = absDiffString ++ " min myöhässä " ++ suffixes.finnish
+        , swedish = absDiffString ++ " min sen " ++ suffixes.swedish
         }
 
 
