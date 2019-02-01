@@ -223,23 +223,6 @@ trainsView t model ( from, to ) heading trainsDict =
             , to = to
             , allTrains = trains
             }
-
-        scheduleSettings =
-            if List.any .viaAirport (Model.sortedTrainList trainsDict) then
-                div [ class "schedule-settings" ]
-                    [ label []
-                        [ input
-                            [ type_ "checkbox"
-                            , checked model.showTrainsViaAirport
-                            , Html.Events.onCheck SetShowTrainsViaAirport
-                            ]
-                            []
-                        , text (t SettingShowTrainsViaAirport)
-                        ]
-                    ]
-
-            else
-                text ""
     in
     div [ class "trains" ] <|
         [ header []
@@ -252,9 +235,28 @@ trainsView t model ( from, to ) heading trainsDict =
                 [ Icons.swap ]
             ]
         , main_ [] (List.map (trainRow t trainRowData) trains)
-        , scheduleSettings
+        , scheduleSettings t trainsDict model.showTrainsViaAirport
         , div [ class "trains-end-of-list" ] [ text (t SchedulePageEndOfListNote) ]
         ]
+
+
+scheduleSettings : T -> Trains -> Bool -> Html Msg
+scheduleSettings t trainsDict isChecked =
+    if List.any .viaAirport (Model.sortedTrainList trainsDict) then
+        div [ class "schedule-settings" ]
+            [ label []
+                [ input
+                    [ type_ "checkbox"
+                    , checked isChecked
+                    , Html.Events.onCheck SetShowTrainsViaAirport
+                    ]
+                    []
+                , text (t SettingShowTrainsViaAirport)
+                ]
+            ]
+
+    else
+        text ""
 
 
 type ArrivalEstimate
