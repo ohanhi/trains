@@ -223,23 +223,6 @@ trainsView t model ( from, to ) heading trainsDict =
             , to = to
             , allTrains = trains
             }
-
-        scheduleSettings =
-            if List.any .viaAirport (Model.sortedTrainList trainsDict) then
-                div [ class "schedule-settings" ]
-                    [ label []
-                        [ input
-                            [ type_ "checkbox"
-                            , checked model.showTrainsViaAirport
-                            , Html.Events.onCheck SetShowTrainsViaAirport
-                            ]
-                            []
-                        , text (t SettingShowTrainsViaAirport)
-                        ]
-                    ]
-
-            else
-                text ""
     in
     div [ class "trains" ] <|
         [ header []
@@ -252,9 +235,28 @@ trainsView t model ( from, to ) heading trainsDict =
                 [ Icons.swap ]
             ]
         , main_ [] (List.map (trainRow t trainRowData) trains)
-        , scheduleSettings
+        , scheduleSettings t trainsDict model.showTrainsViaAirport
         , div [ class "trains-end-of-list" ] [ text (t SchedulePageEndOfListNote) ]
         ]
+
+
+scheduleSettings : T -> Trains -> Bool -> Html Msg
+scheduleSettings t trainsDict isChecked =
+    if List.any .viaAirport (Model.sortedTrainList trainsDict) then
+        div [ class "schedule-settings" ]
+            [ label []
+                [ input
+                    [ type_ "checkbox"
+                    , checked isChecked
+                    , Html.Events.onCheck SetShowTrainsViaAirport
+                    ]
+                    []
+                , text (t SettingShowTrainsViaAirport)
+                ]
+            ]
+
+    else
+        text ""
 
 
 type ArrivalEstimate
@@ -307,6 +309,21 @@ trainRow t data train =
                             Nothing
                    )
 
+        timeDiffTranslation station =
+            case station.stoppingType of
+                Stopping ->
+                    SchedulePageTimeDifference
+                        { minuteDiff = station.differenceInMinutes
+                        , stationName = stationName data.stations station.currentShortCode
+                        }
+
+                NonStopping { prevStopShortCode, nextStopShortCode } ->
+                    SchedulePageTimeDifferenceNonStopping
+                        { minuteDiff = station.differenceInMinutes
+                        , prevStationName = stationName data.stations prevStopShortCode
+                        , nextStationName = stationName data.stations nextStopShortCode
+                        }
+
         statusInfoBadge =
             case ( train.cancelled, train.currentStation ) of
                 ( False, Just station ) ->
@@ -314,12 +331,7 @@ trainRow t data train =
                         [ class "train-status-badge"
                         , class ("is-" ++ timelinessColor station.differenceInMinutes)
                         ]
-                        [ { minuteDiff = station.differenceInMinutes
-                          , stationName = stationName data.stations station.stationShortCode
-                          }
-                            |> SchedulePageTimeDifference
-                            |> tText
-                        ]
+                        [ tText (timeDiffTranslation station) ]
 
                 ( False, Nothing ) ->
                     div [ class "train-status-badge" ] [ tText SchedulePageNotMoving ]
