@@ -1,4 +1,4 @@
-module Model exposing (CurrentStation, Model, Route(..), RowType(..), Stations, StoredState, Targets, TimetableRow, Train, TrainWagonCounts, Trains, decodeStoredState, defaultStoredState, encodeStoredState, mostAccurateTime, sortedTrainList, stationsDecoder, toTrain, trainWagonCountDecoder, trainsDecoder)
+module Model exposing (CurrentStation, CurrentStationStopping(..), Model, Route(..), RowType(..), Stations, StoredState, Targets, TimetableRow, Train, TrainWagonCounts, Trains, decodeStoredState, defaultStoredState, encodeStoredState, mostAccurateTime, sortedTrainList, stationsDecoder, toTrain, trainWagonCountDecoder, trainsDecoder)
 
 import Browser.Navigation
 import DateFormat
@@ -158,12 +158,20 @@ type alias TimetableRow =
 
 
 type alias CurrentStation =
-    { stationShortCode : String
-    , stationUICCode : Int
-    , rowType : RowType
+    { rowType : RowType
     , actualTime : Posix
     , differenceInMinutes : Int
+    , currentShortCode : String
+    , stoppingType : CurrentStationStopping
     }
+
+
+type CurrentStationStopping
+    = NonStopping
+        { prevStopShortCode : String
+        , nextStopShortCode : String
+        }
+    | Stopping
 
 
 type RowType
@@ -339,19 +347,45 @@ isRightDirection rows toShortCode departureRow =
 
 findCurrentStation : List TimetableRow -> Maybe CurrentStation
 findCurrentStation rows =
-    rows
-        |> List.filter (.actualTime >> (/=) Nothing)
+    let
+        passedRows =
+            List.filter (.actualTime >> (/=) Nothing) rows
+
+        stoppingType row =
+            if row.trainStopping then
+                Stopping
+
+            else
+                let
+                    prev =
+                        passedRows
+                            |> List.filter .trainStopping
+                            |> List.reverse
+                            |> List.head
+                            |> Maybe.map .stationShortCode
+                            |> Maybe.withDefault "?"
+
+                    next =
+                        rows
+                            |> List.filter (\r -> r.trainStopping && r.actualTime == Nothing)
+                            |> List.head
+                            |> Maybe.map .stationShortCode
+                            |> Maybe.withDefault "?"
+                in
+                NonStopping { prevStopShortCode = prev, nextStopShortCode = next }
+    in
+    passedRows
         |> List.reverse
         |> List.head
         |> Maybe.andThen
             (\row ->
                 Maybe.map2
                     (\actualTime differenceInMinutes ->
-                        { stationShortCode = row.stationShortCode
-                        , stationUICCode = row.stationUICCode
+                        { currentShortCode = row.stationShortCode
                         , rowType = row.rowType
                         , actualTime = actualTime
                         , differenceInMinutes = differenceInMinutes
+                        , stoppingType = stoppingType row
                         }
                     )
                     row.actualTime

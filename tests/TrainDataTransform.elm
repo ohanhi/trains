@@ -26,7 +26,7 @@ suite =
                         (trainI
                             |> Maybe.map .currentStation
                             |> Maybe.andThen identity
-                            |> Maybe.map .stationShortCode
+                            |> Maybe.map .currentShortCode
                         )
             , test "N train is at TKL" <|
                 \_ ->
@@ -34,7 +34,7 @@ suite =
                         (trainN
                             |> Maybe.map .currentStation
                             |> Maybe.andThen identity
-                            |> Maybe.map .stationShortCode
+                            |> Maybe.map .currentShortCode
                         )
             ]
         ]
