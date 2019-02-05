@@ -133,14 +133,14 @@ a:visited {
 }
 
 .train-name {
-  width: 2rem;
-  margin-right: 1rem;
-  margin-left: 0.5rem;
+  width: 1.5rem;
+  margin-right: 0.5rem;
+  margin-left: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: var(--type-scale-3);
-  font-weight: bold;
+  font-weight: 300;
   color: var(--color-grey);
 }
 
@@ -253,7 +253,7 @@ a:visited {
 }
 
 .duration-text {
-  color: var(--color-grey);
+  color: var(--color-white);
   font-size: var(--type-scale--1);
   margin-left: 1rem;
   display: flex;
