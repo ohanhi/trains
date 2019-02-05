@@ -281,10 +281,6 @@ trainRow t data train =
         tText =
             t >> text
 
-        homeStationArrivingIn =
-            train.homeStationArrival
-                |> Maybe.andThen prettyBestEstimateFor
-
         homeStationDepartingIn =
             prettyBestEstimateFor train.homeStationDeparture
 
@@ -342,7 +338,8 @@ trainRow t data train =
     div [ class "train", id ("train-" ++ String.fromInt train.trainNumber) ]
         [ metaDataRow t data train
         , div [ class "train-content" ]
-            [ div [ class "train-stations" ]
+            [ div [ class "train-name" ] [ text train.lineId ]
+            , div [ class "train-stations" ]
                 [ stationRow data.zone data.stations train.homeStationDeparture
                 , div [ class "train-stations-row" ]
                     [ div [ class "train-stations-separator" ]
@@ -351,21 +348,8 @@ trainRow t data train =
                 , stationRow data.zone data.stations train.endStationArrival
                 ]
             , div [ class "train-status" ] <|
-                case ( train.cancelled, homeStationArrivingIn, homeStationDepartingIn ) of
-                    ( False, Just estimate, _ ) ->
-                        [ div [ class "train-status-arriving" ]
-                            [ tText SchedulePageArrivesIn ]
-                        , div [ class "train-status-time" ]
-                            [ case estimate of
-                                LiveEstimate time ->
-                                    text time
-
-                                ScheduleEstimate time ->
-                                    text ("~" ++ time)
-                            ]
-                        ]
-
-                    ( False, _, Just estimate ) ->
+                case ( train.cancelled, homeStationDepartingIn ) of
+                    ( False, Just estimate ) ->
                         [ div [ class "train-status-arriving" ]
                             [ tText SchedulePageDepartsIn ]
                         , div [ class "train-status-time" ]
@@ -388,24 +372,27 @@ trainRow t data train =
 metaDataRow : T -> TrainRowData -> Train -> Html msg
 metaDataRow t data current =
     let
-        ( fastest, slowest ) =
+        millis =
+            Time.posixToMillis << mostAccurateTime
+
+        overtakeText =
             data.allTrains
-                |> List.sortBy .durationMinutes
-                |> (\list ->
-                        ( list |> List.head |> Maybe.withDefault current
-                        , list |> List.reverse |> List.head |> Maybe.withDefault current
-                        )
-                   )
-
-        relativeWidth n =
-            style "flex-basis" (String.fromFloat ((toFloat n / toFloat slowest.durationMinutes) * 100) ++ "%")
-
-        referenceClass =
-            if current.durationMinutes - fastest.durationMinutes < 4 then
-                "is-fast"
-
-            else
-                "is-slower"
+                |> List.filter
+                    (\train ->
+                        (millis train.homeStationDeparture > millis current.homeStationDeparture)
+                            && (millis train.endStationArrival < millis current.endStationArrival)
+                    )
+                |> List.head
+                |> Maybe.map
+                    (\train ->
+                        { time = prettyTime data.zone (mostAccurateTime train.homeStationDeparture)
+                        , lineId = train.lineId
+                        , endStationName = Stations.findName data.to |> Maybe.withDefault data.to
+                        }
+                            |> SchedulePageOvertakenBy
+                            |> t
+                    )
+                |> Maybe.withDefault ""
 
         wagonCount =
             Dict.get current.trainNumber data.wagonCounts
@@ -414,32 +401,10 @@ metaDataRow t data current =
                         span [ class "train-wagon-count" ] (List.repeat count Icons.wagon)
                    )
     in
-    div [ class "duration", class referenceClass ]
-        [ SchedulePageJourneyDuration
-            { durationMinutes = current.durationMinutes
-            , slowerBy = current.durationMinutes - fastest.durationMinutes
-            , fastestName = fastest.lineId
-            }
-            |> (\key ->
-                    [ span [ class "duration-text-content" ]
-                        [ strong [] [ text (current.lineId ++ " · ") ]
-                        , text (t key)
-                        ]
-                    , wagonCount
-                    ]
-               )
-            |> div [ class "duration-text" ]
-        , div [ class "duration-bar" ]
-            [ div
-                [ class "duration-bar-reference"
-                , relativeWidth fastest.durationMinutes
-                ]
-                []
-            , div
-                [ class "duration-bar-diff"
-                , relativeWidth (current.durationMinutes - fastest.durationMinutes)
-                ]
-                []
+    div [ class "duration" ]
+        [ div [ class "duration-text" ]
+            [ span [ class "duration-text-content" ] [ text overtakeText ]
+            , wagonCount
             ]
         ]
 

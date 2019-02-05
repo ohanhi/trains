@@ -113,7 +113,6 @@ type alias Train =
     , runningCurrently : Bool
     , cancelled : Bool
     , currentStation : Maybe CurrentStation
-    , homeStationArrival : Maybe TimetableRow
     , homeStationDeparture : TimetableRow
     , endStationArrival : TimetableRow
     , durationMinutes : Int
@@ -298,7 +297,6 @@ toTrain { from, to } trainRaw =
                 , runningCurrently = trainRaw.runningCurrently
                 , cancelled = trainRaw.cancelled
                 , currentStation = findCurrentStation trainRaw.timetableRows
-                , homeStationArrival = findTimetableRow Arrival from upcomingRows
                 , homeStationDeparture = dep
                 , endStationArrival = end
                 , durationMinutes = toDuration dep end
@@ -352,7 +350,7 @@ findCurrentStation rows =
             List.filter (.actualTime >> (/=) Nothing) rows
 
         stoppingType row =
-            if row.trainStopping then
+            if row.trainStopping && row.rowType == Arrival then
                 Stopping
 
             else

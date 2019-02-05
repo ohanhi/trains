@@ -63,8 +63,7 @@ type TranslationKey
     | ErrorBadStatus
     | ErrorBadPayload
     | SchedulePageLoading
-    | SchedulePageJourneyDuration { durationMinutes : Int, slowerBy : Int, fastestName : String }
-    | SchedulePageArrivesIn
+    | SchedulePageOvertakenBy { lineId : String, time : String, endStationName : String }
     | SchedulePageDepartsIn
     | SchedulePageTimeDifference { minuteDiff : Int, stationName : String }
     | SchedulePageTimeDifferenceNonStopping { minuteDiff : Int, prevStationName : String, nextStationName : String }
@@ -164,13 +163,10 @@ translationSetFor translationKey =
             , swedish = "Laddar"
             }
 
-        SchedulePageJourneyDuration params ->
-            journeyDurationTranslationSet params
-
-        SchedulePageArrivesIn ->
-            { english = "Arrives in"
-            , finnish = "Saapumiseen"
-            , swedish = "Ankommer om"
+        SchedulePageOvertakenBy { lineId, time, endStationName } ->
+            { english = lineId ++ "-train (" ++ time ++ ") will reach " ++ endStationName ++ " earlier!"
+            , finnish = lineId ++ "-juna (" ++ time ++ ") on aiemmin perillä " ++ finnishInessive endStationName ++ "!"
+            , swedish = lineId ++ "-tåg (" ++ time ++ ") anländer tidigare i " ++ endStationName ++ "!"
             }
 
         SchedulePageDepartsIn ->
@@ -309,28 +305,6 @@ htmlTranslationSetFor key =
                         ]
                     ]
             }
-
-
-journeyDurationTranslationSet : { durationMinutes : Int, slowerBy : Int, fastestName : String } -> TranslationSet
-journeyDurationTranslationSet { durationMinutes, slowerBy, fastestName } =
-    let
-        dMin =
-            String.fromInt durationMinutes ++ " min"
-
-        slowerPrefix =
-            dMin ++ " · " ++ String.fromInt slowerBy ++ " min "
-    in
-    if slowerBy < 4 then
-        { english = dMin ++ " · fast"
-        , finnish = dMin ++ " · nopea"
-        , swedish = dMin ++ " · snabbt"
-        }
-
-    else
-        { english = slowerPrefix ++ "slower than " ++ fastestName
-        , finnish = slowerPrefix ++ "hitaampi kuin " ++ fastestName
-        , swedish = slowerPrefix ++ "långsammare än " ++ fastestName
-        }
 
 
 timeDifferenceTranslationSetNonStopping : { minuteDiff : Int, prevStationName : String, nextStationName : String } -> TranslationSet
