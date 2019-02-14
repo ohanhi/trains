@@ -1,7 +1,7 @@
 module Translations exposing (HtmlTranslationKey(..), Language(..), T, TranslationKey(..), allLanguages, htmlTranslate, languageToString, stringToLanguage, translate)
 
+import Accessibility as Html exposing (..)
 import FinnishConjugation
-import Html exposing (..)
 import Html.Attributes exposing (..)
 
 
@@ -74,6 +74,7 @@ type TranslationKey
     | SettingsPageHeading
     | SettingsPageSelectLanguage
     | SettingShowTrainsViaAirport
+    | SettingShowTrainsViaAirportValue
 
 
 type alias TranslationSet =
@@ -221,6 +222,12 @@ translationSetFor translationKey =
             { english = "Show trains going via the Airport"
             , finnish = "Näytä Lentoaseman kautta kulkevat junat"
             , swedish = "Se tåg som går via Flygplatsen"
+            }
+
+        SettingShowTrainsViaAirportValue ->
+            { english = "Yes"
+            , finnish = "Kyllä"
+            , swedish = "Ja"
             }
 
 
