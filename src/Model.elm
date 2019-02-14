@@ -276,7 +276,7 @@ toTrain { from, to } trainRaw =
         viaAirport =
             List.member "LEN" (List.map .stationShortCode stoppingRows)
                 && (List.member to [ "PSL", "HKI" ] || List.member from [ "PSL", "HKI" ])
-                && isRightDirection stoppingRows "LEN" homeStationDeparture
+                && isRightDirection (takeUntil (\row -> row.stationShortCode == to) stoppingRows) "LEN" homeStationDeparture
 
         rowsAfterHomeStation =
             stoppingRows

@@ -19,7 +19,8 @@
             "krisajenkins/remotedata": "6.0.1",
             "ohanhi/remotedata-http": "4.0.0",
             "rtfeldman/elm-iso8601-date-strings": "1.1.2",
-            "ryannhg/date-format": "2.3.0"
+            "ryannhg/date-format": "2.3.0",
+            "tesk9/accessible-html": "4.0.0"
         },
         "indirect": {
             "elm/bytes": "1.0.7",

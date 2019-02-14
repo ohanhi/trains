@@ -1,9 +1,9 @@
 module View exposing (Msg(..), view)
 
+import Accessibility exposing (..)
 import Browser exposing (Document, UrlRequest)
 import DateFormat
 import Dict
-import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events
 import Http
@@ -244,15 +244,14 @@ scheduleSettings : T -> Trains -> Bool -> Html Msg
 scheduleSettings t trainsDict isChecked =
     if List.any .viaAirport (Model.sortedTrainList trainsDict) then
         div [ class "schedule-settings" ]
-            [ label []
-                [ input
-                    [ type_ "checkbox"
-                    , checked isChecked
-                    , Html.Events.onCheck SetShowTrainsViaAirport
-                    ]
-                    []
-                , text (t SettingShowTrainsViaAirport)
-                ]
+            [ labelAfter
+                []
+                (text (t SettingShowTrainsViaAirport))
+              <|
+                checkbox
+                    (t SettingShowTrainsViaAirportValue)
+                    (Just isChecked)
+                    [ Html.Events.onCheck SetShowTrainsViaAirport ]
             ]
 
     else

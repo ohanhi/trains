@@ -1,6 +1,6 @@
 module Icons exposing (swap, wagon)
 
-import Html exposing (Html)
+import Accessibility exposing (Html)
 import Svg
 import Svg.Attributes exposing (..)
 
