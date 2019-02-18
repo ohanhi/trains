@@ -33,6 +33,23 @@ suite =
         , test "Trains continuing to airport are not via airport" <|
             expectAllTrains decodedHKItoTKL "From HKI to TKL, only P is via airport" <|
                 \{ lineId, viaAirport } -> (lineId == "P") == viaAirport
+        , describe "Airport is never between HKI and PSL"
+            [ test "HKI to PSL" <|
+                expectAllTrains decodedHKItoPSL "HKI to PSL is one hop" <|
+                    \{ stopsBetween, durationMinutes, viaAirport } ->
+                        (stopsBetween == 0)
+                            && (durationMinutes < 10)
+                            && not viaAirport
+            , test "PSL to HKI has 0 stops between" <|
+                expectAllTrains decodedPSLtoHKI "PSL to HKI is 0 stops" <|
+                    \row -> row.stopsBetween == 0
+            , test "PSL to HKI is fast" <|
+                expectAllTrains decodedPSLtoHKI "PSL to HKI is < 10 minutes" <|
+                    \row -> row.durationMinutes < 10
+            , test "PSL to HKI is not via airport" <|
+                expectAllTrains decodedPSLtoHKI "PSL to HKI is not via airport" <|
+                    \row -> not row.viaAirport
+            ]
         , describe "Accuracy of data"
             [ case decoded of
                 Err _ ->
@@ -105,3 +122,13 @@ decoded =
 decodedHKItoTKL : Result Json.Decode.Error Model.Trains
 decodedHKItoTKL =
     Json.Decode.decodeString (Model.trainsDecoder { from = "HKI", to = "TKL" }) TestDataAirport.json
+
+
+decodedHKItoPSL : Result Json.Decode.Error Model.Trains
+decodedHKItoPSL =
+    Json.Decode.decodeString (Model.trainsDecoder { from = "HKI", to = "PSL" }) TestDataAirport.json
+
+
+decodedPSLtoHKI : Result Json.Decode.Error Model.Trains
+decodedPSLtoHKI =
+    Json.Decode.decodeString (Model.trainsDecoder { from = "PSL", to = "HKI" }) TestDataAirport.json
