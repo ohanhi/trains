@@ -261,23 +261,35 @@ toTrain { from, to } trainRaw =
             List.filter .trainStopping trainRaw.timetableRows
 
         -- the stopping rows from passenger's departure to passenger's arrival
-        -- (the last 2 steps take us from e.g. PSL -> ... -> PSL -> HKI to PSL -> HKI)
         itineraryRows =
             stoppingRows
-                -- drop stops before 'from'
-                |> dropWhile (\row -> row.stationShortCode /= from)
-                -- drop stops after 'to'
-                |> dropWhileEnd (\row -> row.stationShortCode /= to)
-                -- start from last remaining 'from'
-                |> takeUntilEnd (\row -> row.stationShortCode == from)
-                -- finish at first remaining 'to'
-                |> takeUntil (\row -> row.stationShortCode == to)
+                |> dropWhile (Just >> (/=) homeStationDeparture)
+                |> takeUntil (Just >> (==) endStationArrival)
 
-        homeStationDeparture =
-            List.head itineraryRows
+        ( homeStationDeparture, endStationArrival ) =
+            let
+                quickestCombination =
+                    cartesian
+                        (findTimetableRows Departure from stoppingRows)
+                        (findTimetableRows Arrival to stoppingRows)
+                        |> List.filter
+                            (\( departure, arrival ) ->
+                                Time.posixToMillis departure.scheduledTime
+                                    < Time.posixToMillis arrival.scheduledTime
+                            )
+                        |> List.sortBy
+                            (\( departure, arrival ) ->
+                                Time.posixToMillis arrival.scheduledTime
+                                    - Time.posixToMillis departure.scheduledTime
+                            )
+                        |> List.head
+            in
+            case quickestCombination of
+                Just ( departure, arrival ) ->
+                    ( Just departure, Just arrival )
 
-        endStationArrival =
-            List.head <| List.reverse itineraryRows
+                Nothing ->
+                    ( Nothing, Nothing )
 
         isValid =
             (trainRaw.trainCategory == "Commuter")
@@ -325,12 +337,11 @@ toDuration homeStationDeparture endStationArrival =
         // 60000
 
 
-findTimetableRow : RowType -> String -> List TimetableRow -> Maybe TimetableRow
-findTimetableRow rowType shortCode rows =
+findTimetableRows : RowType -> String -> List TimetableRow -> List TimetableRow
+findTimetableRows rowType shortCode rows =
     rows
         |> List.filter
             (\row -> row.stationShortCode == shortCode && row.rowType == rowType)
-        |> List.head
 
 
 findCurrentStation : List TimetableRow -> Maybe CurrentStation
@@ -418,19 +429,9 @@ rowTypeDecoder =
             )
 
 
-dropUntil : (a -> Bool) -> List a -> List a
-dropUntil predicate list =
-    case list of
-        [] ->
-            []
-
-        a :: rest ->
-            case predicate a of
-                True ->
-                    rest
-
-                False ->
-                    dropUntil predicate rest
+cartesian : List a -> List b -> List ( a, b )
+cartesian xs ys =
+    List.concatMap (\x -> List.map (Tuple.pair x) ys) xs
 
 
 takeUntil : (a -> Bool) -> List a -> List a
@@ -451,22 +452,6 @@ takeUntilHelp acc predicate list =
 
                 False ->
                     takeUntilHelp (a :: acc) predicate rest
-
-
-takeUntilEnd : (a -> Bool) -> List a -> List a
-takeUntilEnd predicate list =
-    list
-        |> List.reverse
-        |> takeUntil predicate
-        |> List.reverse
-
-
-dropWhileEnd : (a -> Bool) -> List a -> List a
-dropWhileEnd predicate list =
-    list
-        |> List.reverse
-        |> dropWhile predicate
-        |> List.reverse
 
 
 dropWhile : (a -> Bool) -> List a -> List a
