@@ -6,6 +6,7 @@ import Json.Decode
 import Model
 import Test exposing (..)
 import TestData
+import TestDataAirport
 import Time
 
 
@@ -17,18 +18,38 @@ suite =
         , test "Has trains" <|
             expectTrains (Dict.size >> Expect.greaterThan 1)
         , test "Trains' line ids" <|
-            expectAllTrains "Line ids are single letter" <|
+            expectAllTrains decoded "Line ids are single letter" <|
                 \{ lineId } -> String.length lineId == 1
         , test "Trains' home and end stations are correct" <|
-            expectAllTrains "Home is LPV, end is PSL" <|
+            expectAllTrains decoded "Home is LPV, end is PSL" <|
                 \{ homeStationDeparture, endStationArrival } ->
                     (homeStationDeparture.stationShortCode == "LPV")
                         && (endStationArrival.stationShortCode == "PSL")
         , test "Trains stop first at dep, then at dest" <|
-            expectAllTrains "Scheduled times with home < end" <|
+            expectAllTrains decoded "Scheduled times with home < end" <|
                 \{ homeStationDeparture, endStationArrival } ->
                     Time.posixToMillis homeStationDeparture.scheduledTime
                         < Time.posixToMillis endStationArrival.scheduledTime
+        , test "Trains continuing to airport are not via airport" <|
+            expectAllTrains decodedHKItoTKL "From HKI to TKL, only P is via airport" <|
+                \{ lineId, viaAirport } -> (lineId == "P") == viaAirport
+        , describe "Airport is never between HKI and PSL"
+            [ test "HKI to PSL" <|
+                expectAllTrains decodedHKItoPSL "HKI to PSL is one hop" <|
+                    \{ stopsBetween, durationMinutes, viaAirport } ->
+                        (stopsBetween == 0)
+                            && (durationMinutes < 10)
+                            && not viaAirport
+            , test "PSL to HKI has 0 stops between" <|
+                expectAllTrains decodedPSLtoHKI "PSL to HKI is 0 stops" <|
+                    \row -> row.stopsBetween == 0
+            , test "PSL to HKI is fast" <|
+                expectAllTrains decodedPSLtoHKI "PSL to HKI is < 10 minutes" <|
+                    \row -> row.durationMinutes < 10
+            , test "PSL to HKI is not via airport" <|
+                expectAllTrains decodedPSLtoHKI "PSL to HKI is not via airport" <|
+                    \row -> not row.viaAirport
+            ]
         , describe "Accuracy of data"
             [ case decoded of
                 Err _ ->
@@ -66,9 +87,10 @@ suite =
         ]
 
 
-expectAllTrains : String -> (Model.Train -> Bool) -> () -> Expectation
-expectAllTrains expString trainFn =
-    expectTrains
+expectAllTrains : Result Json.Decode.Error Model.Trains -> String -> (Model.Train -> Bool) -> () -> Expectation
+expectAllTrains decodedTrains expString trainFn =
+    expectResult
+        decodedTrains
         (\trains ->
             trains
                 |> Dict.values
@@ -95,3 +117,18 @@ expectResult result exp _ =
 decoded : Result Json.Decode.Error Model.Trains
 decoded =
     Json.Decode.decodeString (Model.trainsDecoder { from = "LPV", to = "PSL" }) TestData.json
+
+
+decodedHKItoTKL : Result Json.Decode.Error Model.Trains
+decodedHKItoTKL =
+    Json.Decode.decodeString (Model.trainsDecoder { from = "HKI", to = "TKL" }) TestDataAirport.json
+
+
+decodedHKItoPSL : Result Json.Decode.Error Model.Trains
+decodedHKItoPSL =
+    Json.Decode.decodeString (Model.trainsDecoder { from = "HKI", to = "PSL" }) TestDataAirport.json
+
+
+decodedPSLtoHKI : Result Json.Decode.Error Model.Trains
+decodedPSLtoHKI =
+    Json.Decode.decodeString (Model.trainsDecoder { from = "PSL", to = "HKI" }) TestDataAirport.json
