@@ -260,34 +260,38 @@ toTrain { from, to } trainRaw =
         stoppingRows =
             List.filter .trainStopping trainRaw.timetableRows
 
-        upcomingRows =
-            List.filter (\row -> row.actualTime == Nothing) stoppingRows
+        -- the stopping rows from passenger's departure to passenger's arrival
+        -- (the last 2 steps take us from e.g. PSL -> ... -> PSL -> HKI to PSL -> HKI)
+        itineraryRows =
+            stoppingRows
+                -- drop stops before 'from'
+                |> dropWhile (\row -> row.stationShortCode /= from)
+                -- drop stops after 'to'
+                |> dropWhileEnd (\row -> row.stationShortCode /= to)
+                -- start from last remaining 'from'
+                |> takeUntilEnd (\row -> row.stationShortCode == from)
+                -- finish at first remaining 'to'
+                |> takeUntil (\row -> row.stationShortCode == to)
 
         homeStationDeparture =
-            findTimetableRow Departure from upcomingRows
+            List.head itineraryRows
 
         endStationArrival =
-            findTimetableRow Arrival to (List.reverse trainRaw.timetableRows)
+            List.head <| List.reverse itineraryRows
 
         isValid =
             (trainRaw.trainCategory == "Commuter")
-                && isRightDirection stoppingRows to homeStationDeparture
+                && (List.length itineraryRows >= 2)
+                && (Maybe.andThen .actualTime homeStationDeparture == Nothing)
 
         viaAirport =
-            List.member "LEN" (List.map .stationShortCode stoppingRows)
+            List.member "LEN" (List.map .stationShortCode itineraryRows)
                 && (List.member to [ "PSL", "HKI" ] || List.member from [ "PSL", "HKI" ])
-                && isRightDirection stoppingRows "LEN" homeStationDeparture
 
-        rowsAfterHomeStation =
-            stoppingRows
-                |> List.map .stationShortCode
-                |> dropUntil ((==) from)
-                |> List.filter ((/=) from)
-
+        -- how many times the train stops between passenger's departure and arrival
         stopsBetween =
-            rowsAfterHomeStation
-                |> takeUntil ((==) to)
-                |> List.length
+            List.length (List.filter (\row -> row.rowType == Arrival) itineraryRows)
+                - 1
     in
     case ( isValid, homeStationDeparture, endStationArrival ) of
         ( True, Just dep, Just end ) ->
@@ -327,20 +331,6 @@ findTimetableRow rowType shortCode rows =
         |> List.filter
             (\row -> row.stationShortCode == shortCode && row.rowType == rowType)
         |> List.head
-
-
-isRightDirection : List TimetableRow -> String -> Maybe TimetableRow -> Bool
-isRightDirection rows toShortCode departureRow =
-    case departureRow of
-        Nothing ->
-            False
-
-        Just departure ->
-            rows
-                |> List.filter
-                    (\row -> row.stationShortCode == toShortCode && row.rowType == Arrival)
-                |> List.any
-                    (\arr -> Time.posixToMillis arr.scheduledTime > Time.posixToMillis departure.scheduledTime)
 
 
 findCurrentStation : List TimetableRow -> Maybe CurrentStation
@@ -457,7 +447,38 @@ takeUntilHelp acc predicate list =
         a :: rest ->
             case predicate a of
                 True ->
-                    acc
+                    List.reverse (a :: acc)
 
                 False ->
                     takeUntilHelp (a :: acc) predicate rest
+
+
+takeUntilEnd : (a -> Bool) -> List a -> List a
+takeUntilEnd predicate list =
+    list
+        |> List.reverse
+        |> takeUntil predicate
+        |> List.reverse
+
+
+dropWhileEnd : (a -> Bool) -> List a -> List a
+dropWhileEnd predicate list =
+    list
+        |> List.reverse
+        |> dropWhile predicate
+        |> List.reverse
+
+
+dropWhile : (a -> Bool) -> List a -> List a
+dropWhile predicate list =
+    case list of
+        [] ->
+            []
+
+        a :: rest ->
+            case predicate a of
+                True ->
+                    dropWhile predicate rest
+
+                False ->
+                    a :: rest
