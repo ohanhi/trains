@@ -460,7 +460,7 @@ dropWhile predicate list =
 
         a :: rest ->
             if predicate a then
-                    dropWhile predicate rest
+                dropWhile predicate rest
 
-                else
-                    a :: rest
+            else
+                a :: rest

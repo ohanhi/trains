@@ -142,6 +142,11 @@ schedulePage t model ( from, to ) =
 
         tText =
             text << t
+
+        minutesSinceLastRequest =
+            Time.posixToMillis model.lastRequestTime
+                - Time.posixToMillis model.currentTime
+                |> (\diff -> toFloat diff / 60000)
     in
     { title = heading ++ " – Trains.today"
     , body =
@@ -149,7 +154,12 @@ schedulePage t model ( from, to ) =
             Nothing
             [ case model.trains of
                 Success trains ->
-                    trainsView t model ( from, to ) heading trains
+                    -- avoid showing too stale information
+                    if minutesSinceLastRequest < 5 then
+                        trainsView t model ( from, to ) heading trains
+
+                    else
+                        header [] [ tText SchedulePageLoading ]
 
                 Failure err ->
                     div
