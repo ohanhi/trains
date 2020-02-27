@@ -31,7 +31,7 @@ matching abbreviation =
         |> List.filter
             (\track ->
                 track
-                    |> List.filter (\( abbr, name ) -> abbreviation == abbr)
+                    |> List.filter (\( abbr, _ ) -> abbreviation == abbr)
                     |> List.head
                     |> Maybe.map (\_ -> True)
                     |> Maybe.withDefault False
@@ -108,11 +108,6 @@ ringTrackCW =
     , pair "OLK" "Oulunkylä"
     , pair "KÄP" "Käpylä"
     ]
-
-
-ringTrackCCW : StationList
-ringTrackCCW =
-    List.reverse ringTrackCW
 
 
 directionTampere : StationList

@@ -1,7 +1,6 @@
 module Model exposing (CurrentStation, CurrentStationStopping(..), Model, Route(..), RowType(..), Stations, StoredState, Targets, TimetableRow, Train, TrainWagonCounts, Trains, decodeStoredState, defaultStoredState, encodeStoredState, mostAccurateTime, sortedTrainList, stationsDecoder, toTrain, trainWagonCountDecoder, trainsDecoder)
 
 import Browser.Navigation
-import DateFormat
 import Dict exposing (Dict)
 import Iso8601
 import Json.Decode exposing (..)
@@ -446,12 +445,11 @@ takeUntilHelp acc predicate list =
             []
 
         a :: rest ->
-            case predicate a of
-                True ->
-                    List.reverse (a :: acc)
+            if predicate a then
+                List.reverse (a :: acc)
 
-                False ->
-                    takeUntilHelp (a :: acc) predicate rest
+            else
+                takeUntilHelp (a :: acc) predicate rest
 
 
 dropWhile : (a -> Bool) -> List a -> List a
@@ -461,9 +459,8 @@ dropWhile predicate list =
             []
 
         a :: rest ->
-            case predicate a of
-                True ->
+            if predicate a then
                     dropWhile predicate rest
 
-                False ->
+                else
                     a :: rest
