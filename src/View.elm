@@ -8,14 +8,12 @@ import Html.Attributes exposing (..)
 import Html.Events
 import Http
 import Icons
-import Json.Decode
 import Model exposing (..)
 import RemoteData exposing (RemoteData(..), WebData)
 import Stations
 import Time exposing (Posix)
 import Translations exposing (..)
 import Url exposing (Url)
-import Url.Parser
 
 
 type Msg
@@ -30,31 +28,7 @@ type Msg
     | SetShowTrainsViaAirport Bool
 
 
-rem : Float -> Float
-rem x =
-    x * 16
-
-
-ts : Int -> Float
-ts scale =
-    1.33 ^ toFloat scale * 16
-
-
-tsPx : Int -> String
-tsPx scale =
-    String.fromFloat (ts scale) ++ "px"
-
-
-whenJust : Maybe a -> (a -> Html msg) -> Html msg
-whenJust value toHtml =
-    case value of
-        Just a ->
-            toHtml a
-
-        Nothing ->
-            text ""
-
-
+timelinessColor : Int -> String
 timelinessColor difference =
     if abs difference <= 1 then
         "on-time"
@@ -168,6 +142,11 @@ schedulePage t model ( from, to ) =
 
         tText =
             text << t
+
+        minutesSinceLastRequest =
+            Time.posixToMillis model.lastRequestTime
+                - Time.posixToMillis model.currentTime
+                |> (\diff -> toFloat diff / 60000)
     in
     { title = heading ++ " – Trains.today"
     , body =
@@ -175,7 +154,12 @@ schedulePage t model ( from, to ) =
             Nothing
             [ case model.trains of
                 Success trains ->
-                    trainsView t model ( from, to ) heading trains
+                    -- avoid showing too stale information
+                    if minutesSinceLastRequest < 5 then
+                        trainsView t model ( from, to ) heading trains
+
+                    else
+                        header [] [ tText SchedulePageLoading ]
 
                 Failure err ->
                     div
@@ -187,10 +171,10 @@ schedulePage t model ( from, to ) =
                             Http.Timeout ->
                                 tText ErrorTimeout
 
-                            Http.BadUrl url ->
+                            Http.BadUrl _ ->
                                 tText ErrorBadUrl
 
-                            Http.BadStatus status ->
+                            Http.BadStatus _ ->
                                 tText ErrorBadStatus
 
                             Http.BadBody _ ->

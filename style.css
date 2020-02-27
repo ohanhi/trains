@@ -52,6 +52,7 @@ header h1 {
   flex: 1;
   margin: 0;
   font-weight: 300;
+  text-align: center;
 }
 
 a {
@@ -94,7 +95,12 @@ a:visited {
   list-style: none;
   margin: 0;
   padding: 0;
-  line-height: 2rem;
+}
+
+.stations {
+  padding: 0 0.5rem;
+  line-height: 2;
+  font-size: var(--type-scale-1);
   text-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
 }
 

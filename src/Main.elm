@@ -10,7 +10,6 @@ import RemoteData exposing (..)
 import RemoteData.Http as Http
 import Task
 import Time exposing (Posix)
-import Translations
 import Url exposing (Url)
 import Url.Builder
 import Url.Parser exposing ((</>))
@@ -230,7 +229,7 @@ getTrains targets =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Time.every 1000 UpdateTime
 
 
