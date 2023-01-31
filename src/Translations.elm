@@ -65,11 +65,14 @@ type TranslationKey
     | SchedulePageLoading
     | SchedulePageOvertakenBy { lineId : String, time : String, endStationName : String }
     | SchedulePageDepartsIn
+    | SchedulePageArrivesIn
+    | SchedulePageArrived
     | SchedulePageTimeDifference { minuteDiff : Int, stationName : String }
     | SchedulePageTimeDifferenceNonStopping { minuteDiff : Int, prevStationName : String, nextStationName : String }
     | SchedulePageNotMoving
     | SchedulePageCancelled
     | SchedulePageEndOfListNote
+    | TrainPageHeading { lineId : String }
     | SettingsPageTitle
     | SettingsPageHeading
     | SettingsPageSelectLanguage
@@ -176,6 +179,18 @@ translationSetFor translationKey =
             , swedish = "Avgår om"
             }
 
+        SchedulePageArrivesIn ->
+            { english = "Arriving in"
+            , finnish = "Perillä"
+            , swedish = "Anländar"
+            }
+
+        SchedulePageArrived ->
+            { english = "Arrived at"
+            , finnish = "Saapui"
+            , swedish = "Anlände"
+            }
+
         SchedulePageTimeDifference facts ->
             timeDifferenceTranslationSetStopping facts
 
@@ -198,6 +213,12 @@ translationSetFor translationKey =
             { english = "Only direct trains departing in 2 hours are displayed."
             , finnish = "Vain suorat 2 tunnin kuluessa lähtevät junat näytetään."
             , swedish = "Bara direkta tåg som avgår inom 2 timmar visas."
+            }
+
+        TrainPageHeading { lineId } ->
+            { english = lineId ++ " train"
+            , finnish = lineId ++ "-juna"
+            , swedish = lineId ++ "-tåg"
             }
 
         SettingsPageTitle ->

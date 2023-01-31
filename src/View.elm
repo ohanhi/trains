@@ -8,6 +8,7 @@ import Html.Attributes exposing (..)
 import Html.Events
 import Http
 import Icons
+import Json.Decode exposing (maybe)
 import Model exposing (..)
 import RemoteData exposing (RemoteData(..), WebData)
 import Stations
@@ -55,6 +56,9 @@ view model =
 
         ScheduleRoute from to ->
             schedulePage t model ( from, to )
+
+        TrainRoute from to trainNumber ->
+            trainPage t model ( from, to ) trainNumber
 
 
 container : Language -> Maybe String -> List (Html Msg) -> List (Html Msg)
@@ -130,6 +134,46 @@ selectDestPage t model dep =
                         li [] [ a [ href (url abbr) ] [ text (linkText name) ] ]
                     )
                     (Stations.matching dep)
+            ]
+    }
+
+
+trainPage : T -> Model -> ( String, String ) -> Int -> Document Msg
+trainPage t model ( from, to ) trainNumber =
+    let
+        maybeTrain =
+            model.trains
+                |> RemoteData.toMaybe
+                |> Maybe.andThen (\trains -> Dict.get trainNumber trains)
+
+        heading =
+            case maybeTrain of
+                Just train ->
+                    t (TrainPageHeading { lineId = train.lineId })
+
+                Nothing ->
+                    ""
+
+        trainRowData =
+            { zone = model.zone
+            , stations = model.stations
+            , wagonCounts = model.wagonCounts
+            , currentTime = model.currentTime
+            , from = from
+            , to = to
+            , allTrains = []
+            }
+    in
+    { title = heading
+    , body =
+        container model.language
+            (Just heading)
+            [ case maybeTrain of
+                Just train ->
+                    trainPageCard t trainRowData train
+
+                Nothing ->
+                    text ""
             ]
     }
 
@@ -245,6 +289,7 @@ scheduleSettings t trainsDict isChecked =
 type ArrivalEstimate
     = LiveEstimate String
     | ScheduleEstimate String
+    | ActualTime String
 
 
 type alias TrainRowData =
@@ -258,27 +303,11 @@ type alias TrainRowData =
     }
 
 
-trainRow : T -> TrainRowData -> Train -> Html msg
-trainRow t data train =
+prettyBestEstimateFor : Posix -> TimetableRow -> Maybe ArrivalEstimate
+prettyBestEstimateFor currentTime timetableRow =
     let
-        tText =
-            t >> text
-
-        homeStationDepartingIn =
-            prettyBestEstimateFor train.homeStationDeparture
-
-        prettyBestEstimateFor timetableRow =
-            case timetableRow.liveEstimateTime of
-                Just estimate ->
-                    prettyDiff estimate
-                        |> Maybe.map LiveEstimate
-
-                Nothing ->
-                    prettyDiff timetableRow.scheduledTime
-                        |> Maybe.map ScheduleEstimate
-
         prettyDiff date =
-            (Time.posixToMillis date - Time.posixToMillis data.currentTime)
+            (Time.posixToMillis date - Time.posixToMillis currentTime)
                 |> Basics.max 0
                 |> (\millis ->
                         if millis < minutesToMillis 30 then
@@ -287,6 +316,64 @@ trainRow t data train =
                         else
                             Nothing
                    )
+    in
+    case timetableRow.liveEstimateTime of
+        Just estimate ->
+            prettyDiff estimate
+                |> Maybe.map LiveEstimate
+
+        Nothing ->
+            prettyDiff timetableRow.scheduledTime
+                |> Maybe.map ScheduleEstimate
+
+
+type TrainViewKind
+    = SchedulePageRow
+    | TrainPageCard
+
+
+trainRow : T -> TrainRowData -> Train -> Html msg
+trainRow =
+    trainViewCustom SchedulePageRow
+
+
+trainPageCard : T -> TrainRowData -> Train -> Html msg
+trainPageCard =
+    trainViewCustom TrainPageCard
+
+
+trainViewCustom : TrainViewKind -> T -> TrainRowData -> Train -> Html msg
+trainViewCustom kind t data train =
+    let
+        tText =
+            t >> text
+
+        wrapper =
+            case kind of
+                SchedulePageRow ->
+                    a
+                        [ href ("#/" ++ data.from ++ "/" ++ data.to ++ "/" ++ String.fromInt train.trainNumber)
+                        , class "train"
+                        , id ("train-" ++ String.fromInt train.trainNumber)
+                        ]
+
+                TrainPageCard ->
+                    div [ class "train is-expanded" ]
+
+        ( shownEstimate, estimateTranslation ) =
+            case ( train.homeStationDeparture.actualTime, train.endStationArrival.actualTime ) of
+                ( Just _, Just time ) ->
+                    ( Just (ActualTime (prettyTime data.zone time)), SchedulePageArrived )
+
+                ( Just _, Nothing ) ->
+                    ( prettyBestEstimateFor data.currentTime train.endStationArrival
+                    , SchedulePageArrivesIn
+                    )
+
+                _ ->
+                    ( prettyBestEstimateFor data.currentTime train.homeStationDeparture
+                    , SchedulePageDepartsIn
+                    )
 
         timeDiffTranslation station =
             case station.stoppingType of
@@ -318,7 +405,7 @@ trainRow t data train =
                 ( True, _ ) ->
                     div [ class "train-status-badge is-cancelled" ] [ tText SchedulePageCancelled ]
     in
-    div [ class "train", id ("train-" ++ String.fromInt train.trainNumber) ]
+    wrapper
         [ metaDataRow t data train
         , div [ class "train-content" ]
             [ div [ class "train-name" ] [ text train.lineId ]
@@ -331,10 +418,10 @@ trainRow t data train =
                 , stationRow data.zone data.stations train.endStationArrival
                 ]
             , div [ class "train-status" ] <|
-                case ( train.cancelled, homeStationDepartingIn ) of
+                case ( train.cancelled, shownEstimate ) of
                     ( False, Just estimate ) ->
                         [ div [ class "train-status-arriving" ]
-                            [ tText SchedulePageDepartsIn ]
+                            [ tText estimateTranslation ]
                         , div [ class "train-status-time" ]
                             [ case estimate of
                                 LiveEstimate time ->
@@ -342,6 +429,9 @@ trainRow t data train =
 
                                 ScheduleEstimate time ->
                                     text ("~" ++ time)
+
+                                ActualTime time ->
+                                    text time
                             ]
                         ]
 
