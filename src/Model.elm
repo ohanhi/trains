@@ -90,6 +90,7 @@ type Route
     = SelectDepRoute
     | SelectDestRoute String
     | ScheduleRoute String String
+    | TrainRoute String String Int
 
 
 type alias Model =
@@ -293,7 +294,6 @@ toTrain { from, to } trainRaw =
         isValid =
             (trainRaw.trainCategory == "Commuter")
                 && (List.length itineraryRows >= 2)
-                && (Maybe.andThen .actualTime homeStationDeparture == Nothing)
 
         viaAirport =
             List.member "LEN" (List.map .stationShortCode itineraryRows)

@@ -68,6 +68,9 @@ urlChange model url =
                 ScheduleRoute from to ->
                     ( Loading, getTrains { from = from, to = to } )
 
+                TrainRoute from to trainNumber ->
+                    ( Loading, getTrain { from = from, to = to } trainNumber )
+
                 _ ->
                     ( NotAsked, Cmd.none )
     in
@@ -153,6 +156,15 @@ updateTime ({ currentTime, route } as model) =
             else
                 ( model, Cmd.none )
 
+        TrainRoute from to trainNumber ->
+            if currentMillis - requestMillis >= 10000 then
+                ( { model | lastRequestTime = currentTime }
+                , getTrain { from = from, to = to } trainNumber
+                )
+
+            else
+                ( model, Cmd.none )
+
         _ ->
             ( model, Cmd.none )
 
@@ -168,6 +180,8 @@ parseUrl url =
                     |> Url.Parser.map SelectDestRoute
                 , (Url.Parser.string </> Url.Parser.string)
                     |> Url.Parser.map ScheduleRoute
+                , (Url.Parser.string </> Url.Parser.string </> Url.Parser.int)
+                    |> Url.Parser.map TrainRoute
                 ]
     in
     case url.fragment of
@@ -224,6 +238,17 @@ getTrains targets =
                 , Url.Builder.int "minutes_before_arrival" 0
                 , Url.Builder.int "minutes_after_arrival" 0
                 ]
+    in
+    get trainsUrl TrainsResponse (trainsDecoder targets)
+
+
+getTrain : Targets -> Int -> Cmd Msg
+getTrain targets trainNumber =
+    let
+        trainsUrl =
+            Url.Builder.crossOrigin "https://rata.digitraffic.fi/api/v1/trains/latest"
+                [ String.fromInt trainNumber ]
+                []
     in
     get trainsUrl TrainsResponse (trainsDecoder targets)
 

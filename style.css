@@ -33,6 +33,10 @@
   }
 }
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 html,
 head,
 body {
@@ -127,6 +131,7 @@ a:visited {
 }
 
 .train {
+  display: block;
   margin-bottom: 2rem;
 }
 
@@ -136,6 +141,7 @@ a:visited {
   flex-wrap: wrap;
   flex-direction: row;
   background-color: var(--color-black);
+  border-radius: 0.5rem 0.5rem 0 0;
 }
 
 .train-name {
@@ -178,6 +184,17 @@ a:visited {
   background-color: var(--color-charcoal);
   display: flex;
   justify-content: space-between;
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+
+.train.is-expanded .train-content {
+  padding: 2rem 1rem 1rem;
+}
+.train.is-expanded .train-status-badge {
+  padding: 0.5rem 1rem;
+}
+.train.is-expanded .train-stations-separator {
+  height: 2rem;
 }
 
 .train-status-badge.is-on-time {
@@ -217,13 +234,17 @@ a:visited {
   flex-direction: row;
   font-weight: normal;
   line-height: var(--type-scale-1);
+  color: var(--color-white);
 }
 
 .train-stations-estimate,
 .train-stations-separator {
   width: 3rem;
-  text-align: center;
   margin-right: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .train-stations-estimate {
