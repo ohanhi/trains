@@ -373,7 +373,7 @@ function _Debug_toAnsiString(ansi, value)
 		return _Debug_stringColor(ansi, '<' + value.byteLength + ' bytes>');
 	}
 
-	if (typeof File === 'function' && value instanceof File)
+	if (typeof File !== 'undefined' && value instanceof File)
 	{
 		return _Debug_internalColor(ansi, '<' + value.name + '>');
 	}
@@ -443,7 +443,7 @@ function _Debug_fadeColor(ansi, string)
 
 function _Debug_internalColor(ansi, string)
 {
-	return ansi ? '\x1b[94m' + string + '\x1b[0m' : string;
+	return ansi ? '\x1b[36m' + string + '\x1b[0m' : string;
 }
 
 function _Debug_toHexDigit(n)
@@ -519,11 +519,11 @@ function _Debug_crash_UNUSED(identifier, fact1, fact2, fact3, fact4)
 
 function _Debug_regionToString(region)
 {
-	if (region.aT.X === region.bd.X)
+	if (region.be.as === region.bD.as)
 	{
-		return 'on line ' + region.aT.X;
+		return 'on line ' + region.be.as;
 	}
-	return 'on lines ' + region.aT.X + ' through ' + region.bd.X;
+	return 'on lines ' + region.be.as + ' through ' + region.bD.as;
 }
 
 
@@ -544,12 +544,6 @@ function _Utils_eq(x, y)
 
 function _Utils_eqHelp(x, y, depth, stack)
 {
-	if (depth > 100)
-	{
-		stack.push(_Utils_Tuple2(x,y));
-		return true;
-	}
-
 	if (x === y)
 	{
 		return true;
@@ -559,6 +553,12 @@ function _Utils_eqHelp(x, y, depth, stack)
 	{
 		typeof x === 'function' && _Debug_crash(5);
 		return false;
+	}
+
+	if (depth > 100)
+	{
+		stack.push(_Utils_Tuple2(x,y));
+		return true;
 	}
 
 	/**_UNUSED/
@@ -861,7 +861,7 @@ var _String_cons = F2(function(chr, str)
 function _String_uncons(string)
 {
 	var word = string.charCodeAt(0);
-	return word
+	return !isNaN(word)
 		? $elm$core$Maybe$Just(
 			0xD800 <= word && word <= 0xDBFF
 				? _Utils_Tuple2(_Utils_chr(string[0] + string[1]), string.slice(2))
@@ -1529,7 +1529,7 @@ function _Json_runArrayDecoder(decoder, value, toElmValue)
 
 function _Json_isArray(value)
 {
-	return Array.isArray(value) || (typeof FileList === 'function' && value instanceof FileList);
+	return Array.isArray(value) || (typeof FileList !== 'undefined' && value instanceof FileList);
 }
 
 function _Json_toElmArray(array)
@@ -1857,9 +1857,9 @@ var _Platform_worker = F4(function(impl, flagDecoder, debugMetadata, args)
 	return _Platform_initialize(
 		flagDecoder,
 		args,
-		impl.ct,
-		impl.c7,
-		impl.cY,
+		impl.c8,
+		impl.dV,
+		impl.dJ,
 		function() { return function() {} }
 	);
 });
@@ -1874,19 +1874,19 @@ function _Platform_initialize(flagDecoder, args, init, update, subscriptions, st
 	var result = A2(_Json_run, flagDecoder, _Json_wrap(args ? args['flags'] : undefined));
 	$elm$core$Result$isOk(result) || _Debug_crash(2 /**_UNUSED/, _Json_errorToString(result.a) /**/);
 	var managers = {};
-	result = init(result.a);
-	var model = result.a;
+	var initPair = init(result.a);
+	var model = initPair.a;
 	var stepper = stepperBuilder(sendToApp, model);
 	var ports = _Platform_setupEffects(managers, sendToApp);
 
 	function sendToApp(msg, viewMetadata)
 	{
-		result = A2(update, msg, model);
-		stepper(model = result.a, viewMetadata);
-		_Platform_dispatchEffects(managers, result.b, subscriptions(model));
+		var pair = A2(update, msg, model);
+		stepper(model = pair.a, viewMetadata);
+		_Platform_enqueueEffects(managers, pair.b, subscriptions(model));
 	}
 
-	_Platform_dispatchEffects(managers, result.b, subscriptions(model));
+	_Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
 
 	return ports ? { ports: ports } : {};
 }
@@ -2044,6 +2044,51 @@ var _Platform_map = F2(function(tagger, bag)
 
 
 // PIPE BAGS INTO EFFECT MANAGERS
+//
+// Effects must be queued!
+//
+// Say your init contains a synchronous command, like Time.now or Time.here
+//
+//   - This will produce a batch of effects (FX_1)
+//   - The synchronous task triggers the subsequent `update` call
+//   - This will produce a batch of effects (FX_2)
+//
+// If we just start dispatching FX_2, subscriptions from FX_2 can be processed
+// before subscriptions from FX_1. No good! Earlier versions of this code had
+// this problem, leading to these reports:
+//
+//   https://github.com/elm/core/issues/980
+//   https://github.com/elm/core/pull/981
+//   https://github.com/elm/compiler/issues/1776
+//
+// The queue is necessary to avoid ordering issues for synchronous commands.
+
+
+// Why use true/false here? Why not just check the length of the queue?
+// The goal is to detect "are we currently dispatching effects?" If we
+// are, we need to bail and let the ongoing while loop handle things.
+//
+// Now say the queue has 1 element. When we dequeue the final element,
+// the queue will be empty, but we are still actively dispatching effects.
+// So you could get queue jumping in a really tricky category of cases.
+//
+var _Platform_effectsQueue = [];
+var _Platform_effectsActive = false;
+
+
+function _Platform_enqueueEffects(managers, cmdBag, subBag)
+{
+	_Platform_effectsQueue.push({ p: managers, q: cmdBag, r: subBag });
+
+	if (_Platform_effectsActive) return;
+
+	_Platform_effectsActive = true;
+	for (var fx; fx = _Platform_effectsQueue.shift(); )
+	{
+		_Platform_dispatchEffects(fx.p, fx.q, fx.r);
+	}
+	_Platform_effectsActive = false;
+}
 
 
 function _Platform_dispatchEffects(managers, cmdBag, subBag)
@@ -2081,8 +2126,8 @@ function _Platform_gatherEffects(isCmd, bag, effectsDict, taggers)
 
 		case 3:
 			_Platform_gatherEffects(isCmd, bag.o, effectsDict, {
-				p: bag.n,
-				q: taggers
+				s: bag.n,
+				t: taggers
 			});
 			return;
 	}
@@ -2093,9 +2138,9 @@ function _Platform_toEffect(isCmd, home, taggers, value)
 {
 	function applyTaggers(x)
 	{
-		for (var temp = taggers; temp; temp = temp.q)
+		for (var temp = taggers; temp; temp = temp.t)
 		{
-			x = temp.p(x);
+			x = temp.s(x);
 		}
 		return x;
 	}
@@ -2142,7 +2187,7 @@ function _Platform_outgoingPort(name, converter)
 	_Platform_checkPortName(name);
 	_Platform_effectManagers[name] = {
 		e: _Platform_outgoingPortMap,
-		r: converter,
+		u: converter,
 		a: _Platform_setupOutgoingPort
 	};
 	return _Platform_leaf(name);
@@ -2155,7 +2200,7 @@ var _Platform_outgoingPortMap = F2(function(tagger, value) { return value; });
 function _Platform_setupOutgoingPort(name)
 {
 	var subs = [];
-	var converter = _Platform_effectManagers[name].r;
+	var converter = _Platform_effectManagers[name].u;
 
 	// CREATE MANAGER
 
@@ -2212,7 +2257,7 @@ function _Platform_incomingPort(name, converter)
 	_Platform_checkPortName(name);
 	_Platform_effectManagers[name] = {
 		f: _Platform_incomingPortMap,
-		r: converter,
+		u: converter,
 		a: _Platform_setupIncomingPort
 	};
 	return _Platform_leaf(name);
@@ -2231,7 +2276,7 @@ var _Platform_incomingPortMap = F2(function(tagger, finalTagger)
 function _Platform_setupIncomingPort(name, sendToApp)
 {
 	var subs = _List_Nil;
-	var converter = _Platform_effectManagers[name].r;
+	var converter = _Platform_effectManagers[name].u;
 
 	// CREATE MANAGER
 
@@ -2573,16 +2618,33 @@ var _VirtualDom_attributeNS = F3(function(namespace, key, value)
 
 
 // XSS ATTACK VECTOR CHECKS
+//
+// For some reason, tabs can appear in href protocols and it still works.
+// So '\tjava\tSCRIPT:alert("!!!")' and 'javascript:alert("!!!")' are the same
+// in practice. That is why _VirtualDom_RE_js and _VirtualDom_RE_js_html look
+// so freaky.
+//
+// Pulling the regular expressions out to the top level gives a slight speed
+// boost in small benchmarks (4-10%) but hoisting values to reduce allocation
+// can be unpredictable in large programs where JIT may have a harder time with
+// functions are not fully self-contained. The benefit is more that the js and
+// js_html ones are so weird that I prefer to see them near each other.
+
+
+var _VirtualDom_RE_script = /^script$/i;
+var _VirtualDom_RE_on_formAction = /^(on|formAction$)/i;
+var _VirtualDom_RE_js = /^\s*j\s*a\s*v\s*a\s*s\s*c\s*r\s*i\s*p\s*t\s*:/i;
+var _VirtualDom_RE_js_html = /^\s*(j\s*a\s*v\s*a\s*s\s*c\s*r\s*i\s*p\s*t\s*:|d\s*a\s*t\s*a\s*:\s*t\s*e\s*x\s*t\s*\/\s*h\s*t\s*m\s*l\s*(,|;))/i;
 
 
 function _VirtualDom_noScript(tag)
 {
-	return tag == 'script' ? 'p' : tag;
+	return _VirtualDom_RE_script.test(tag) ? 'p' : tag;
 }
 
 function _VirtualDom_noOnOrFormAction(key)
 {
-	return /^(on|formAction$)/i.test(key) ? 'data-' + key : key;
+	return _VirtualDom_RE_on_formAction.test(key) ? 'data-' + key : key;
 }
 
 function _VirtualDom_noInnerHtmlOrFormAction(key)
@@ -2592,26 +2654,24 @@ function _VirtualDom_noInnerHtmlOrFormAction(key)
 
 function _VirtualDom_noJavaScriptUri(value)
 {
-	return /^javascript:/i.test(value.replace(/\s/g,'')) ? '' : value;
-}
-
-function _VirtualDom_noJavaScriptUri_UNUSED(value)
-{
-	return /^javascript:/i.test(value.replace(/\s/g,''))
-		? 'javascript:alert("This is an XSS vector. Please use ports or web components instead.")'
+	return _VirtualDom_RE_js.test(value)
+		? /**/''//*//**_UNUSED/'javascript:alert("This is an XSS vector. Please use ports or web components instead.")'//*/
 		: value;
 }
 
 function _VirtualDom_noJavaScriptOrHtmlUri(value)
 {
-	return /^\s*(javascript:|data:text\/html)/i.test(value) ? '' : value;
+	return _VirtualDom_RE_js_html.test(value)
+		? /**/''//*//**_UNUSED/'javascript:alert("This is an XSS vector. Please use ports or web components instead.")'//*/
+		: value;
 }
 
-function _VirtualDom_noJavaScriptOrHtmlUri_UNUSED(value)
+function _VirtualDom_noJavaScriptOrHtmlJson(value)
 {
-	return /^\s*(javascript:|data:text\/html)/i.test(value)
-		? 'javascript:alert("This is an XSS vector. Please use ports or web components instead.")'
-		: value;
+	return (typeof _Json_unwrap(value) === 'string' && _VirtualDom_RE_js_html.test(_Json_unwrap(value)))
+		? _Json_wrap(
+			/**/''//*//**_UNUSED/'javascript:alert("This is an XSS vector. Please use ports or web components instead.")'//*/
+		) : value;
 }
 
 
@@ -2659,9 +2719,9 @@ var _VirtualDom_mapEventTuple = F2(function(func, tuple)
 var _VirtualDom_mapEventRecord = F2(function(func, record)
 {
 	return {
-		C: func(record.C),
-		aU: record.aU,
-		aI: record.aI
+		T: func(record.T),
+		bf: record.bf,
+		a3: record.a3
 	}
 });
 
@@ -2929,11 +2989,11 @@ function _VirtualDom_makeCallback(eventNode, initialHandler)
 		// 3 = Custom
 
 		var value = result.a;
-		var message = !tag ? value : tag < 3 ? value.a : value.C;
-		var stopPropagation = tag == 1 ? value.b : tag == 3 && value.aU;
+		var message = !tag ? value : tag < 3 ? value.a : value.T;
+		var stopPropagation = tag == 1 ? value.b : tag == 3 && value.bf;
 		var currentEventNode = (
 			stopPropagation && event.stopPropagation(),
-			(tag == 2 ? value.b : tag == 3 && value.aI) && event.preventDefault(),
+			(tag == 2 ? value.b : tag == 3 && value.a3) && event.preventDefault(),
 			eventNode
 		);
 		var tagger;
@@ -3883,11 +3943,11 @@ var _Browser_element = _Debugger_element || F4(function(impl, flagDecoder, debug
 	return _Platform_initialize(
 		flagDecoder,
 		args,
-		impl.ct,
-		impl.c7,
-		impl.cY,
+		impl.c8,
+		impl.dV,
+		impl.dJ,
 		function(sendToApp, initialModel) {
-			var view = impl.c8;
+			var view = impl.dW;
 			/**/
 			var domNode = args['node'];
 			//*/
@@ -3919,12 +3979,12 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 	return _Platform_initialize(
 		flagDecoder,
 		args,
-		impl.ct,
-		impl.c7,
-		impl.cY,
+		impl.c8,
+		impl.dV,
+		impl.dJ,
 		function(sendToApp, initialModel) {
-			var divertHrefToApp = impl.aL && impl.aL(sendToApp)
-			var view = impl.c8;
+			var divertHrefToApp = impl.a6 && impl.a6(sendToApp)
+			var view = impl.dW;
 			var title = _VirtualDom_doc.title;
 			var bodyNode = _VirtualDom_doc.body;
 			var currNode = _VirtualDom_virtualize(bodyNode);
@@ -3932,12 +3992,12 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 			{
 				_VirtualDom_divertHrefToApp = divertHrefToApp;
 				var doc = view(model);
-				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.ah);
+				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.aC);
 				var patches = _VirtualDom_diff(currNode, nextNode);
 				bodyNode = _VirtualDom_applyPatches(bodyNode, currNode, patches, sendToApp);
 				currNode = nextNode;
 				_VirtualDom_divertHrefToApp = 0;
-				(title !== doc.as) && (_VirtualDom_doc.title = title = doc.as);
+				(title !== doc.aP) && (_VirtualDom_doc.title = title = doc.aP);
 			});
 		}
 	);
@@ -3993,12 +4053,12 @@ function _Browser_makeAnimator(model, draw)
 
 function _Browser_application(impl)
 {
-	var onUrlChange = impl.cI;
-	var onUrlRequest = impl.cJ;
+	var onUrlChange = impl.dq;
+	var onUrlRequest = impl.dr;
 	var key = function() { key.a(onUrlChange(_Browser_getUrl())); };
 
 	return _Browser_document({
-		aL: function(sendToApp)
+		a6: function(sendToApp)
 		{
 			key.a = sendToApp;
 			_Browser_window.addEventListener('popstate', key);
@@ -4014,9 +4074,9 @@ function _Browser_application(impl)
 					var next = $elm$url$Url$fromString(href).a;
 					sendToApp(onUrlRequest(
 						(next
-							&& curr.bH === next.bH
-							&& curr.bn === next.bn
-							&& curr.bD.a === next.bD.a
+							&& curr.cb === next.cb
+							&& curr.bP === next.bP
+							&& curr.b7.a === next.b7.a
 						)
 							? $elm$browser$Browser$Internal(next)
 							: $elm$browser$Browser$External(href)
@@ -4024,13 +4084,13 @@ function _Browser_application(impl)
 				}
 			});
 		},
-		ct: function(flags)
+		c8: function(flags)
 		{
-			return A3(impl.ct, flags, _Browser_getUrl(), key);
+			return A3(impl.c8, flags, _Browser_getUrl(), key);
 		},
-		c8: impl.c8,
-		c7: impl.c7,
-		cY: impl.cY
+		dW: impl.dW,
+		dV: impl.dV,
+		dJ: impl.dJ
 	});
 }
 
@@ -4096,17 +4156,17 @@ var _Browser_decodeEvent = F2(function(decoder, event)
 function _Browser_visibilityInfo()
 {
 	return (typeof _VirtualDom_doc.hidden !== 'undefined')
-		? { cr: 'hidden', cf: 'visibilitychange' }
+		? { c5: 'hidden', cT: 'visibilitychange' }
 		:
 	(typeof _VirtualDom_doc.mozHidden !== 'undefined')
-		? { cr: 'mozHidden', cf: 'mozvisibilitychange' }
+		? { c5: 'mozHidden', cT: 'mozvisibilitychange' }
 		:
 	(typeof _VirtualDom_doc.msHidden !== 'undefined')
-		? { cr: 'msHidden', cf: 'msvisibilitychange' }
+		? { c5: 'msHidden', cT: 'msvisibilitychange' }
 		:
 	(typeof _VirtualDom_doc.webkitHidden !== 'undefined')
-		? { cr: 'webkitHidden', cf: 'webkitvisibilitychange' }
-		: { cr: 'hidden', cf: 'visibilitychange' };
+		? { c5: 'webkitHidden', cT: 'webkitvisibilitychange' }
+		: { c5: 'hidden', cT: 'visibilitychange' };
 }
 
 
@@ -4187,12 +4247,12 @@ var _Browser_call = F2(function(functionName, id)
 function _Browser_getViewport()
 {
 	return {
-		bR: _Browser_getScene(),
-		b6: {
-			at: _Browser_window.pageXOffset,
-			au: _Browser_window.pageYOffset,
-			V: _Browser_doc.documentElement.clientWidth,
-			N: _Browser_doc.documentElement.clientHeight
+		ck: _Browser_getScene(),
+		cD: {
+			cH: _Browser_window.pageXOffset,
+			cI: _Browser_window.pageYOffset,
+			cG: _Browser_doc.documentElement.clientWidth,
+			bN: _Browser_doc.documentElement.clientHeight
 		}
 	};
 }
@@ -4202,8 +4262,8 @@ function _Browser_getScene()
 	var body = _Browser_doc.body;
 	var elem = _Browser_doc.documentElement;
 	return {
-		V: Math.max(body.scrollWidth, body.offsetWidth, elem.scrollWidth, elem.offsetWidth, elem.clientWidth),
-		N: Math.max(body.scrollHeight, body.offsetHeight, elem.scrollHeight, elem.offsetHeight, elem.clientHeight)
+		cG: Math.max(body.scrollWidth, body.offsetWidth, elem.scrollWidth, elem.offsetWidth, elem.clientWidth),
+		bN: Math.max(body.scrollHeight, body.offsetHeight, elem.scrollHeight, elem.offsetHeight, elem.clientHeight)
 	};
 }
 
@@ -4226,15 +4286,15 @@ function _Browser_getViewportOf(id)
 	return _Browser_withNode(id, function(node)
 	{
 		return {
-			bR: {
-				V: node.scrollWidth,
-				N: node.scrollHeight
+			ck: {
+				cG: node.scrollWidth,
+				bN: node.scrollHeight
 			},
-			b6: {
-				at: node.scrollLeft,
-				au: node.scrollTop,
-				V: node.clientWidth,
-				N: node.clientHeight
+			cD: {
+				cH: node.scrollLeft,
+				cI: node.scrollTop,
+				cG: node.clientWidth,
+				bN: node.clientHeight
 			}
 		};
 	});
@@ -4264,18 +4324,18 @@ function _Browser_getElement(id)
 		var x = _Browser_window.pageXOffset;
 		var y = _Browser_window.pageYOffset;
 		return {
-			bR: _Browser_getScene(),
-			b6: {
-				at: x,
-				au: y,
-				V: _Browser_doc.documentElement.clientWidth,
-				N: _Browser_doc.documentElement.clientHeight
+			ck: _Browser_getScene(),
+			cD: {
+				cH: x,
+				cI: y,
+				cG: _Browser_doc.documentElement.clientWidth,
+				bN: _Browser_doc.documentElement.clientHeight
 			},
-			cj: {
-				at: x + rect.left,
-				au: y + rect.top,
-				V: rect.width,
-				N: rect.height
+			cZ: {
+				cH: x + rect.left,
+				cI: y + rect.top,
+				cG: rect.width,
+				bN: rect.height
 			}
 		};
 	});
@@ -4320,25 +4380,25 @@ var _Http_toTask = F3(function(router, toTask, request)
 	return _Scheduler_binding(function(callback)
 	{
 		function done(response) {
-			callback(toTask(request.aw.a(response)));
+			callback(toTask(request.aS.a(response)));
 		}
 
 		var xhr = new XMLHttpRequest();
 		xhr.addEventListener('error', function() { done($elm$http$Http$NetworkError_); });
 		xhr.addEventListener('timeout', function() { done($elm$http$Http$Timeout_); });
-		xhr.addEventListener('load', function() { done(_Http_toResponse(request.aw.b, xhr)); });
-		$elm$core$Maybe$isJust(request.b2) && _Http_track(router, xhr, request.b2.a);
+		xhr.addEventListener('load', function() { done(_Http_toResponse(request.aS.b, xhr)); });
+		$elm$core$Maybe$isJust(request.cz) && _Http_track(router, xhr, request.cz.a);
 
 		try {
-			xhr.open(request.cv, request.a0, true);
+			xhr.open(request.dc, request.bn, true);
 		} catch (e) {
-			return done($elm$http$Http$BadUrl_(request.a0));
+			return done($elm$http$Http$BadUrl_(request.bn));
 		}
 
 		_Http_configureRequest(xhr, request);
 
-		request.ah.a && xhr.setRequestHeader('Content-Type', request.ah.a);
-		xhr.send(request.ah.b);
+		request.aC.a && xhr.setRequestHeader('Content-Type', request.aC.a);
+		xhr.send(request.aC.b);
 
 		return function() { xhr.c = true; xhr.abort(); };
 	});
@@ -4349,13 +4409,13 @@ var _Http_toTask = F3(function(router, toTask, request)
 
 function _Http_configureRequest(xhr, request)
 {
-	for (var headers = request.bl; headers.b; headers = headers.b) // WHILE_CONS
+	for (var headers = request.bM; headers.b; headers = headers.b) // WHILE_CONS
 	{
 		xhr.setRequestHeader(headers.a.a, headers.a.b);
 	}
-	xhr.timeout = request.c0.a || 0;
-	xhr.responseType = request.aw.d;
-	xhr.withCredentials = request.cc;
+	xhr.timeout = request.dN.a || 0;
+	xhr.responseType = request.aS.d;
+	xhr.withCredentials = request.cN;
 }
 
 
@@ -4376,10 +4436,10 @@ function _Http_toResponse(toBody, xhr)
 function _Http_toMetadata(xhr)
 {
 	return {
-		a0: xhr.responseURL,
-		cW: xhr.status,
-		cX: xhr.statusText,
-		bl: _Http_parseHeaders(xhr.getAllResponseHeaders())
+		bn: xhr.responseURL,
+		dH: xhr.status,
+		dI: xhr.statusText,
+		bM: _Http_parseHeaders(xhr.getAllResponseHeaders())
 	};
 }
 
@@ -4474,15 +4534,15 @@ function _Http_track(router, xhr, tracker)
 	xhr.upload.addEventListener('progress', function(event) {
 		if (xhr.c) { return; }
 		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Sending({
-			cT: event.loaded,
-			bU: event.total
+			dE: event.loaded,
+			co: event.total
 		}))));
 	});
 	xhr.addEventListener('progress', function(event) {
 		if (xhr.c) { return; }
 		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Receiving({
-			cP: event.loaded,
-			bU: event.lengthComputable ? $elm$core$Maybe$Just(event.total) : $elm$core$Maybe$Nothing
+			dx: event.loaded,
+			co: event.lengthComputable ? $elm$core$Maybe$Just(event.total) : $elm$core$Maybe$Nothing
 		}))));
 	});
 }
@@ -5090,25 +5150,25 @@ var $elm$core$Array$treeFromBuilder = F2(
 	});
 var $elm$core$Array$builderToArray = F2(
 	function (reverseNodeList, builder) {
-		if (!builder.m) {
+		if (!builder.q) {
 			return A4(
 				$elm$core$Array$Array_elm_builtin,
-				$elm$core$Elm$JsArray$length(builder.o),
+				$elm$core$Elm$JsArray$length(builder.t),
 				$elm$core$Array$shiftStep,
 				$elm$core$Elm$JsArray$empty,
-				builder.o);
+				builder.t);
 		} else {
-			var treeLen = builder.m * $elm$core$Array$branchFactor;
+			var treeLen = builder.q * $elm$core$Array$branchFactor;
 			var depth = $elm$core$Basics$floor(
 				A2($elm$core$Basics$logBase, $elm$core$Array$branchFactor, treeLen - 1));
-			var correctNodeList = reverseNodeList ? $elm$core$List$reverse(builder.p) : builder.p;
-			var tree = A2($elm$core$Array$treeFromBuilder, correctNodeList, builder.m);
+			var correctNodeList = reverseNodeList ? $elm$core$List$reverse(builder.u) : builder.u;
+			var tree = A2($elm$core$Array$treeFromBuilder, correctNodeList, builder.q);
 			return A4(
 				$elm$core$Array$Array_elm_builtin,
-				$elm$core$Elm$JsArray$length(builder.o) + treeLen,
+				$elm$core$Elm$JsArray$length(builder.t) + treeLen,
 				A2($elm$core$Basics$max, 5, depth * $elm$core$Array$shiftStep),
 				tree,
-				builder.o);
+				builder.t);
 		}
 	});
 var $elm$core$Basics$idiv = _Basics_idiv;
@@ -5121,7 +5181,7 @@ var $elm$core$Array$initializeHelp = F5(
 				return A2(
 					$elm$core$Array$builderToArray,
 					false,
-					{p: nodeList, m: (len / $elm$core$Array$branchFactor) | 0, o: tail});
+					{u: nodeList, q: (len / $elm$core$Array$branchFactor) | 0, t: tail});
 			} else {
 				var leaf = $elm$core$Array$Leaf(
 					A3($elm$core$Elm$JsArray$initialize, $elm$core$Array$branchFactor, fromIndex, fn));
@@ -5189,7 +5249,7 @@ var $elm$url$Url$Http = 0;
 var $elm$url$Url$Https = 1;
 var $elm$url$Url$Url = F6(
 	function (protocol, host, port_, path, query, fragment) {
-		return {bi: fragment, bn: host, cM: path, bD: port_, bH: protocol, bI: query};
+		return {bI: fragment, bP: host, du: path, b7: port_, cb: protocol, cc: query};
 	});
 var $elm$core$String$contains = _String_contains;
 var $elm$core$String$length = _String_length;
@@ -5478,7 +5538,7 @@ var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$json$Json$Decode$decodeString = _Json_runOnString;
 var $elm$json$Json$Decode$int = _Json_decodeInt;
 var $author$project$Translations$Finnish = 0;
-var $author$project$Model$defaultStoredState = {aE: 0, aM: false};
+var $author$project$Model$defaultStoredState = {a$: 0, a7: false};
 var $elm$json$Json$Decode$fail = _Json_fail;
 var $elm$json$Json$Decode$string = _Json_decodeString;
 var $author$project$Translations$English = 1;
@@ -5523,11 +5583,11 @@ var $author$project$Model$storedStateDecoderV1 = A3(
 		function (lang) {
 			return _Utils_update(
 				$author$project$Model$defaultStoredState,
-				{aE: lang});
+				{a$: lang});
 		}));
 var $author$project$Model$StoredState = F2(
 	function (language, showTrainsViaAirport) {
-		return {aE: language, aM: showTrainsViaAirport};
+		return {a$: language, a7: showTrainsViaAirport};
 	});
 var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $author$project$Model$storedStateDecoderV2 = A3(
@@ -5562,11 +5622,11 @@ var $elm$http$Http$Header = F2(
 var $elm$http$Http$header = $elm$http$Http$Header;
 var $ohanhi$remotedata_http$RemoteData$Http$acceptJson = A2($elm$http$Http$header, 'Accept', 'application/json');
 var $ohanhi$remotedata_http$RemoteData$Http$defaultConfig = {
-	bl: _List_fromArray(
+	bM: _List_fromArray(
 		[$ohanhi$remotedata_http$RemoteData$Http$acceptJson]),
-	Q: false,
-	c0: $elm$core$Maybe$Nothing,
-	b2: $elm$core$Maybe$Nothing
+	ah: false,
+	dN: $elm$core$Maybe$Nothing,
+	cz: $elm$core$Maybe$Nothing
 };
 var $elm$http$Http$BadStatus_ = F2(
 	function (a, b) {
@@ -6158,7 +6218,7 @@ var $elm$http$Http$resolve = F2(
 			case 3:
 				var metadata = response.a;
 				return $elm$core$Result$Err(
-					$elm$http$Http$BadStatus(metadata.cW));
+					$elm$http$Http$BadStatus(metadata.dH));
 			default:
 				var body = response.b;
 				return A2(
@@ -6200,7 +6260,7 @@ var $elm$http$Http$Request = function (a) {
 };
 var $elm$http$Http$State = F2(
 	function (reqs, subs) {
-		return {bK: reqs, b0: subs};
+		return {ce: reqs, cw: subs};
 	});
 var $elm$http$Http$init = $elm$core$Task$succeed(
 	A2($elm$http$Http$State, $elm$core$Dict$empty, _List_Nil));
@@ -6244,7 +6304,7 @@ var $elm$http$Http$updateReqs = F3(
 					return A2(
 						$elm$core$Task$andThen,
 						function (pid) {
-							var _v4 = req.b2;
+							var _v4 = req.cz;
 							if (_v4.$ === 1) {
 								return A3($elm$http$Http$updateReqs, router, otherCmds, reqs);
 							} else {
@@ -6274,7 +6334,7 @@ var $elm$http$Http$onEffects = F4(
 				return $elm$core$Task$succeed(
 					A2($elm$http$Http$State, reqs, subs));
 			},
-			A3($elm$http$Http$updateReqs, router, cmds, state.bK));
+			A3($elm$http$Http$updateReqs, router, cmds, state.ce));
 	});
 var $elm$core$List$maybeCons = F3(
 	function (f, mx, xs) {
@@ -6317,7 +6377,7 @@ var $elm$http$Http$onSelfMsg = F3(
 				A2(
 					$elm$core$List$filterMap,
 					A3($elm$http$Http$maybeSend, router, tracker, progress),
-					state.b0)));
+					state.cw)));
 	});
 var $elm$http$Http$Cancel = function (a) {
 	return {$: 0, a: a};
@@ -6331,14 +6391,14 @@ var $elm$http$Http$cmdMap = F2(
 			var r = cmd.a;
 			return $elm$http$Http$Request(
 				{
-					cc: r.cc,
-					ah: r.ah,
-					aw: A2(_Http_mapExpect, func, r.aw),
-					bl: r.bl,
-					cv: r.cv,
-					c0: r.c0,
-					b2: r.b2,
-					a0: r.a0
+					cN: r.cN,
+					aC: r.aC,
+					aS: A2(_Http_mapExpect, func, r.aS),
+					bM: r.bM,
+					dc: r.dc,
+					dN: r.dN,
+					cz: r.cz,
+					bn: r.bn
 				});
 		}
 	});
@@ -6361,15 +6421,15 @@ var $elm$http$Http$subscription = _Platform_leaf('Http');
 var $elm$http$Http$request = function (r) {
 	return $elm$http$Http$command(
 		$elm$http$Http$Request(
-			{cc: false, ah: r.ah, aw: r.aw, bl: r.bl, cv: r.cv, c0: r.c0, b2: r.b2, a0: r.a0}));
+			{cN: false, aC: r.aC, aS: r.aS, bM: r.bM, dc: r.dc, dN: r.dN, cz: r.cz, bn: r.bn}));
 };
 var $elm$http$Http$riskyRequest = function (r) {
 	return $elm$http$Http$command(
 		$elm$http$Http$Request(
-			{cc: true, ah: r.ah, aw: r.aw, bl: r.bl, cv: r.cv, c0: r.c0, b2: r.b2, a0: r.a0}));
+			{cN: true, aC: r.aC, aS: r.aS, bM: r.bM, dc: r.dc, dN: r.dN, cz: r.cz, bn: r.bn}));
 };
 var $ohanhi$remotedata_http$RemoteData$Http$performRequest = function (_v0) {
-	var risky = _v0.Q;
+	var risky = _v0.ah;
 	return risky ? $elm$http$Http$riskyRequest : $elm$http$Http$request;
 };
 var $ohanhi$remotedata_http$RemoteData$Http$request = F6(
@@ -6378,16 +6438,16 @@ var $ohanhi$remotedata_http$RemoteData$Http$request = F6(
 			$ohanhi$remotedata_http$RemoteData$Http$performRequest,
 			config,
 			{
-				ah: body,
-				aw: A2(
+				aC: body,
+				aS: A2(
 					$elm$http$Http$expectJson,
 					A2($elm$core$Basics$composeR, $krisajenkins$remotedata$RemoteData$fromResult, tagger),
 					decoder),
-				bl: config.bl,
-				cv: method,
-				c0: config.c0,
-				b2: config.b2,
-				a0: url
+				bM: config.bM,
+				dc: method,
+				dN: config.dN,
+				cz: config.cz,
+				bn: url
 			});
 	});
 var $ohanhi$remotedata_http$RemoteData$Http$getWithConfig = F4(
@@ -6475,7 +6535,7 @@ var $elm$url$Url$Builder$crossOrigin = F3(
 	});
 var $author$project$Model$TrainRaw = F6(
 	function (trainNumber, lineId, trainCategory, timetableRows, runningCurrently, cancelled) {
-		return {ai: cancelled, an: lineId, aq: runningCurrently, a_: timetableRows, b4: trainCategory, ac: trainNumber};
+		return {aD: cancelled, aI: lineId, aL: runningCurrently, bl: timetableRows, cB: trainCategory, ax: trainNumber};
 	});
 var $elm$core$Basics$composeL = F3(
 	function (g, f, x) {
@@ -6484,10 +6544,74 @@ var $elm$core$Basics$composeL = F3(
 	});
 var $author$project$Model$TimetableRow = F9(
 	function (scheduledTime, trainStopping, stationShortCode, stationUICCode, track, rowType, actualTime, liveEstimateTime, differenceInMinutes) {
-		return {F: actualTime, ak: differenceInMinutes, bv: liveEstimateTime, J: rowType, K: scheduledTime, S: stationShortCode, cV: stationUICCode, c6: track, ad: trainStopping};
+		return {W: actualTime, aF: differenceInMinutes, bY: liveEstimateTime, ab: rowType, ac: scheduledTime, aj: stationShortCode, dG: stationUICCode, dT: track, ay: trainStopping};
 	});
-var $elm$parser$Parser$deadEndsToString = function (deadEnds) {
-	return 'TODO deadEndsToString';
+var $elm$core$String$concat = function (strings) {
+	return A2($elm$core$String$join, '', strings);
+};
+var $rtfeldman$elm_iso8601_date_strings$DeadEnds$problemToString = function (p) {
+	switch (p.$) {
+		case 0:
+			var s = p.a;
+			return 'expecting \'' + (s + '\'');
+		case 1:
+			return 'expecting int';
+		case 2:
+			return 'expecting hex';
+		case 3:
+			return 'expecting octal';
+		case 4:
+			return 'expecting binary';
+		case 5:
+			return 'expecting float';
+		case 6:
+			return 'expecting number';
+		case 7:
+			return 'expecting variable';
+		case 8:
+			var s = p.a;
+			return 'expecting symbol \'' + (s + '\'');
+		case 9:
+			var s = p.a;
+			return 'expecting keyword \'' + (s + '\'');
+		case 10:
+			return 'expecting end';
+		case 11:
+			return 'unexpected char';
+		case 12:
+			var s = p.a;
+			return 'problem ' + s;
+		default:
+			return 'bad repeat';
+	}
+};
+var $rtfeldman$elm_iso8601_date_strings$DeadEnds$deadEndToString = function (deadend) {
+	return $rtfeldman$elm_iso8601_date_strings$DeadEnds$problemToString(deadend.b8) + (' at row ' + ($elm$core$String$fromInt(deadend.ci) + (', col ' + $elm$core$String$fromInt(deadend.bu))));
+};
+var $elm$core$List$intersperse = F2(
+	function (sep, xs) {
+		if (!xs.b) {
+			return _List_Nil;
+		} else {
+			var hd = xs.a;
+			var tl = xs.b;
+			var step = F2(
+				function (x, rest) {
+					return A2(
+						$elm$core$List$cons,
+						sep,
+						A2($elm$core$List$cons, x, rest));
+				});
+			var spersed = A3($elm$core$List$foldr, step, _List_Nil, tl);
+			return A2($elm$core$List$cons, hd, spersed);
+		}
+	});
+var $rtfeldman$elm_iso8601_date_strings$DeadEnds$deadEndsToString = function (deadEnds) {
+	return $elm$core$String$concat(
+		A2(
+			$elm$core$List$intersperse,
+			'; ',
+			A2($elm$core$List$map, $rtfeldman$elm_iso8601_date_strings$DeadEnds$deadEndToString, deadEnds)));
 };
 var $elm$parser$Parser$Advanced$Bad = F2(
 	function (a, b) {
@@ -6535,7 +6659,7 @@ var $elm$parser$Parser$Advanced$AddRight = F2(
 	});
 var $elm$parser$Parser$Advanced$DeadEnd = F4(
 	function (row, col, problem, contextStack) {
-		return {a6: col, ch: contextStack, bE: problem, bO: row};
+		return {bu: col, cV: contextStack, b8: problem, ci: row};
 	});
 var $elm$parser$Parser$Advanced$Empty = {$: 0};
 var $elm$parser$Parser$Advanced$fromState = F2(
@@ -6543,12 +6667,12 @@ var $elm$parser$Parser$Advanced$fromState = F2(
 		return A2(
 			$elm$parser$Parser$Advanced$AddRight,
 			$elm$parser$Parser$Advanced$Empty,
-			A4($elm$parser$Parser$Advanced$DeadEnd, s.bO, s.a6, x, s.j));
+			A4($elm$parser$Parser$Advanced$DeadEnd, s.ci, s.bu, x, s.l));
 	});
 var $elm$parser$Parser$Advanced$end = function (x) {
 	return function (s) {
 		return _Utils_eq(
-			$elm$core$String$length(s.f),
+			$elm$core$String$length(s.g),
 			s.e) ? A3($elm$parser$Parser$Advanced$Good, false, 0, s) : A2(
 			$elm$parser$Parser$Advanced$Bad,
 			false,
@@ -6564,13 +6688,13 @@ var $elm$parser$Parser$Advanced$chompWhileHelp = F5(
 	function (isGood, offset, row, col, s0) {
 		chompWhileHelp:
 		while (true) {
-			var newOffset = A3($elm$parser$Parser$Advanced$isSubChar, isGood, offset, s0.f);
+			var newOffset = A3($elm$parser$Parser$Advanced$isSubChar, isGood, offset, s0.g);
 			if (_Utils_eq(newOffset, -1)) {
 				return A3(
 					$elm$parser$Parser$Advanced$Good,
 					_Utils_cmp(s0.e, offset) < 0,
 					0,
-					{a6: col, j: s0.j, k: s0.k, e: offset, bO: row, f: s0.f});
+					{bu: col, l: s0.l, m: s0.m, e: offset, ci: row, g: s0.g});
 			} else {
 				if (_Utils_eq(newOffset, -2)) {
 					var $temp$isGood = isGood,
@@ -6602,7 +6726,7 @@ var $elm$parser$Parser$Advanced$chompWhileHelp = F5(
 	});
 var $elm$parser$Parser$Advanced$chompWhile = function (isGood) {
 	return function (s) {
-		return A5($elm$parser$Parser$Advanced$chompWhileHelp, isGood, s.e, s.bO, s.a6, s);
+		return A5($elm$parser$Parser$Advanced$chompWhileHelp, isGood, s.e, s.ci, s.bu, s);
 	};
 };
 var $elm$parser$Parser$chompWhile = $elm$parser$Parser$Advanced$chompWhile;
@@ -6628,7 +6752,7 @@ var $elm$parser$Parser$Advanced$mapChompedString = F2(
 					p,
 					A2(
 						func,
-						A3($elm$core$String$slice, s0.e, s1.e, s0.f),
+						A3($elm$core$String$slice, s0.e, s1.e, s0.g),
 						a),
 					s1);
 			}
@@ -6727,6 +6851,116 @@ var $elm$parser$Parser$Advanced$keeper = F2(
 		return A3($elm$parser$Parser$Advanced$map2, $elm$core$Basics$apL, parseFunc, parseArg);
 	});
 var $elm$parser$Parser$keeper = $elm$parser$Parser$Advanced$keeper;
+var $elm$parser$Parser$Advanced$Append = F2(
+	function (a, b) {
+		return {$: 2, a: a, b: b};
+	});
+var $elm$parser$Parser$Advanced$oneOfHelp = F3(
+	function (s0, bag, parsers) {
+		oneOfHelp:
+		while (true) {
+			if (!parsers.b) {
+				return A2($elm$parser$Parser$Advanced$Bad, false, bag);
+			} else {
+				var parse = parsers.a;
+				var remainingParsers = parsers.b;
+				var _v1 = parse(s0);
+				if (!_v1.$) {
+					var step = _v1;
+					return step;
+				} else {
+					var step = _v1;
+					var p = step.a;
+					var x = step.b;
+					if (p) {
+						return step;
+					} else {
+						var $temp$s0 = s0,
+							$temp$bag = A2($elm$parser$Parser$Advanced$Append, bag, x),
+							$temp$parsers = remainingParsers;
+						s0 = $temp$s0;
+						bag = $temp$bag;
+						parsers = $temp$parsers;
+						continue oneOfHelp;
+					}
+				}
+			}
+		}
+	});
+var $elm$parser$Parser$Advanced$oneOf = function (parsers) {
+	return function (s) {
+		return A3($elm$parser$Parser$Advanced$oneOfHelp, s, $elm$parser$Parser$Advanced$Empty, parsers);
+	};
+};
+var $elm$parser$Parser$oneOf = $elm$parser$Parser$Advanced$oneOf;
+var $elm$parser$Parser$Done = function (a) {
+	return {$: 1, a: a};
+};
+var $elm$parser$Parser$Loop = function (a) {
+	return {$: 0, a: a};
+};
+var $elm$core$String$append = _String_append;
+var $elm$parser$Parser$UnexpectedChar = {$: 11};
+var $elm$parser$Parser$Advanced$chompIf = F2(
+	function (isGood, expecting) {
+		return function (s) {
+			var newOffset = A3($elm$parser$Parser$Advanced$isSubChar, isGood, s.e, s.g);
+			return _Utils_eq(newOffset, -1) ? A2(
+				$elm$parser$Parser$Advanced$Bad,
+				false,
+				A2($elm$parser$Parser$Advanced$fromState, s, expecting)) : (_Utils_eq(newOffset, -2) ? A3(
+				$elm$parser$Parser$Advanced$Good,
+				true,
+				0,
+				{bu: 1, l: s.l, m: s.m, e: s.e + 1, ci: s.ci + 1, g: s.g}) : A3(
+				$elm$parser$Parser$Advanced$Good,
+				true,
+				0,
+				{bu: s.bu + 1, l: s.l, m: s.m, e: newOffset, ci: s.ci, g: s.g}));
+		};
+	});
+var $elm$parser$Parser$chompIf = function (isGood) {
+	return A2($elm$parser$Parser$Advanced$chompIf, isGood, $elm$parser$Parser$UnexpectedChar);
+};
+var $elm$parser$Parser$Advanced$loopHelp = F4(
+	function (p, state, callback, s0) {
+		loopHelp:
+		while (true) {
+			var _v0 = callback(state);
+			var parse = _v0;
+			var _v1 = parse(s0);
+			if (!_v1.$) {
+				var p1 = _v1.a;
+				var step = _v1.b;
+				var s1 = _v1.c;
+				if (!step.$) {
+					var newState = step.a;
+					var $temp$p = p || p1,
+						$temp$state = newState,
+						$temp$callback = callback,
+						$temp$s0 = s1;
+					p = $temp$p;
+					state = $temp$state;
+					callback = $temp$callback;
+					s0 = $temp$s0;
+					continue loopHelp;
+				} else {
+					var result = step.a;
+					return A3($elm$parser$Parser$Advanced$Good, p || p1, result, s1);
+				}
+			} else {
+				var p1 = _v1.a;
+				var x = _v1.b;
+				return A2($elm$parser$Parser$Advanced$Bad, p || p1, x);
+			}
+		}
+	});
+var $elm$parser$Parser$Advanced$loop = F2(
+	function (state, callback) {
+		return function (s) {
+			return A4($elm$parser$Parser$Advanced$loopHelp, false, state, callback, s);
+		};
+	});
 var $elm$parser$Parser$Advanced$map = F2(
 	function (func, _v0) {
 		var parse = _v0;
@@ -6749,28 +6983,60 @@ var $elm$parser$Parser$Advanced$map = F2(
 		};
 	});
 var $elm$parser$Parser$map = $elm$parser$Parser$Advanced$map;
+var $elm$parser$Parser$Advanced$Done = function (a) {
+	return {$: 1, a: a};
+};
+var $elm$parser$Parser$Advanced$Loop = function (a) {
+	return {$: 0, a: a};
+};
+var $elm$parser$Parser$toAdvancedStep = function (step) {
+	if (!step.$) {
+		var s = step.a;
+		return $elm$parser$Parser$Advanced$Loop(s);
+	} else {
+		var a = step.a;
+		return $elm$parser$Parser$Advanced$Done(a);
+	}
+};
+var $elm$parser$Parser$loop = F2(
+	function (state, callback) {
+		return A2(
+			$elm$parser$Parser$Advanced$loop,
+			state,
+			function (s) {
+				return A2(
+					$elm$parser$Parser$map,
+					$elm$parser$Parser$toAdvancedStep,
+					callback(s));
+			});
+	});
 var $rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt = function (quantity) {
-	return A2(
-		$elm$parser$Parser$andThen,
-		function (str) {
-			if (_Utils_eq(
-				$elm$core$String$length(str),
-				quantity)) {
-				var _v0 = $elm$core$String$toInt(str);
-				if (!_v0.$) {
-					var intVal = _v0.a;
-					return $elm$parser$Parser$succeed(intVal);
-				} else {
-					return $elm$parser$Parser$problem('Invalid integer: \"' + (str + '\"'));
-				}
+	var helper = function (str) {
+		if (_Utils_eq(
+			$elm$core$String$length(str),
+			quantity)) {
+			var _v0 = $elm$core$String$toInt(str);
+			if (!_v0.$) {
+				var intVal = _v0.a;
+				return A2(
+					$elm$parser$Parser$map,
+					$elm$parser$Parser$Done,
+					$elm$parser$Parser$succeed(intVal));
 			} else {
-				return $elm$parser$Parser$problem(
-					'Expected ' + ($elm$core$String$fromInt(quantity) + (' digits, but got ' + $elm$core$String$fromInt(
-						$elm$core$String$length(str)))));
+				return $elm$parser$Parser$problem('Invalid integer: \"' + (str + '\"'));
 			}
-		},
-		$elm$parser$Parser$getChompedString(
-			$elm$parser$Parser$chompWhile($elm$core$Char$isDigit)));
+		} else {
+			return A2(
+				$elm$parser$Parser$map,
+				function (nextChar) {
+					return $elm$parser$Parser$Loop(
+						A2($elm$core$String$append, str, nextChar));
+				},
+				$elm$parser$Parser$getChompedString(
+					$elm$parser$Parser$chompIf($elm$core$Char$isDigit)));
+		}
+	};
+	return A2($elm$parser$Parser$loop, '', helper);
 };
 var $elm$parser$Parser$ExpectingSymbol = function (a) {
 	return {$: 8, a: a};
@@ -6786,7 +7052,7 @@ var $elm$parser$Parser$Advanced$token = function (_v0) {
 	var expecting = _v0.b;
 	var progress = !$elm$core$String$isEmpty(str);
 	return function (s) {
-		var _v1 = A5($elm$parser$Parser$Advanced$isSubString, str, s.e, s.bO, s.a6, s.f);
+		var _v1 = A5($elm$parser$Parser$Advanced$isSubString, str, s.e, s.ci, s.bu, s.g);
 		var newOffset = _v1.a;
 		var newRow = _v1.b;
 		var newCol = _v1.c;
@@ -6797,7 +7063,7 @@ var $elm$parser$Parser$Advanced$token = function (_v0) {
 			$elm$parser$Parser$Advanced$Good,
 			progress,
 			0,
-			{a6: newCol, j: s.j, k: s.k, e: newOffset, bO: newRow, f: s.f});
+			{bu: newCol, l: s.l, m: s.m, e: newOffset, ci: newRow, g: s.g});
 	};
 };
 var $elm$parser$Parser$Advanced$symbol = $elm$parser$Parser$Advanced$token;
@@ -6882,61 +7148,91 @@ var $rtfeldman$elm_iso8601_date_strings$Iso8601$monthYearDayInMs = A2(
 						function (year, month, day) {
 							return _Utils_Tuple3(year, month, day);
 						})),
-				A2(
+				$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(4)),
+			$elm$parser$Parser$oneOf(
+				_List_fromArray(
+					[
+						A2(
+						$elm$parser$Parser$keeper,
+						A2(
+							$elm$parser$Parser$ignorer,
+							$elm$parser$Parser$succeed($elm$core$Basics$identity),
+							$elm$parser$Parser$symbol('-')),
+						$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2)),
+						$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2)
+					]))),
+		$elm$parser$Parser$oneOf(
+			_List_fromArray(
+				[
+					A2(
+					$elm$parser$Parser$keeper,
+					A2(
+						$elm$parser$Parser$ignorer,
+						$elm$parser$Parser$succeed($elm$core$Basics$identity),
+						$elm$parser$Parser$symbol('-')),
+					$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2)),
+					$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2)
+				]))));
+var $rtfeldman$elm_iso8601_date_strings$Iso8601$utcOffsetInMinutes = function () {
+	var utcOffsetMinutesFromParts = F3(
+		function (multiplier, hours, minutes) {
+			return (multiplier * (hours * 60)) + minutes;
+		});
+	return A2(
+		$elm$parser$Parser$keeper,
+		$elm$parser$Parser$succeed($elm$core$Basics$identity),
+		$elm$parser$Parser$oneOf(
+			_List_fromArray(
+				[
+					A2(
+					$elm$parser$Parser$map,
+					function (_v0) {
+						return 0;
+					},
+					$elm$parser$Parser$symbol('Z')),
+					A2(
+					$elm$parser$Parser$keeper,
+					A2(
+						$elm$parser$Parser$keeper,
+						A2(
+							$elm$parser$Parser$keeper,
+							$elm$parser$Parser$succeed(utcOffsetMinutesFromParts),
+							$elm$parser$Parser$oneOf(
+								_List_fromArray(
+									[
+										A2(
+										$elm$parser$Parser$map,
+										function (_v1) {
+											return 1;
+										},
+										$elm$parser$Parser$symbol('+')),
+										A2(
+										$elm$parser$Parser$map,
+										function (_v2) {
+											return -1;
+										},
+										$elm$parser$Parser$symbol('-'))
+									]))),
+						$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2)),
+					$elm$parser$Parser$oneOf(
+						_List_fromArray(
+							[
+								A2(
+								$elm$parser$Parser$keeper,
+								A2(
+									$elm$parser$Parser$ignorer,
+									$elm$parser$Parser$succeed($elm$core$Basics$identity),
+									$elm$parser$Parser$symbol(':')),
+								$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2)),
+								$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2),
+								$elm$parser$Parser$succeed(0)
+							]))),
+					A2(
 					$elm$parser$Parser$ignorer,
-					$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(4),
-					$elm$parser$Parser$symbol('-'))),
-			A2(
-				$elm$parser$Parser$ignorer,
-				$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2),
-				$elm$parser$Parser$symbol('-'))),
-		$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2)));
-var $elm$parser$Parser$Advanced$Append = F2(
-	function (a, b) {
-		return {$: 2, a: a, b: b};
-	});
-var $elm$parser$Parser$Advanced$oneOfHelp = F3(
-	function (s0, bag, parsers) {
-		oneOfHelp:
-		while (true) {
-			if (!parsers.b) {
-				return A2($elm$parser$Parser$Advanced$Bad, false, bag);
-			} else {
-				var parse = parsers.a;
-				var remainingParsers = parsers.b;
-				var _v1 = parse(s0);
-				if (!_v1.$) {
-					var step = _v1;
-					return step;
-				} else {
-					var step = _v1;
-					var p = step.a;
-					var x = step.b;
-					if (p) {
-						return step;
-					} else {
-						var $temp$s0 = s0,
-							$temp$bag = A2($elm$parser$Parser$Advanced$Append, bag, x),
-							$temp$parsers = remainingParsers;
-						s0 = $temp$s0;
-						bag = $temp$bag;
-						parsers = $temp$parsers;
-						continue oneOfHelp;
-					}
-				}
-			}
-		}
-	});
-var $elm$parser$Parser$Advanced$oneOf = function (parsers) {
-	return function (s) {
-		return A3($elm$parser$Parser$Advanced$oneOfHelp, s, $elm$parser$Parser$Advanced$Empty, parsers);
-	};
-};
-var $elm$parser$Parser$oneOf = $elm$parser$Parser$Advanced$oneOf;
-var $rtfeldman$elm_iso8601_date_strings$Iso8601$utcOffsetMinutesFromParts = F3(
-	function (multiplier, hours, minutes) {
-		return multiplier * ((hours * 60) + minutes);
-	});
+					$elm$parser$Parser$succeed(0),
+					$elm$parser$Parser$end)
+				])));
+}();
 var $rtfeldman$elm_iso8601_date_strings$Iso8601$iso8601 = A2(
 	$elm$parser$Parser$andThen,
 	function (datePart) {
@@ -6958,15 +7254,32 @@ var $rtfeldman$elm_iso8601_date_strings$Iso8601$iso8601 = A2(
 										$elm$parser$Parser$succeed(
 											$rtfeldman$elm_iso8601_date_strings$Iso8601$fromParts(datePart)),
 										$elm$parser$Parser$symbol('T')),
-									A2(
-										$elm$parser$Parser$ignorer,
+									$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2)),
+								$elm$parser$Parser$oneOf(
+									_List_fromArray(
+										[
+											A2(
+											$elm$parser$Parser$keeper,
+											A2(
+												$elm$parser$Parser$ignorer,
+												$elm$parser$Parser$succeed($elm$core$Basics$identity),
+												$elm$parser$Parser$symbol(':')),
+											$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2)),
+											$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2)
+										]))),
+							$elm$parser$Parser$oneOf(
+								_List_fromArray(
+									[
+										A2(
+										$elm$parser$Parser$keeper,
+										A2(
+											$elm$parser$Parser$ignorer,
+											$elm$parser$Parser$succeed($elm$core$Basics$identity),
+											$elm$parser$Parser$symbol(':')),
+										$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2)),
 										$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2),
-										$elm$parser$Parser$symbol(':'))),
-								A2(
-									$elm$parser$Parser$ignorer,
-									$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2),
-									$elm$parser$Parser$symbol(':'))),
-							$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2)),
+										$elm$parser$Parser$succeed(0)
+									]))),
 						$elm$parser$Parser$oneOf(
 							_List_fromArray(
 								[
@@ -6979,44 +7292,7 @@ var $rtfeldman$elm_iso8601_date_strings$Iso8601$iso8601 = A2(
 									$rtfeldman$elm_iso8601_date_strings$Iso8601$fractionsOfASecondInMs),
 									$elm$parser$Parser$succeed(0)
 								]))),
-					$elm$parser$Parser$oneOf(
-						_List_fromArray(
-							[
-								A2(
-								$elm$parser$Parser$map,
-								function (_v0) {
-									return 0;
-								},
-								$elm$parser$Parser$symbol('Z')),
-								A2(
-								$elm$parser$Parser$keeper,
-								A2(
-									$elm$parser$Parser$keeper,
-									A2(
-										$elm$parser$Parser$keeper,
-										$elm$parser$Parser$succeed($rtfeldman$elm_iso8601_date_strings$Iso8601$utcOffsetMinutesFromParts),
-										$elm$parser$Parser$oneOf(
-											_List_fromArray(
-												[
-													A2(
-													$elm$parser$Parser$map,
-													function (_v1) {
-														return 1;
-													},
-													$elm$parser$Parser$symbol('+')),
-													A2(
-													$elm$parser$Parser$map,
-													function (_v2) {
-														return -1;
-													},
-													$elm$parser$Parser$symbol('-'))
-												]))),
-									A2(
-										$elm$parser$Parser$ignorer,
-										$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2),
-										$elm$parser$Parser$symbol(':'))),
-								$rtfeldman$elm_iso8601_date_strings$Iso8601$paddedInt(2))
-							]))),
+					A2($elm$parser$Parser$ignorer, $rtfeldman$elm_iso8601_date_strings$Iso8601$utcOffsetInMinutes, $elm$parser$Parser$end)),
 					A2(
 					$elm$parser$Parser$ignorer,
 					$elm$parser$Parser$succeed(
@@ -7027,10 +7303,10 @@ var $rtfeldman$elm_iso8601_date_strings$Iso8601$iso8601 = A2(
 	$rtfeldman$elm_iso8601_date_strings$Iso8601$monthYearDayInMs);
 var $elm$parser$Parser$DeadEnd = F3(
 	function (row, col, problem) {
-		return {a6: col, bE: problem, bO: row};
+		return {bu: col, b8: problem, ci: row};
 	});
 var $elm$parser$Parser$problemToDeadEnd = function (p) {
-	return A3($elm$parser$Parser$DeadEnd, p.bO, p.a6, p.bE);
+	return A3($elm$parser$Parser$DeadEnd, p.ci, p.bu, p.b8);
 };
 var $elm$parser$Parser$Advanced$bagToList = F2(
 	function (bag, list) {
@@ -7062,7 +7338,7 @@ var $elm$parser$Parser$Advanced$run = F2(
 	function (_v0, src) {
 		var parse = _v0;
 		var _v1 = parse(
-			{a6: 1, j: _List_Nil, k: 1, e: 0, bO: 1, f: src});
+			{bu: 1, l: _List_Nil, m: 1, e: 0, ci: 1, g: src});
 		if (!_v1.$) {
 			var value = _v1.b;
 			return $elm$core$Result$Ok(value);
@@ -7094,7 +7370,7 @@ var $rtfeldman$elm_iso8601_date_strings$Iso8601$decoder = A2(
 		if (_v0.$ === 1) {
 			var deadEnds = _v0.a;
 			return $elm$json$Json$Decode$fail(
-				$elm$parser$Parser$deadEndsToString(deadEnds));
+				$rtfeldman$elm_iso8601_date_strings$DeadEnds$deadEndsToString(deadEnds));
 		} else {
 			var time = _v0.a;
 			return $elm$json$Json$Decode$succeed(time);
@@ -7111,11 +7387,15 @@ var $elm$json$Json$Decode$maybe = function (decoder) {
 				$elm$json$Json$Decode$succeed($elm$core$Maybe$Nothing)
 			]));
 };
+var $elm$json$Json$Decode$at = F2(
+	function (fields, decoder) {
+		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
+	});
 var $elm$json$Json$Decode$decodeValue = _Json_run;
 var $elm$json$Json$Decode$null = _Json_decodeNull;
 var $elm$json$Json$Decode$value = _Json_decodeValue;
 var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optionalDecoder = F3(
-	function (pathDecoder, valDecoder, fallback) {
+	function (path, valDecoder, fallback) {
 		var nullOr = function (decoder) {
 			return $elm$json$Json$Decode$oneOf(
 				_List_fromArray(
@@ -7125,7 +7405,10 @@ var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optionalDecoder = F3
 					]));
 		};
 		var handleResult = function (input) {
-			var _v0 = A2($elm$json$Json$Decode$decodeValue, pathDecoder, input);
+			var _v0 = A2(
+				$elm$json$Json$Decode$decodeValue,
+				A2($elm$json$Json$Decode$at, path, $elm$json$Json$Decode$value),
+				input);
 			if (!_v0.$) {
 				var rawValue = _v0.a;
 				var _v1 = A2(
@@ -7136,9 +7419,10 @@ var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optionalDecoder = F3
 					var finalResult = _v1.a;
 					return $elm$json$Json$Decode$succeed(finalResult);
 				} else {
-					var finalErr = _v1.a;
-					return $elm$json$Json$Decode$fail(
-						$elm$json$Json$Decode$errorToString(finalErr));
+					return A2(
+						$elm$json$Json$Decode$at,
+						path,
+						nullOr(valDecoder));
 				}
 			} else {
 				return $elm$json$Json$Decode$succeed(fallback);
@@ -7152,7 +7436,8 @@ var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optional = F4(
 			$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom,
 			A3(
 				$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$optionalDecoder,
-				A2($elm$json$Json$Decode$field, key, $elm$json$Json$Decode$value),
+				_List_fromArray(
+					[key]),
 				valDecoder,
 				fallback),
 			decoder);
@@ -7341,12 +7626,12 @@ var $author$project$Model$findCurrentStation = function (rows) {
 		A2(
 			$elm$core$Basics$composeR,
 			function ($) {
-				return $.F;
+				return $.W;
 			},
 			$elm$core$Basics$neq($elm$core$Maybe$Nothing)),
 		rows);
 	var stoppingType = function (row) {
-		if (row.ad && (row.J === 1)) {
+		if (row.ay && (row.ab === 1)) {
 			return $author$project$Model$Stopping;
 		} else {
 			var prev = A2(
@@ -7355,14 +7640,14 @@ var $author$project$Model$findCurrentStation = function (rows) {
 				A2(
 					$elm$core$Maybe$map,
 					function ($) {
-						return $.S;
+						return $.aj;
 					},
 					$elm$core$List$head(
 						$elm$core$List$reverse(
 							A2(
 								$elm$core$List$filter,
 								function ($) {
-									return $.ad;
+									return $.ay;
 								},
 								passedRows)))));
 			var next = A2(
@@ -7371,17 +7656,17 @@ var $author$project$Model$findCurrentStation = function (rows) {
 				A2(
 					$elm$core$Maybe$map,
 					function ($) {
-						return $.S;
+						return $.aj;
 					},
 					$elm$core$List$head(
 						A2(
 							$elm$core$List$filter,
 							function (r) {
-								return r.ad && _Utils_eq(r.F, $elm$core$Maybe$Nothing);
+								return r.ay && _Utils_eq(r.W, $elm$core$Maybe$Nothing);
 							},
 							rows))));
 			return $author$project$Model$NonStopping(
-				{cA: next, cO: prev});
+				{di: next, dw: prev});
 		}
 	};
 	return A2(
@@ -7392,15 +7677,15 @@ var $author$project$Model$findCurrentStation = function (rows) {
 				F2(
 					function (actualTime, differenceInMinutes) {
 						return {
-							F: actualTime,
-							a7: row.S,
-							ak: differenceInMinutes,
-							J: row.J,
-							bY: stoppingType(row)
+							W: actualTime,
+							bw: row.aj,
+							aF: differenceInMinutes,
+							ab: row.ab,
+							cs: stoppingType(row)
 						};
 					}),
-				row.F,
-				row.ak);
+				row.W,
+				row.aF);
 		},
 		$elm$core$List$head(
 			$elm$core$List$reverse(passedRows)));
@@ -7410,7 +7695,7 @@ var $author$project$Model$findTimetableRows = F3(
 		return A2(
 			$elm$core$List$filter,
 			function (row) {
-				return _Utils_eq(row.S, shortCode) && _Utils_eq(row.J, rowType);
+				return _Utils_eq(row.aj, shortCode) && _Utils_eq(row.ab, rowType);
 			},
 			rows);
 	});
@@ -7478,11 +7763,11 @@ var $author$project$Model$takeUntil = $author$project$Model$takeUntilHelp(_List_
 var $author$project$Model$mostAccurateTime = function (timetableRow) {
 	return A2(
 		$elm$core$Maybe$withDefault,
-		timetableRow.K,
+		timetableRow.ac,
 		A2(
 			$elm$core$Maybe$withDefault,
-			timetableRow.bv,
-			$elm$core$Maybe$Just(timetableRow.F)));
+			timetableRow.bY,
+			$elm$core$Maybe$Just(timetableRow.W)));
 };
 var $author$project$Model$toDuration = F2(
 	function (homeStationDeparture, endStationArrival) {
@@ -7497,9 +7782,9 @@ var $author$project$Model$toTrain = F2(
 		var stoppingRows = A2(
 			$elm$core$List$filter,
 			function ($) {
-				return $.ad;
+				return $.ay;
 			},
-			trainRaw.a_);
+			trainRaw.bl);
 		var _v1 = function () {
 			var quickestCombination = $elm$core$List$head(
 				A2(
@@ -7507,7 +7792,7 @@ var $author$project$Model$toTrain = F2(
 					function (_v5) {
 						var departure = _v5.a;
 						var arrival = _v5.b;
-						return $elm$time$Time$posixToMillis(arrival.K) - $elm$time$Time$posixToMillis(departure.K);
+						return $elm$time$Time$posixToMillis(arrival.ac) - $elm$time$Time$posixToMillis(departure.ac);
 					},
 					A2(
 						$elm$core$List$filter,
@@ -7515,8 +7800,8 @@ var $author$project$Model$toTrain = F2(
 							var departure = _v4.a;
 							var arrival = _v4.b;
 							return _Utils_cmp(
-								$elm$time$Time$posixToMillis(departure.K),
-								$elm$time$Time$posixToMillis(arrival.K)) < 0;
+								$elm$time$Time$posixToMillis(departure.ac),
+								$elm$time$Time$posixToMillis(arrival.ac)) < 0;
 						},
 						A2(
 							$author$project$Model$cartesian,
@@ -7548,12 +7833,12 @@ var $author$project$Model$toTrain = F2(
 					$elm$core$Maybe$Just,
 					$elm$core$Basics$neq(homeStationDeparture)),
 				stoppingRows));
-		var isValid = (trainRaw.b4 === 'Commuter') && ($elm$core$List$length(itineraryRows) >= 2);
+		var isValid = (trainRaw.cB === 'Commuter') && ($elm$core$List$length(itineraryRows) >= 2);
 		var stopsBetween = $elm$core$List$length(
 			A2(
 				$elm$core$List$filter,
 				function (row) {
-					return row.J === 1;
+					return row.ab === 1;
 				},
 				itineraryRows)) - 1;
 		var viaAirport = A2(
@@ -7562,7 +7847,7 @@ var $author$project$Model$toTrain = F2(
 			A2(
 				$elm$core$List$map,
 				function ($) {
-					return $.S;
+					return $.aj;
 				},
 				itineraryRows)) && (A2(
 			$elm$core$List$member,
@@ -7579,16 +7864,16 @@ var $author$project$Model$toTrain = F2(
 			var end = _v6.c.a;
 			return $elm$core$Maybe$Just(
 				{
-					ai: trainRaw.ai,
-					a8: $author$project$Model$findCurrentStation(trainRaw.a_),
-					bc: A2($author$project$Model$toDuration, dep, end),
-					be: end,
-					ax: dep,
-					an: trainRaw.an,
-					aq: trainRaw.aq,
-					bZ: stopsBetween,
-					ac: trainRaw.ac,
-					b5: viaAirport
+					aD: trainRaw.aD,
+					bx: $author$project$Model$findCurrentStation(trainRaw.bl),
+					bC: A2($author$project$Model$toDuration, dep, end),
+					bE: end,
+					aU: dep,
+					aI: trainRaw.aI,
+					aL: trainRaw.aL,
+					ct: stopsBetween,
+					ax: trainRaw.ax,
+					cC: viaAirport
 				});
 		} else {
 			return $elm$core$Maybe$Nothing;
@@ -7604,7 +7889,7 @@ var $author$project$Model$trainsDecoder = function (targets) {
 				$elm$core$Basics$composeR,
 				$elm$core$List$map(
 					function (a) {
-						return _Utils_Tuple2(a.ac, a);
+						return _Utils_Tuple2(a.ax, a);
 					}),
 				A2($elm$core$Basics$composeR, $elm$core$Dict$fromList, $elm$json$Json$Decode$succeed))),
 		$elm$json$Json$Decode$list(
@@ -7702,16 +7987,16 @@ var $author$project$Model$TrainRoute = F3(
 var $elm$url$Url$Parser$Parser = $elm$core$Basics$identity;
 var $elm$url$Url$Parser$State = F5(
 	function (visited, unvisited, params, frag, value) {
-		return {G: frag, I: params, E: unvisited, A: value, L: visited};
+		return {Y: frag, _: params, V: unvisited, Q: value, ae: visited};
 	});
 var $elm$url$Url$Parser$custom = F2(
 	function (tipe, stringToSomething) {
 		return function (_v0) {
-			var visited = _v0.L;
-			var unvisited = _v0.E;
-			var params = _v0.I;
-			var frag = _v0.G;
-			var value = _v0.A;
+			var visited = _v0.ae;
+			var unvisited = _v0.V;
+			var params = _v0._;
+			var frag = _v0.Y;
+			var value = _v0.Q;
 			if (!unvisited.b) {
 				return _List_Nil;
 			} else {
@@ -7739,11 +8024,11 @@ var $elm$url$Url$Parser$custom = F2(
 var $elm$url$Url$Parser$int = A2($elm$url$Url$Parser$custom, 'NUMBER', $elm$core$String$toInt);
 var $elm$url$Url$Parser$mapState = F2(
 	function (func, _v0) {
-		var visited = _v0.L;
-		var unvisited = _v0.E;
-		var params = _v0.I;
-		var frag = _v0.G;
-		var value = _v0.A;
+		var visited = _v0.ae;
+		var unvisited = _v0.V;
+		var params = _v0._;
+		var frag = _v0.Y;
+		var value = _v0.Q;
 		return A5(
 			$elm$url$Url$Parser$State,
 			visited,
@@ -7756,11 +8041,11 @@ var $elm$url$Url$Parser$map = F2(
 	function (subValue, _v0) {
 		var parseArg = _v0;
 		return function (_v1) {
-			var visited = _v1.L;
-			var unvisited = _v1.E;
-			var params = _v1.I;
-			var frag = _v1.G;
-			var value = _v1.A;
+			var visited = _v1.ae;
+			var unvisited = _v1.V;
+			var params = _v1._;
+			var frag = _v1.Y;
+			var value = _v1.Q;
 			return A2(
 				$elm$core$List$map,
 				$elm$url$Url$Parser$mapState(value),
@@ -7787,12 +8072,12 @@ var $elm$url$Url$Parser$getFirstMatch = function (states) {
 		} else {
 			var state = states.a;
 			var rest = states.b;
-			var _v1 = state.E;
+			var _v1 = state.V;
 			if (!_v1.b) {
-				return $elm$core$Maybe$Just(state.A);
+				return $elm$core$Maybe$Just(state.Q);
 			} else {
 				if ((_v1.a === '') && (!_v1.b.b)) {
-					return $elm$core$Maybe$Just(state.A);
+					return $elm$core$Maybe$Just(state.Q);
 				} else {
 					var $temp$states = rest;
 					states = $temp$states;
@@ -7889,9 +8174,9 @@ var $elm$url$Url$Parser$parse = F2(
 				A5(
 					$elm$url$Url$Parser$State,
 					_List_Nil,
-					$elm$url$Url$Parser$preparePath(url.cM),
-					$elm$url$Url$Parser$prepareQuery(url.bI),
-					url.bi,
+					$elm$url$Url$Parser$preparePath(url.du),
+					$elm$url$Url$Parser$prepareQuery(url.cc),
+					url.bI,
 					$elm$core$Basics$identity)));
 	});
 var $elm$url$Url$Parser$slash = F2(
@@ -7928,7 +8213,7 @@ var $author$project$Main$parseUrl = function (url) {
 					$elm$url$Url$Parser$string,
 					A2($elm$url$Url$Parser$slash, $elm$url$Url$Parser$string, $elm$url$Url$Parser$int)))
 			]));
-	var _v0 = url.bi;
+	var _v0 = url.bI;
 	if (_v0.$ === 1) {
 		return $author$project$Model$SelectDepRoute;
 	} else {
@@ -7942,8 +8227,8 @@ var $author$project$Main$parseUrl = function (url) {
 				_Utils_update(
 					url,
 					{
-						bi: $elm$core$Maybe$Nothing,
-						cM: A2(
+						bI: $elm$core$Maybe$Nothing,
+						du: A2(
 							$elm$core$Maybe$withDefault,
 							'',
 							$elm$url$Url$percentDecode(fragment))
@@ -7981,7 +8266,7 @@ var $author$project$Main$urlChange = F2(
 		return _Utils_Tuple2(
 			_Utils_update(
 				model,
-				{aK: route, a$: trains}),
+				{a5: route, bm: trains}),
 			trainsCmd);
 	});
 var $elm$time$Time$utc = A2($elm$time$Time$Zone, 0, _List_Nil);
@@ -7999,20 +8284,20 @@ var $author$project$Main$init = F3(
 		var storedState = A2(
 			$elm$core$Result$withDefault,
 			$author$project$Model$defaultStoredState,
-			$author$project$Model$decodeStoredState(flags.aV));
+			$author$project$Model$decodeStoredState(flags.bg));
 		var _v0 = A2(
 			$author$project$Main$urlChange,
 			{
-				aj: $elm$time$Time$millisToPosix(flags.aZ),
-				aE: storedState.aE,
-				am: $elm$time$Time$millisToPosix(0),
-				bz: key,
-				aK: $author$project$Model$SelectDepRoute,
-				aM: storedState.aM,
-				bX: $elm$core$Dict$empty,
-				a$: $krisajenkins$remotedata$RemoteData$NotAsked,
-				b7: $elm$core$Dict$empty,
-				ca: $elm$time$Time$utc
+				aE: $elm$time$Time$millisToPosix(flags.bk),
+				a$: storedState.a$,
+				aH: $elm$time$Time$millisToPosix(0),
+				b0: key,
+				a5: $author$project$Model$SelectDepRoute,
+				a7: storedState.a7,
+				cr: $elm$core$Dict$empty,
+				bm: $krisajenkins$remotedata$RemoteData$NotAsked,
+				cE: $elm$core$Dict$empty,
+				cL: $elm$time$Time$utc
 			},
 			url);
 		var model = _v0.a;
@@ -8036,7 +8321,7 @@ var $elm$time$Time$Every = F2(
 	});
 var $elm$time$Time$State = F2(
 	function (taggers, processes) {
-		return {bG: processes, b1: taggers};
+		return {ca: processes, cx: taggers};
 	});
 var $elm$time$Time$init = $elm$core$Task$succeed(
 	A2($elm$time$Time$State, $elm$core$Dict$empty, $elm$core$Dict$empty));
@@ -8172,7 +8457,7 @@ var $elm$time$Time$spawnHelp = F3(
 	});
 var $elm$time$Time$onEffects = F3(
 	function (router, subs, _v0) {
-		var processes = _v0.bG;
+		var processes = _v0.ca;
 		var rightStep = F3(
 			function (_v6, id, _v7) {
 				var spawns = _v7.a;
@@ -8239,7 +8524,7 @@ var $elm$time$Time$onEffects = F3(
 var $elm$time$Time$now = _Time_now($elm$time$Time$millisToPosix);
 var $elm$time$Time$onSelfMsg = F3(
 	function (router, interval, state) {
-		var _v0 = A2($elm$core$Dict$get, interval, state.b1);
+		var _v0 = A2($elm$core$Dict$get, interval, state.cx);
 		if (_v0.$ === 1) {
 			return $elm$core$Task$succeed(state);
 		} else {
@@ -8325,26 +8610,26 @@ var $author$project$Model$encodeStoredState = function (model) {
 					$elm$core$Tuple$pair,
 					'language',
 					$elm$json$Json$Encode$string(
-						$author$project$Translations$languageToString(model.aE))),
+						$author$project$Translations$languageToString(model.a$))),
 					A2(
 					$elm$core$Tuple$pair,
 					'showTrainsViaAirport',
-					$elm$json$Json$Encode$bool(model.aM))
+					$elm$json$Json$Encode$bool(model.a7))
 				])));
 };
 var $author$project$View$TrainWagonCountsResponse = function (a) {
 	return {$: 4, a: a};
 };
-var $ryannhg$date_format$DateFormat$DayOfMonthFixed = {$: 7};
-var $ryannhg$date_format$DateFormat$dayOfMonthFixed = $ryannhg$date_format$DateFormat$DayOfMonthFixed;
-var $ryannhg$date_format$DateFormat$Language$Language = F6(
+var $ryan_haskell$date_format$DateFormat$DayOfMonthFixed = {$: 7};
+var $ryan_haskell$date_format$DateFormat$dayOfMonthFixed = $ryan_haskell$date_format$DateFormat$DayOfMonthFixed;
+var $ryan_haskell$date_format$DateFormat$Language$Language = F6(
 	function (toMonthName, toMonthAbbreviation, toWeekdayName, toWeekdayAbbreviation, toAmPm, toOrdinalSuffix) {
-		return {c1: toAmPm, c2: toMonthAbbreviation, c3: toMonthName, T: toOrdinalSuffix, c4: toWeekdayAbbreviation, c5: toWeekdayName};
+		return {dO: toAmPm, dP: toMonthAbbreviation, dQ: toMonthName, ak: toOrdinalSuffix, dR: toWeekdayAbbreviation, dS: toWeekdayName};
 	});
-var $ryannhg$date_format$DateFormat$Language$toEnglishAmPm = function (hour) {
+var $ryan_haskell$date_format$DateFormat$Language$toEnglishAmPm = function (hour) {
 	return (hour > 11) ? 'pm' : 'am';
 };
-var $ryannhg$date_format$DateFormat$Language$toEnglishMonthName = function (month) {
+var $ryan_haskell$date_format$DateFormat$Language$toEnglishMonthName = function (month) {
 	switch (month) {
 		case 0:
 			return 'January';
@@ -8372,7 +8657,7 @@ var $ryannhg$date_format$DateFormat$Language$toEnglishMonthName = function (mont
 			return 'December';
 	}
 };
-var $ryannhg$date_format$DateFormat$Language$toEnglishSuffix = function (num) {
+var $ryan_haskell$date_format$DateFormat$Language$toEnglishSuffix = function (num) {
 	var _v0 = A2($elm$core$Basics$modBy, 100, num);
 	switch (_v0) {
 		case 11:
@@ -8395,7 +8680,7 @@ var $ryannhg$date_format$DateFormat$Language$toEnglishSuffix = function (num) {
 			}
 	}
 };
-var $ryannhg$date_format$DateFormat$Language$toEnglishWeekdayName = function (weekday) {
+var $ryan_haskell$date_format$DateFormat$Language$toEnglishWeekdayName = function (weekday) {
 	switch (weekday) {
 		case 0:
 			return 'Monday';
@@ -8413,20 +8698,20 @@ var $ryannhg$date_format$DateFormat$Language$toEnglishWeekdayName = function (we
 			return 'Sunday';
 	}
 };
-var $ryannhg$date_format$DateFormat$Language$english = A6(
-	$ryannhg$date_format$DateFormat$Language$Language,
-	$ryannhg$date_format$DateFormat$Language$toEnglishMonthName,
+var $ryan_haskell$date_format$DateFormat$Language$english = A6(
+	$ryan_haskell$date_format$DateFormat$Language$Language,
+	$ryan_haskell$date_format$DateFormat$Language$toEnglishMonthName,
 	A2(
 		$elm$core$Basics$composeR,
-		$ryannhg$date_format$DateFormat$Language$toEnglishMonthName,
+		$ryan_haskell$date_format$DateFormat$Language$toEnglishMonthName,
 		$elm$core$String$left(3)),
-	$ryannhg$date_format$DateFormat$Language$toEnglishWeekdayName,
+	$ryan_haskell$date_format$DateFormat$Language$toEnglishWeekdayName,
 	A2(
 		$elm$core$Basics$composeR,
-		$ryannhg$date_format$DateFormat$Language$toEnglishWeekdayName,
+		$ryan_haskell$date_format$DateFormat$Language$toEnglishWeekdayName,
 		$elm$core$String$left(3)),
-	$ryannhg$date_format$DateFormat$Language$toEnglishAmPm,
-	$ryannhg$date_format$DateFormat$Language$toEnglishSuffix);
+	$ryan_haskell$date_format$DateFormat$Language$toEnglishAmPm,
+	$ryan_haskell$date_format$DateFormat$Language$toEnglishSuffix);
 var $elm$time$Time$flooredDiv = F2(
 	function (numerator, denominator) {
 		return $elm$core$Basics$floor(numerator / denominator);
@@ -8440,7 +8725,7 @@ var $elm$time$Time$toAdjustedMinutesHelp = F3(
 			} else {
 				var era = eras.a;
 				var olderEras = eras.b;
-				if (_Utils_cmp(era.aT, posixMinutes) < 0) {
+				if (_Utils_cmp(era.be, posixMinutes) < 0) {
 					return posixMinutes + era.e;
 				} else {
 					var $temp$defaultOffset = defaultOffset,
@@ -8477,9 +8762,9 @@ var $elm$time$Time$toHour = F2(
 				A2($elm$time$Time$toAdjustedMinutes, zone, time),
 				60));
 	});
-var $ryannhg$date_format$DateFormat$amPm = F3(
+var $ryan_haskell$date_format$DateFormat$amPm = F3(
 	function (language, zone, posix) {
-		return language.c1(
+		return language.dO(
 			A2($elm$time$Time$toHour, zone, posix));
 	});
 var $elm$time$Time$toCivil = function (minutes) {
@@ -8492,17 +8777,17 @@ var $elm$time$Time$toCivil = function (minutes) {
 	var month = mp + ((mp < 10) ? 3 : (-9));
 	var year = yearOfEra + (era * 400);
 	return {
-		a9: (dayOfYear - ((((153 * mp) + 2) / 5) | 0)) + 1,
-		bx: month,
-		b8: year + ((month <= 2) ? 1 : 0)
+		by: (dayOfYear - ((((153 * mp) + 2) / 5) | 0)) + 1,
+		b_: month,
+		cJ: year + ((month <= 2) ? 1 : 0)
 	};
 };
 var $elm$time$Time$toDay = F2(
 	function (zone, time) {
 		return $elm$time$Time$toCivil(
-			A2($elm$time$Time$toAdjustedMinutes, zone, time)).a9;
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).by;
 	});
-var $ryannhg$date_format$DateFormat$dayOfMonth = $elm$time$Time$toDay;
+var $ryan_haskell$date_format$DateFormat$dayOfMonth = $elm$time$Time$toDay;
 var $elm$time$Time$Sun = 6;
 var $elm$time$Time$Fri = 4;
 var $elm$time$Time$Mon = 0;
@@ -8510,7 +8795,7 @@ var $elm$time$Time$Sat = 5;
 var $elm$time$Time$Thu = 3;
 var $elm$time$Time$Tue = 1;
 var $elm$time$Time$Wed = 2;
-var $ryannhg$date_format$DateFormat$days = _List_fromArray(
+var $ryan_haskell$date_format$DateFormat$days = _List_fromArray(
 	[6, 0, 1, 2, 3, 4, 5]);
 var $elm$time$Time$toWeekday = F2(
 	function (zone, time) {
@@ -8538,7 +8823,7 @@ var $elm$time$Time$toWeekday = F2(
 				return 2;
 		}
 	});
-var $ryannhg$date_format$DateFormat$dayOfWeek = F2(
+var $ryan_haskell$date_format$DateFormat$dayOfWeek = F2(
 	function (zone, posix) {
 		return function (_v1) {
 			var i = _v1.a;
@@ -8562,18 +8847,18 @@ var $ryannhg$date_format$DateFormat$dayOfWeek = F2(
 								function (i, day) {
 									return _Utils_Tuple2(i, day);
 								}),
-							$ryannhg$date_format$DateFormat$days)))));
+							$ryan_haskell$date_format$DateFormat$days)))));
 	});
-var $ryannhg$date_format$DateFormat$isLeapYear = function (year_) {
+var $ryan_haskell$date_format$DateFormat$isLeapYear = function (year_) {
 	return (!(!A2($elm$core$Basics$modBy, 4, year_))) ? false : ((!(!A2($elm$core$Basics$modBy, 100, year_))) ? true : ((!(!A2($elm$core$Basics$modBy, 400, year_))) ? false : true));
 };
-var $ryannhg$date_format$DateFormat$daysInMonth = F2(
+var $ryan_haskell$date_format$DateFormat$daysInMonth = F2(
 	function (year_, month) {
 		switch (month) {
 			case 0:
 				return 31;
 			case 1:
-				return $ryannhg$date_format$DateFormat$isLeapYear(year_) ? 29 : 28;
+				return $ryan_haskell$date_format$DateFormat$isLeapYear(year_) ? 29 : 28;
 			case 2:
 				return 31;
 			case 3:
@@ -8608,12 +8893,12 @@ var $elm$time$Time$May = 4;
 var $elm$time$Time$Nov = 10;
 var $elm$time$Time$Oct = 9;
 var $elm$time$Time$Sep = 8;
-var $ryannhg$date_format$DateFormat$months = _List_fromArray(
+var $ryan_haskell$date_format$DateFormat$months = _List_fromArray(
 	[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
 var $elm$time$Time$toMonth = F2(
 	function (zone, time) {
 		var _v0 = $elm$time$Time$toCivil(
-			A2($elm$time$Time$toAdjustedMinutes, zone, time)).bx;
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).b_;
 		switch (_v0) {
 			case 1:
 				return 0;
@@ -8641,7 +8926,7 @@ var $elm$time$Time$toMonth = F2(
 				return 11;
 		}
 	});
-var $ryannhg$date_format$DateFormat$monthPair = F2(
+var $ryan_haskell$date_format$DateFormat$monthPair = F2(
 	function (zone, posix) {
 		return A2(
 			$elm$core$Maybe$withDefault,
@@ -8662,16 +8947,16 @@ var $ryannhg$date_format$DateFormat$monthPair = F2(
 							function (a, b) {
 								return _Utils_Tuple2(a, b);
 							}),
-						$ryannhg$date_format$DateFormat$months))));
+						$ryan_haskell$date_format$DateFormat$months))));
 	});
-var $ryannhg$date_format$DateFormat$monthNumber_ = F2(
+var $ryan_haskell$date_format$DateFormat$monthNumber_ = F2(
 	function (zone, posix) {
 		return 1 + function (_v0) {
 			var i = _v0.a;
 			var m = _v0.b;
 			return i;
 		}(
-			A2($ryannhg$date_format$DateFormat$monthPair, zone, posix));
+			A2($ryan_haskell$date_format$DateFormat$monthPair, zone, posix));
 	});
 var $elm$core$List$sum = function (numbers) {
 	return A3($elm$core$List$foldl, $elm$core$Basics$add, 0, numbers);
@@ -8805,25 +9090,25 @@ var $elm$core$List$take = F2(
 var $elm$time$Time$toYear = F2(
 	function (zone, time) {
 		return $elm$time$Time$toCivil(
-			A2($elm$time$Time$toAdjustedMinutes, zone, time)).b8;
+			A2($elm$time$Time$toAdjustedMinutes, zone, time)).cJ;
 	});
-var $ryannhg$date_format$DateFormat$dayOfYear = F2(
+var $ryan_haskell$date_format$DateFormat$dayOfYear = F2(
 	function (zone, posix) {
 		var monthsBeforeThisOne = A2(
 			$elm$core$List$take,
-			A2($ryannhg$date_format$DateFormat$monthNumber_, zone, posix) - 1,
-			$ryannhg$date_format$DateFormat$months);
+			A2($ryan_haskell$date_format$DateFormat$monthNumber_, zone, posix) - 1,
+			$ryan_haskell$date_format$DateFormat$months);
 		var daysBeforeThisMonth = $elm$core$List$sum(
 			A2(
 				$elm$core$List$map,
-				$ryannhg$date_format$DateFormat$daysInMonth(
+				$ryan_haskell$date_format$DateFormat$daysInMonth(
 					A2($elm$time$Time$toYear, zone, posix)),
 				monthsBeforeThisOne));
-		return daysBeforeThisMonth + A2($ryannhg$date_format$DateFormat$dayOfMonth, zone, posix);
+		return daysBeforeThisMonth + A2($ryan_haskell$date_format$DateFormat$dayOfMonth, zone, posix);
 	});
-var $ryannhg$date_format$DateFormat$quarter = F2(
+var $ryan_haskell$date_format$DateFormat$quarter = F2(
 	function (zone, posix) {
-		return (A2($ryannhg$date_format$DateFormat$monthNumber_, zone, posix) / 4) | 0;
+		return (A2($ryan_haskell$date_format$DateFormat$monthNumber_, zone, posix) / 4) | 0;
 	});
 var $elm$core$String$right = F2(
 	function (n, string) {
@@ -8833,7 +9118,7 @@ var $elm$core$String$right = F2(
 			$elm$core$String$length(string),
 			string);
 	});
-var $ryannhg$date_format$DateFormat$toFixedLength = F2(
+var $ryan_haskell$date_format$DateFormat$toFixedLength = F2(
 	function (totalChars, num) {
 		var numStr = $elm$core$String$fromInt(num);
 		var numZerosNeeded = totalChars - $elm$core$String$length(numStr);
@@ -8863,7 +9148,7 @@ var $elm$time$Time$toMinute = F2(
 			60,
 			A2($elm$time$Time$toAdjustedMinutes, zone, time));
 	});
-var $ryannhg$date_format$DateFormat$toNonMilitary = function (num) {
+var $ryan_haskell$date_format$DateFormat$toNonMilitary = function (num) {
 	return (!num) ? 12 : ((num <= 12) ? num : (num - 12));
 };
 var $elm$time$Time$toSecond = F2(
@@ -8877,156 +9162,156 @@ var $elm$time$Time$toSecond = F2(
 				1000));
 	});
 var $elm$core$String$toUpper = _String_toUpper;
-var $ryannhg$date_format$DateFormat$millisecondsPerYear = $elm$core$Basics$round((((1000 * 60) * 60) * 24) * 365.25);
-var $ryannhg$date_format$DateFormat$firstDayOfYear = F2(
+var $ryan_haskell$date_format$DateFormat$millisecondsPerYear = $elm$core$Basics$round((((1000 * 60) * 60) * 24) * 365.25);
+var $ryan_haskell$date_format$DateFormat$firstDayOfYear = F2(
 	function (zone, time) {
 		return $elm$time$Time$millisToPosix(
-			$ryannhg$date_format$DateFormat$millisecondsPerYear * A2($elm$time$Time$toYear, zone, time));
+			$ryan_haskell$date_format$DateFormat$millisecondsPerYear * A2($elm$time$Time$toYear, zone, time));
 	});
-var $ryannhg$date_format$DateFormat$weekOfYear = F2(
+var $ryan_haskell$date_format$DateFormat$weekOfYear = F2(
 	function (zone, posix) {
-		var firstDay = A2($ryannhg$date_format$DateFormat$firstDayOfYear, zone, posix);
-		var firstDayOffset = A2($ryannhg$date_format$DateFormat$dayOfWeek, zone, firstDay);
-		var daysSoFar = A2($ryannhg$date_format$DateFormat$dayOfYear, zone, posix);
+		var firstDay = A2($ryan_haskell$date_format$DateFormat$firstDayOfYear, zone, posix);
+		var firstDayOffset = A2($ryan_haskell$date_format$DateFormat$dayOfWeek, zone, firstDay);
+		var daysSoFar = A2($ryan_haskell$date_format$DateFormat$dayOfYear, zone, posix);
 		return (((daysSoFar + firstDayOffset) / 7) | 0) + 1;
 	});
-var $ryannhg$date_format$DateFormat$year = F2(
+var $ryan_haskell$date_format$DateFormat$year = F2(
 	function (zone, time) {
 		return $elm$core$String$fromInt(
 			A2($elm$time$Time$toYear, zone, time));
 	});
-var $ryannhg$date_format$DateFormat$piece = F4(
+var $ryan_haskell$date_format$DateFormat$piece = F4(
 	function (language, zone, posix, token) {
 		switch (token.$) {
 			case 0:
 				return $elm$core$String$fromInt(
-					A2($ryannhg$date_format$DateFormat$monthNumber_, zone, posix));
+					A2($ryan_haskell$date_format$DateFormat$monthNumber_, zone, posix));
 			case 1:
 				return function (num) {
 					return _Utils_ap(
 						$elm$core$String$fromInt(num),
-						language.T(num));
+						language.ak(num));
 				}(
-					A2($ryannhg$date_format$DateFormat$monthNumber_, zone, posix));
+					A2($ryan_haskell$date_format$DateFormat$monthNumber_, zone, posix));
 			case 2:
 				return A2(
-					$ryannhg$date_format$DateFormat$toFixedLength,
+					$ryan_haskell$date_format$DateFormat$toFixedLength,
 					2,
-					A2($ryannhg$date_format$DateFormat$monthNumber_, zone, posix));
+					A2($ryan_haskell$date_format$DateFormat$monthNumber_, zone, posix));
 			case 3:
-				return language.c2(
+				return language.dP(
 					A2($elm$time$Time$toMonth, zone, posix));
 			case 4:
-				return language.c3(
+				return language.dQ(
 					A2($elm$time$Time$toMonth, zone, posix));
 			case 17:
 				return $elm$core$String$fromInt(
-					1 + A2($ryannhg$date_format$DateFormat$quarter, zone, posix));
+					1 + A2($ryan_haskell$date_format$DateFormat$quarter, zone, posix));
 			case 18:
 				return function (num) {
 					return _Utils_ap(
 						$elm$core$String$fromInt(num),
-						language.T(num));
+						language.ak(num));
 				}(
-					1 + A2($ryannhg$date_format$DateFormat$quarter, zone, posix));
+					1 + A2($ryan_haskell$date_format$DateFormat$quarter, zone, posix));
 			case 5:
 				return $elm$core$String$fromInt(
-					A2($ryannhg$date_format$DateFormat$dayOfMonth, zone, posix));
+					A2($ryan_haskell$date_format$DateFormat$dayOfMonth, zone, posix));
 			case 6:
 				return function (num) {
 					return _Utils_ap(
 						$elm$core$String$fromInt(num),
-						language.T(num));
+						language.ak(num));
 				}(
-					A2($ryannhg$date_format$DateFormat$dayOfMonth, zone, posix));
+					A2($ryan_haskell$date_format$DateFormat$dayOfMonth, zone, posix));
 			case 7:
 				return A2(
-					$ryannhg$date_format$DateFormat$toFixedLength,
+					$ryan_haskell$date_format$DateFormat$toFixedLength,
 					2,
-					A2($ryannhg$date_format$DateFormat$dayOfMonth, zone, posix));
+					A2($ryan_haskell$date_format$DateFormat$dayOfMonth, zone, posix));
 			case 8:
 				return $elm$core$String$fromInt(
-					A2($ryannhg$date_format$DateFormat$dayOfYear, zone, posix));
+					A2($ryan_haskell$date_format$DateFormat$dayOfYear, zone, posix));
 			case 9:
 				return function (num) {
 					return _Utils_ap(
 						$elm$core$String$fromInt(num),
-						language.T(num));
+						language.ak(num));
 				}(
-					A2($ryannhg$date_format$DateFormat$dayOfYear, zone, posix));
+					A2($ryan_haskell$date_format$DateFormat$dayOfYear, zone, posix));
 			case 10:
 				return A2(
-					$ryannhg$date_format$DateFormat$toFixedLength,
+					$ryan_haskell$date_format$DateFormat$toFixedLength,
 					3,
-					A2($ryannhg$date_format$DateFormat$dayOfYear, zone, posix));
+					A2($ryan_haskell$date_format$DateFormat$dayOfYear, zone, posix));
 			case 11:
 				return $elm$core$String$fromInt(
-					A2($ryannhg$date_format$DateFormat$dayOfWeek, zone, posix));
+					A2($ryan_haskell$date_format$DateFormat$dayOfWeek, zone, posix));
 			case 12:
 				return function (num) {
 					return _Utils_ap(
 						$elm$core$String$fromInt(num),
-						language.T(num));
+						language.ak(num));
 				}(
-					A2($ryannhg$date_format$DateFormat$dayOfWeek, zone, posix));
+					A2($ryan_haskell$date_format$DateFormat$dayOfWeek, zone, posix));
 			case 13:
-				return language.c4(
+				return language.dR(
 					A2($elm$time$Time$toWeekday, zone, posix));
 			case 14:
-				return language.c5(
+				return language.dS(
 					A2($elm$time$Time$toWeekday, zone, posix));
 			case 19:
 				return $elm$core$String$fromInt(
-					A2($ryannhg$date_format$DateFormat$weekOfYear, zone, posix));
+					A2($ryan_haskell$date_format$DateFormat$weekOfYear, zone, posix));
 			case 20:
 				return function (num) {
 					return _Utils_ap(
 						$elm$core$String$fromInt(num),
-						language.T(num));
+						language.ak(num));
 				}(
-					A2($ryannhg$date_format$DateFormat$weekOfYear, zone, posix));
+					A2($ryan_haskell$date_format$DateFormat$weekOfYear, zone, posix));
 			case 21:
 				return A2(
-					$ryannhg$date_format$DateFormat$toFixedLength,
+					$ryan_haskell$date_format$DateFormat$toFixedLength,
 					2,
-					A2($ryannhg$date_format$DateFormat$weekOfYear, zone, posix));
+					A2($ryan_haskell$date_format$DateFormat$weekOfYear, zone, posix));
 			case 15:
 				return A2(
 					$elm$core$String$right,
 					2,
-					A2($ryannhg$date_format$DateFormat$year, zone, posix));
+					A2($ryan_haskell$date_format$DateFormat$year, zone, posix));
 			case 16:
-				return A2($ryannhg$date_format$DateFormat$year, zone, posix);
+				return A2($ryan_haskell$date_format$DateFormat$year, zone, posix);
 			case 22:
 				return $elm$core$String$toUpper(
-					A3($ryannhg$date_format$DateFormat$amPm, language, zone, posix));
+					A3($ryan_haskell$date_format$DateFormat$amPm, language, zone, posix));
 			case 23:
 				return $elm$core$String$toLower(
-					A3($ryannhg$date_format$DateFormat$amPm, language, zone, posix));
+					A3($ryan_haskell$date_format$DateFormat$amPm, language, zone, posix));
 			case 24:
 				return $elm$core$String$fromInt(
 					A2($elm$time$Time$toHour, zone, posix));
 			case 25:
 				return A2(
-					$ryannhg$date_format$DateFormat$toFixedLength,
+					$ryan_haskell$date_format$DateFormat$toFixedLength,
 					2,
 					A2($elm$time$Time$toHour, zone, posix));
 			case 26:
 				return $elm$core$String$fromInt(
-					$ryannhg$date_format$DateFormat$toNonMilitary(
+					$ryan_haskell$date_format$DateFormat$toNonMilitary(
 						A2($elm$time$Time$toHour, zone, posix)));
 			case 27:
 				return A2(
-					$ryannhg$date_format$DateFormat$toFixedLength,
+					$ryan_haskell$date_format$DateFormat$toFixedLength,
 					2,
-					$ryannhg$date_format$DateFormat$toNonMilitary(
+					$ryan_haskell$date_format$DateFormat$toNonMilitary(
 						A2($elm$time$Time$toHour, zone, posix)));
 			case 28:
 				return $elm$core$String$fromInt(
 					1 + A2($elm$time$Time$toHour, zone, posix));
 			case 29:
 				return A2(
-					$ryannhg$date_format$DateFormat$toFixedLength,
+					$ryan_haskell$date_format$DateFormat$toFixedLength,
 					2,
 					1 + A2($elm$time$Time$toHour, zone, posix));
 			case 30:
@@ -9034,7 +9319,7 @@ var $ryannhg$date_format$DateFormat$piece = F4(
 					A2($elm$time$Time$toMinute, zone, posix));
 			case 31:
 				return A2(
-					$ryannhg$date_format$DateFormat$toFixedLength,
+					$ryan_haskell$date_format$DateFormat$toFixedLength,
 					2,
 					A2($elm$time$Time$toMinute, zone, posix));
 			case 32:
@@ -9042,7 +9327,7 @@ var $ryannhg$date_format$DateFormat$piece = F4(
 					A2($elm$time$Time$toSecond, zone, posix));
 			case 33:
 				return A2(
-					$ryannhg$date_format$DateFormat$toFixedLength,
+					$ryan_haskell$date_format$DateFormat$toFixedLength,
 					2,
 					A2($elm$time$Time$toSecond, zone, posix));
 			case 34:
@@ -9050,7 +9335,7 @@ var $ryannhg$date_format$DateFormat$piece = F4(
 					A2($elm$time$Time$toMillis, zone, posix));
 			case 35:
 				return A2(
-					$ryannhg$date_format$DateFormat$toFixedLength,
+					$ryan_haskell$date_format$DateFormat$toFixedLength,
 					3,
 					A2($elm$time$Time$toMillis, zone, posix));
 			default:
@@ -9058,23 +9343,23 @@ var $ryannhg$date_format$DateFormat$piece = F4(
 				return string;
 		}
 	});
-var $ryannhg$date_format$DateFormat$formatWithLanguage = F4(
+var $ryan_haskell$date_format$DateFormat$formatWithLanguage = F4(
 	function (language, tokens, zone, time) {
 		return A2(
 			$elm$core$String$join,
 			'',
 			A2(
 				$elm$core$List$map,
-				A3($ryannhg$date_format$DateFormat$piece, language, zone, time),
+				A3($ryan_haskell$date_format$DateFormat$piece, language, zone, time),
 				tokens));
 	});
-var $ryannhg$date_format$DateFormat$format = $ryannhg$date_format$DateFormat$formatWithLanguage($ryannhg$date_format$DateFormat$Language$english);
-var $ryannhg$date_format$DateFormat$MonthFixed = {$: 2};
-var $ryannhg$date_format$DateFormat$monthFixed = $ryannhg$date_format$DateFormat$MonthFixed;
-var $ryannhg$date_format$DateFormat$Text = function (a) {
+var $ryan_haskell$date_format$DateFormat$format = $ryan_haskell$date_format$DateFormat$formatWithLanguage($ryan_haskell$date_format$DateFormat$Language$english);
+var $ryan_haskell$date_format$DateFormat$MonthFixed = {$: 2};
+var $ryan_haskell$date_format$DateFormat$monthFixed = $ryan_haskell$date_format$DateFormat$MonthFixed;
+var $ryan_haskell$date_format$DateFormat$Text = function (a) {
 	return {$: 36, a: a};
 };
-var $ryannhg$date_format$DateFormat$text = $ryannhg$date_format$DateFormat$Text;
+var $ryan_haskell$date_format$DateFormat$text = $ryan_haskell$date_format$DateFormat$Text;
 var $elm$core$Basics$min = F2(
 	function (x, y) {
 		return (_Utils_cmp(x, y) < 0) ? x : y;
@@ -9137,19 +9422,19 @@ var $author$project$Model$trainWagonCountDecoder = function () {
 					$elm$json$Json$Decode$int,
 					$elm$json$Json$Decode$succeed(liftMaybe)))));
 }();
-var $ryannhg$date_format$DateFormat$YearNumber = {$: 16};
-var $ryannhg$date_format$DateFormat$yearNumber = $ryannhg$date_format$DateFormat$YearNumber;
+var $ryan_haskell$date_format$DateFormat$YearNumber = {$: 16};
+var $ryan_haskell$date_format$DateFormat$yearNumber = $ryan_haskell$date_format$DateFormat$YearNumber;
 var $author$project$Main$getCompositions = F2(
 	function (posix, zone) {
 		var localDate = A3(
-			$ryannhg$date_format$DateFormat$format,
+			$ryan_haskell$date_format$DateFormat$format,
 			_List_fromArray(
 				[
-					$ryannhg$date_format$DateFormat$yearNumber,
-					$ryannhg$date_format$DateFormat$text('-'),
-					$ryannhg$date_format$DateFormat$monthFixed,
-					$ryannhg$date_format$DateFormat$text('-'),
-					$ryannhg$date_format$DateFormat$dayOfMonthFixed
+					$ryan_haskell$date_format$DateFormat$yearNumber,
+					$ryan_haskell$date_format$DateFormat$text('-'),
+					$ryan_haskell$date_format$DateFormat$monthFixed,
+					$ryan_haskell$date_format$DateFormat$text('-'),
+					$ryan_haskell$date_format$DateFormat$dayOfMonthFixed
 				]),
 			zone,
 			posix);
@@ -9186,7 +9471,7 @@ var $elm$url$Url$addPrefixed = F3(
 	});
 var $elm$url$Url$toString = function (url) {
 	var http = function () {
-		var _v0 = url.bH;
+		var _v0 = url.cb;
 		if (!_v0) {
 			return 'http://';
 		} else {
@@ -9196,22 +9481,22 @@ var $elm$url$Url$toString = function (url) {
 	return A3(
 		$elm$url$Url$addPrefixed,
 		'#',
-		url.bi,
+		url.bI,
 		A3(
 			$elm$url$Url$addPrefixed,
 			'?',
-			url.bI,
+			url.cc,
 			_Utils_ap(
 				A2(
 					$elm$url$Url$addPort,
-					url.bD,
-					_Utils_ap(http, url.bn)),
-				url.cM)));
+					url.b7,
+					_Utils_ap(http, url.bP)),
+				url.du)));
 };
 var $author$project$Main$updateTime = function (model) {
-	var currentTime = model.aj;
-	var route = model.aK;
-	var requestMillis = $elm$time$Time$posixToMillis(model.am);
+	var currentTime = model.aE;
+	var route = model.a5;
+	var requestMillis = $elm$time$Time$posixToMillis(model.aH);
 	var currentMillis = $elm$time$Time$posixToMillis(currentTime);
 	switch (route.$) {
 		case 2:
@@ -9220,7 +9505,7 @@ var $author$project$Main$updateTime = function (model) {
 			return ((currentMillis - requestMillis) >= 10000) ? _Utils_Tuple2(
 				_Utils_update(
 					model,
-					{am: currentTime}),
+					{aH: currentTime}),
 				$author$project$Main$getTrains(
 					{a: from, c: to})) : _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 		case 3:
@@ -9230,7 +9515,7 @@ var $author$project$Main$updateTime = function (model) {
 			return ((currentMillis - requestMillis) >= 10000) ? _Utils_Tuple2(
 				_Utils_update(
 					model,
-					{am: currentTime}),
+					{aH: currentTime}),
 				A2(
 					$author$project$Main$getTrain,
 					{a: from, c: to},
@@ -9250,20 +9535,20 @@ var $author$project$Main$update = F2(
 				return $author$project$Main$updateTime(
 					_Utils_update(
 						model,
-						{aj: time}));
+						{aE: time}));
 			case 1:
 				var zone = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{ca: zone}),
-					A2($author$project$Main$getCompositions, model.aj, zone));
+						{cL: zone}),
+					A2($author$project$Main$getCompositions, model.aE, zone));
 			case 2:
 				var webData = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{a$: webData}),
+						{bm: webData}),
 					$elm$core$Platform$Cmd$none);
 			case 3:
 				if (msg.a.$ === 3) {
@@ -9271,7 +9556,7 @@ var $author$project$Main$update = F2(
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{bX: stations}),
+							{cr: stations}),
 						$elm$core$Platform$Cmd$none);
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -9282,7 +9567,7 @@ var $author$project$Main$update = F2(
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{b7: wagonCounts}),
+							{cE: wagonCounts}),
 						$elm$core$Platform$Cmd$none);
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
@@ -9295,7 +9580,7 @@ var $author$project$Main$update = F2(
 						model,
 						A2(
 							$elm$browser$Browser$Navigation$pushUrl,
-							model.bz,
+							model.b0,
 							$elm$url$Url$toString(url)));
 				} else {
 					var url = urlRequest.a;
@@ -9307,7 +9592,7 @@ var $author$project$Main$update = F2(
 				var language = msg.a;
 				var nextModel = _Utils_update(
 					model,
-					{aE: language});
+					{a$: language});
 				return _Utils_Tuple2(
 					nextModel,
 					$author$project$Main$setStorage(
@@ -9316,7 +9601,7 @@ var $author$project$Main$update = F2(
 				var value = msg.a;
 				var nextModel = _Utils_update(
 					model,
-					{aM: value});
+					{a7: value});
 				return _Utils_Tuple2(
 					nextModel,
 					$author$project$Main$setStorage(
@@ -9388,7 +9673,7 @@ var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
 var $tesk9$accessible_html$Accessibility$text = $elm$html$Html$text;
 var $author$project$Translations$htmlTranslationSetFor = function (key) {
 	return {
-		g: A2(
+		h: A2(
 			$tesk9$accessible_html$Accessibility$footer,
 			_List_Nil,
 			_List_fromArray(
@@ -9454,7 +9739,7 @@ var $author$project$Translations$htmlTranslationSetFor = function (key) {
 								]))
 						]))
 				])),
-		h: A2(
+		i: A2(
 			$tesk9$accessible_html$Accessibility$footer,
 			_List_Nil,
 			_List_fromArray(
@@ -9520,7 +9805,7 @@ var $author$project$Translations$htmlTranslationSetFor = function (key) {
 								]))
 						]))
 				])),
-		i: A2(
+		j: A2(
 			$tesk9$accessible_html$Accessibility$footer,
 			_List_Nil,
 			_List_fromArray(
@@ -9593,11 +9878,11 @@ var $author$project$Translations$htmlTranslate = F2(
 		var translationSet = $author$project$Translations$htmlTranslationSetFor(key);
 		switch (language) {
 			case 0:
-				return translationSet.h;
-			case 1:
-				return translationSet.g;
-			default:
 				return translationSet.i;
+			case 1:
+				return translationSet.h;
+			default:
+				return translationSet.j;
 		}
 	});
 var $author$project$View$SetLanguage = function (a) {
@@ -9728,10 +10013,10 @@ var $elm$virtual_dom$VirtualDom$property = F2(
 		return A2(
 			_VirtualDom_property,
 			_VirtualDom_noInnerHtmlOrFormAction(key),
-			_VirtualDom_noJavaScriptOrHtmlUri(value));
+			_VirtualDom_noJavaScriptOrHtmlJson(value));
 	});
 var $elm$html$Html$Attributes$property = $elm$virtual_dom$VirtualDom$property;
-var $tesk9$accessible_html$Accessibility$Widget$indeterminate = A2(
+var $tesk9$accessible_html$Accessibility$Aria$indeterminate = A2(
 	$elm$html$Html$Attributes$property,
 	'indeterminate',
 	$elm$json$Json$Encode$bool(true));
@@ -9749,7 +10034,7 @@ var $tesk9$accessible_html$Accessibility$checkbox = F3(
 							$elm$html$Html$Attributes$value(value_),
 							A2(
 							$elm$core$Maybe$withDefault,
-							$tesk9$accessible_html$Accessibility$Widget$indeterminate,
+							$tesk9$accessible_html$Accessibility$Aria$indeterminate,
 							A2($elm$core$Maybe$map, $elm$html$Html$Attributes$checked, maybeChecked))
 						])),
 				attributes),
@@ -9772,10 +10057,6 @@ var $tesk9$accessible_html$Accessibility$labelAfter = F3(
 					input,
 					A2($elm$html$Html$map, $elm$core$Basics$never, labelContent)
 				]));
-	});
-var $elm$json$Json$Decode$at = F2(
-	function (fields, decoder) {
-		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
 	});
 var $elm$html$Html$Events$targetChecked = A2(
 	$elm$json$Json$Decode$at,
@@ -9802,7 +10083,7 @@ var $author$project$Model$sortedTrainList = function (trains) {
 	return A2(
 		$elm$core$List$sortBy,
 		function (train) {
-			return $elm$time$Time$posixToMillis(train.ax.K);
+			return $elm$time$Time$posixToMillis(train.aU.ac);
 		},
 		$elm$core$Dict$values(trains));
 };
@@ -9811,7 +10092,7 @@ var $author$project$View$scheduleSettings = F3(
 		return A2(
 			$elm$core$List$any,
 			function ($) {
-				return $.b5;
+				return $.cC;
 			},
 			$author$project$Model$sortedTrainList(trainsDict)) ? A2(
 			$tesk9$accessible_html$Accessibility$div,
@@ -10000,16 +10281,16 @@ var $author$project$Stations$findName = function (abbreviation) {
 		$elm$core$Dict$fromList(
 			$elm$core$List$concat($author$project$Stations$commuterStations)));
 };
-var $ryannhg$date_format$DateFormat$HourMilitaryNumber = {$: 24};
-var $ryannhg$date_format$DateFormat$hourMilitaryNumber = $ryannhg$date_format$DateFormat$HourMilitaryNumber;
-var $ryannhg$date_format$DateFormat$MinuteFixed = {$: 31};
-var $ryannhg$date_format$DateFormat$minuteFixed = $ryannhg$date_format$DateFormat$MinuteFixed;
-var $author$project$View$prettyTime = $ryannhg$date_format$DateFormat$format(
+var $ryan_haskell$date_format$DateFormat$HourMilitaryNumber = {$: 24};
+var $ryan_haskell$date_format$DateFormat$hourMilitaryNumber = $ryan_haskell$date_format$DateFormat$HourMilitaryNumber;
+var $ryan_haskell$date_format$DateFormat$MinuteFixed = {$: 31};
+var $ryan_haskell$date_format$DateFormat$minuteFixed = $ryan_haskell$date_format$DateFormat$MinuteFixed;
+var $author$project$View$prettyTime = $ryan_haskell$date_format$DateFormat$format(
 	_List_fromArray(
 		[
-			$ryannhg$date_format$DateFormat$hourMilitaryNumber,
-			$ryannhg$date_format$DateFormat$text('.'),
-			$ryannhg$date_format$DateFormat$minuteFixed
+			$ryan_haskell$date_format$DateFormat$hourMilitaryNumber,
+			$ryan_haskell$date_format$DateFormat$text('.'),
+			$ryan_haskell$date_format$DateFormat$minuteFixed
 		]));
 var $elm$core$List$repeatHelp = F3(
 	function (result, n, value) {
@@ -10063,7 +10344,7 @@ var $author$project$View$metaDataRow = F3(
 			A2(
 				$elm$core$Maybe$withDefault,
 				0,
-				A2($elm$core$Dict$get, current.ac, data.b7)));
+				A2($elm$core$Dict$get, current.ax, data.cE)));
 		var millis = A2($elm$core$Basics$composeL, $elm$time$Time$posixToMillis, $author$project$Model$mostAccurateTime);
 		var overtakeText = A2(
 			$elm$core$Maybe$withDefault,
@@ -10074,15 +10355,15 @@ var $author$project$View$metaDataRow = F3(
 					return t(
 						$author$project$Translations$SchedulePageOvertakenBy(
 							{
-								ck: A2(
+								c_: A2(
 									$elm$core$Maybe$withDefault,
 									data.c,
 									$author$project$Stations$findName(data.c)),
-								an: train.an,
-								c$: A2(
+								aI: train.aI,
+								dM: A2(
 									$author$project$View$prettyTime,
-									data.ca,
-									$author$project$Model$mostAccurateTime(train.ax))
+									data.cL,
+									$author$project$Model$mostAccurateTime(train.aU))
 							}));
 				},
 				$elm$core$List$head(
@@ -10090,12 +10371,12 @@ var $author$project$View$metaDataRow = F3(
 						$elm$core$List$filter,
 						function (train) {
 							return (_Utils_cmp(
-								millis(train.ax),
-								millis(current.ax)) > 0) && (_Utils_cmp(
-								millis(train.be),
-								millis(current.be)) < 0);
+								millis(train.aU),
+								millis(current.aU)) > 0) && (_Utils_cmp(
+								millis(train.bE),
+								millis(current.bE)) < 0);
 						},
-						data.ag))));
+						data.aB))));
 		return A2(
 			$tesk9$accessible_html$Accessibility$div,
 			_List_fromArray(
@@ -10135,18 +10416,18 @@ var $author$project$View$ScheduleEstimate = function (a) {
 var $author$project$View$minutesToMillis = function (minutes) {
 	return minutes * 60000;
 };
-var $ryannhg$date_format$DateFormat$MinuteNumber = {$: 30};
-var $ryannhg$date_format$DateFormat$minuteNumber = $ryannhg$date_format$DateFormat$MinuteNumber;
-var $ryannhg$date_format$DateFormat$SecondFixed = {$: 33};
-var $ryannhg$date_format$DateFormat$secondFixed = $ryannhg$date_format$DateFormat$SecondFixed;
+var $ryan_haskell$date_format$DateFormat$MinuteNumber = {$: 30};
+var $ryan_haskell$date_format$DateFormat$minuteNumber = $ryan_haskell$date_format$DateFormat$MinuteNumber;
+var $ryan_haskell$date_format$DateFormat$SecondFixed = {$: 33};
+var $ryan_haskell$date_format$DateFormat$secondFixed = $ryan_haskell$date_format$DateFormat$SecondFixed;
 var $author$project$View$prettyMinutes = function (posix) {
 	var formatted = A3(
-		$ryannhg$date_format$DateFormat$format,
+		$ryan_haskell$date_format$DateFormat$format,
 		_List_fromArray(
 			[
-				$ryannhg$date_format$DateFormat$minuteNumber,
-				$ryannhg$date_format$DateFormat$text(':'),
-				$ryannhg$date_format$DateFormat$secondFixed
+				$ryan_haskell$date_format$DateFormat$minuteNumber,
+				$ryan_haskell$date_format$DateFormat$text(':'),
+				$ryan_haskell$date_format$DateFormat$secondFixed
 			]),
 		$elm$time$Time$utc,
 		posix);
@@ -10167,7 +10448,7 @@ var $author$project$View$prettyBestEstimateFor = F2(
 					0,
 					$elm$time$Time$posixToMillis(date) - $elm$time$Time$posixToMillis(currentTime)));
 		};
-		var _v0 = timetableRow.bv;
+		var _v0 = timetableRow.bY;
 		if (!_v0.$) {
 			var estimate = _v0.a;
 			return A2(
@@ -10178,7 +10459,7 @@ var $author$project$View$prettyBestEstimateFor = F2(
 			return A2(
 				$elm$core$Maybe$map,
 				$author$project$View$ScheduleEstimate,
-				prettyDiff(timetableRow.K));
+				prettyDiff(timetableRow.ac));
 		}
 	});
 var $elm$core$Basics$abs = function (n) {
@@ -10189,7 +10470,7 @@ var $author$project$View$timelinessColor = function (difference) {
 };
 var $author$project$View$stationRow = F3(
 	function (zone, stations, station) {
-		var name = A2($author$project$View$stationName, stations, station.S);
+		var name = A2($author$project$View$stationName, stations, station.aj);
 		return A2(
 			$tesk9$accessible_html$Accessibility$div,
 			_List_fromArray(
@@ -10199,7 +10480,7 @@ var $author$project$View$stationRow = F3(
 			_List_fromArray(
 				[
 					function () {
-					var _v0 = _Utils_Tuple2(station.bv, station.ak);
+					var _v0 = _Utils_Tuple2(station.bY, station.aF);
 					if ((!_v0.a.$) && (!_v0.b.$)) {
 						var estimate = _v0.a.a;
 						var n = _v0.b.a;
@@ -10233,7 +10514,7 @@ var $author$project$View$stationRow = F3(
 									_List_fromArray(
 										[
 											$tesk9$accessible_html$Accessibility$text(
-											A2($author$project$View$prettyTime, zone, station.K))
+											A2($author$project$View$prettyTime, zone, station.ac))
 										])) : $tesk9$accessible_html$Accessibility$text('')
 								]));
 					} else {
@@ -10246,7 +10527,7 @@ var $author$project$View$stationRow = F3(
 							_List_fromArray(
 								[
 									$tesk9$accessible_html$Accessibility$text(
-									A2($author$project$View$prettyTime, zone, station.K))
+									A2($author$project$View$prettyTime, zone, station.ac))
 								]));
 					}
 				}(),
@@ -10269,7 +10550,7 @@ var $author$project$View$stationRow = F3(
 					_List_fromArray(
 						[
 							$tesk9$accessible_html$Accessibility$text(
-							A2($elm$core$Maybe$withDefault, '', station.c6))
+							A2($elm$core$Maybe$withDefault, '', station.dT))
 						]))
 				]));
 	});
@@ -10281,10 +10562,10 @@ var $author$project$View$trainViewCustom = F4(
 					_List_fromArray(
 						[
 							$elm$html$Html$Attributes$href(
-							'#/' + (data.a + ('/' + (data.c + ('/' + $elm$core$String$fromInt(train.ac)))))),
+							'#/' + (data.a + ('/' + (data.c + ('/' + $elm$core$String$fromInt(train.ax)))))),
 							$elm$html$Html$Attributes$class('train'),
 							$elm$html$Html$Attributes$id(
-							'train-' + $elm$core$String$fromInt(train.ac))
+							'train-' + $elm$core$String$fromInt(train.ax))
 						]));
 			} else {
 				return $tesk9$accessible_html$Accessibility$div(
@@ -10295,27 +10576,27 @@ var $author$project$View$trainViewCustom = F4(
 			}
 		}();
 		var timeDiffTranslation = function (station) {
-			var _v7 = station.bY;
+			var _v7 = station.cs;
 			if (_v7.$ === 1) {
 				return $author$project$Translations$SchedulePageTimeDifference(
 					{
-						Y: station.ak,
-						cU: A2($author$project$View$stationName, data.bX, station.a7)
+						at: station.aF,
+						dF: A2($author$project$View$stationName, data.cr, station.bw)
 					});
 			} else {
-				var prevStopShortCode = _v7.a.cO;
-				var nextStopShortCode = _v7.a.cA;
+				var prevStopShortCode = _v7.a.dw;
+				var nextStopShortCode = _v7.a.di;
 				return $author$project$Translations$SchedulePageTimeDifferenceNonStopping(
 					{
-						Y: station.ak,
-						cz: A2($author$project$View$stationName, data.bX, nextStopShortCode),
-						cN: A2($author$project$View$stationName, data.bX, prevStopShortCode)
+						at: station.aF,
+						dh: A2($author$project$View$stationName, data.cr, nextStopShortCode),
+						dv: A2($author$project$View$stationName, data.cr, prevStopShortCode)
 					});
 			}
 		};
 		var tText = A2($elm$core$Basics$composeR, t, $tesk9$accessible_html$Accessibility$text);
 		var statusInfoBadge = function () {
-			var _v5 = _Utils_Tuple2(train.ai, train.a8);
+			var _v5 = _Utils_Tuple2(train.aD, train.bx);
 			if (!_v5.a) {
 				if (!_v5.b.$) {
 					var station = _v5.b.a;
@@ -10325,7 +10606,7 @@ var $author$project$View$trainViewCustom = F4(
 							[
 								$elm$html$Html$Attributes$class('train-status-badge'),
 								$elm$html$Html$Attributes$class(
-								'is-' + $author$project$View$timelinessColor(station.ak))
+								'is-' + $author$project$View$timelinessColor(station.aF))
 							]),
 						_List_fromArray(
 							[
@@ -10359,24 +10640,24 @@ var $author$project$View$trainViewCustom = F4(
 			}
 		}();
 		var _v0 = function () {
-			var _v1 = _Utils_Tuple2(train.ax.F, train.be.F);
+			var _v1 = _Utils_Tuple2(train.aU.W, train.bE.W);
 			if (!_v1.a.$) {
 				if (!_v1.b.$) {
 					var time = _v1.b.a;
 					return _Utils_Tuple2(
 						$elm$core$Maybe$Just(
 							$author$project$View$ActualTime(
-								A2($author$project$View$prettyTime, data.ca, time))),
+								A2($author$project$View$prettyTime, data.cL, time))),
 						$author$project$Translations$SchedulePageArrived);
 				} else {
 					var _v2 = _v1.b;
 					return _Utils_Tuple2(
-						A2($author$project$View$prettyBestEstimateFor, data.aj, train.be),
+						A2($author$project$View$prettyBestEstimateFor, data.aE, train.bE),
 						$author$project$Translations$SchedulePageArrivesIn);
 				}
 			} else {
 				return _Utils_Tuple2(
-					A2($author$project$View$prettyBestEstimateFor, data.aj, train.ax),
+					A2($author$project$View$prettyBestEstimateFor, data.aE, train.aU),
 					$author$project$Translations$SchedulePageDepartsIn);
 			}
 		}();
@@ -10402,7 +10683,7 @@ var $author$project$View$trainViewCustom = F4(
 								]),
 							_List_fromArray(
 								[
-									$tesk9$accessible_html$Accessibility$text(train.an)
+									$tesk9$accessible_html$Accessibility$text(train.aI)
 								])),
 							A2(
 							$tesk9$accessible_html$Accessibility$div,
@@ -10412,7 +10693,7 @@ var $author$project$View$trainViewCustom = F4(
 								]),
 							_List_fromArray(
 								[
-									A3($author$project$View$stationRow, data.ca, data.bX, train.ax),
+									A3($author$project$View$stationRow, data.cL, data.cr, train.aU),
 									A2(
 									$tesk9$accessible_html$Accessibility$div,
 									_List_fromArray(
@@ -10432,7 +10713,7 @@ var $author$project$View$trainViewCustom = F4(
 													$tesk9$accessible_html$Accessibility$text('︙')
 												]))
 										])),
-									A3($author$project$View$stationRow, data.ca, data.bX, train.be)
+									A3($author$project$View$stationRow, data.cL, data.cr, train.bE)
 								])),
 							A2(
 							$tesk9$accessible_html$Accessibility$div,
@@ -10441,7 +10722,7 @@ var $author$project$View$trainViewCustom = F4(
 									$elm$html$Html$Attributes$class('train-status')
 								]),
 							function () {
-								var _v3 = _Utils_Tuple2(train.ai, shownEstimate);
+								var _v3 = _Utils_Tuple2(train.aD, shownEstimate);
 								if ((!_v3.a) && (!_v3.b.$)) {
 									var estimate = _v3.b.a;
 									return _List_fromArray(
@@ -10495,10 +10776,10 @@ var $author$project$View$trainsView = F5(
 		var trains = A2(
 			$elm$core$List$filter,
 			function (train) {
-				return model.aM || (!train.b5);
+				return model.a7 || (!train.cC);
 			},
 			$author$project$Model$sortedTrainList(trainsDict));
-		var trainRowData = {ag: trains, aj: model.aj, a: from, bX: model.bX, c: to, b7: model.b7, ca: model.ca};
+		var trainRowData = {aB: trains, aE: model.aE, a: from, cr: model.cr, c: to, cE: model.cE, cL: model.cL};
 		return A2(
 			$tesk9$accessible_html$Accessibility$div,
 			_List_fromArray(
@@ -10547,7 +10828,7 @@ var $author$project$View$trainsView = F5(
 						$elm$core$List$map,
 						A2($author$project$View$trainRow, t, trainRowData),
 						trains)),
-					A3($author$project$View$scheduleSettings, t, trainsDict, model.aM),
+					A3($author$project$View$scheduleSettings, t, trainsDict, model.a7),
 					A2(
 					$tesk9$accessible_html$Accessibility$div,
 					_List_fromArray(
@@ -10569,17 +10850,17 @@ var $author$project$View$schedulePage = F3(
 		var minutesSinceLastRequest = function (diff) {
 			return diff / 60000;
 		}(
-			$elm$time$Time$posixToMillis(model.am) - $elm$time$Time$posixToMillis(model.aj));
-		var heading = A2($author$project$View$stationName, model.bX, from) + ('—' + A2($author$project$View$stationName, model.bX, to));
+			$elm$time$Time$posixToMillis(model.aH) - $elm$time$Time$posixToMillis(model.aE));
+		var heading = A2($author$project$View$stationName, model.cr, from) + ('—' + A2($author$project$View$stationName, model.cr, to));
 		return {
-			ah: A3(
+			aC: A3(
 				$author$project$View$container,
-				model.aE,
+				model.a$,
 				$elm$core$Maybe$Nothing,
 				_List_fromArray(
 					[
 						function () {
-						var _v1 = model.a$;
+						var _v1 = model.bm;
 						switch (_v1.$) {
 							case 3:
 								var trains = _v1.a;
@@ -10631,7 +10912,7 @@ var $author$project$View$schedulePage = F3(
 						}
 					}()
 					])),
-			as: heading + ' – Trains.today'
+			aP: heading + ' – Trains.today'
 		};
 	});
 var $author$project$Translations$DepPageHeading = {$: 1};
@@ -10659,9 +10940,9 @@ var $tesk9$accessible_html$Accessibility$ul = function (attributes) {
 var $author$project$View$selectDepPage = F2(
 	function (t, model) {
 		return {
-			ah: A3(
+			aC: A3(
 				$author$project$View$container,
-				model.aE,
+				model.a$,
 				$elm$core$Maybe$Just(
 					t($author$project$Translations$DepPageHeading)),
 				_List_fromArray(
@@ -10696,7 +10977,7 @@ var $author$project$View$selectDepPage = F2(
 							},
 							$author$project$Stations$all))
 					])),
-			as: t($author$project$Translations$DepPageTitle)
+			aP: t($author$project$Translations$DepPageTitle)
 		};
 	});
 var $author$project$Translations$DestPageHeading = {$: 3};
@@ -10750,9 +11031,9 @@ var $author$project$View$selectDestPage = F3(
 					$author$project$Stations$findName(dep)));
 		};
 		return {
-			ah: A3(
+			aC: A3(
 				$author$project$View$container,
-				model.aE,
+				model.a$,
 				$elm$core$Maybe$Just(
 					t($author$project$Translations$DestPageHeading)),
 				_List_fromArray(
@@ -10789,7 +11070,7 @@ var $author$project$View$selectDestPage = F3(
 							},
 							$author$project$Stations$matching(dep)))
 					])),
-			as: t($author$project$Translations$DestPageTitle)
+			aP: t($author$project$Translations$DestPageTitle)
 		};
 	});
 var $author$project$Translations$TrainPageHeading = function (a) {
@@ -10830,27 +11111,27 @@ var $author$project$View$trainPage = F4(
 	function (t, model, _v0, trainNumber) {
 		var from = _v0.a;
 		var to = _v0.b;
-		var trainRowData = {ag: _List_Nil, aj: model.aj, a: from, bX: model.bX, c: to, b7: model.b7, ca: model.ca};
+		var trainRowData = {aB: _List_Nil, aE: model.aE, a: from, cr: model.cr, c: to, cE: model.cE, cL: model.cL};
 		var maybeTrain = A2(
 			$elm$core$Maybe$andThen,
 			function (trains) {
 				return A2($elm$core$Dict$get, trainNumber, trains);
 			},
-			$krisajenkins$remotedata$RemoteData$toMaybe(model.a$));
+			$krisajenkins$remotedata$RemoteData$toMaybe(model.bm));
 		var heading = function () {
 			if (!maybeTrain.$) {
 				var train = maybeTrain.a;
 				return t(
 					$author$project$Translations$TrainPageHeading(
-						{an: train.an}));
+						{aI: train.aI}));
 			} else {
 				return '';
 			}
 		}();
 		return {
-			ah: A3(
+			aC: A3(
 				$author$project$View$container,
-				model.aE,
+				model.a$,
 				$elm$core$Maybe$Just(heading),
 				_List_fromArray(
 					[
@@ -10863,7 +11144,7 @@ var $author$project$View$trainPage = F4(
 						}
 					}()
 					])),
-			as: heading
+			aP: heading
 		};
 	});
 var $elm$core$String$dropRight = F2(
@@ -11455,72 +11736,72 @@ var $author$project$Translations$finnishInessive = function (stationName) {
 	}
 };
 var $author$project$Translations$timeDifferenceTranslationSet = function (_v0) {
-	var minuteDiff = _v0.Y;
-	var suffixes = _v0.aW;
+	var minuteDiff = _v0.at;
+	var suffixes = _v0.bh;
 	var absDiff = $elm$core$Basics$abs(minuteDiff);
 	var absDiffString = $elm$core$String$fromInt(absDiff);
-	return (absDiff <= 1) ? {g: 'On time ' + suffixes.g, h: 'Ajallaan ' + suffixes.h, i: 'Enligt tidtabell ' + suffixes.i} : ((minuteDiff < 0) ? {g: absDiffString + (' min early ' + suffixes.g), h: absDiffString + (' min ajoissa ' + suffixes.h), i: absDiffString + (' min i förtid ' + suffixes.i)} : {g: absDiffString + (' min late ' + suffixes.g), h: absDiffString + (' min myöhässä ' + suffixes.h), i: absDiffString + (' min sen ' + suffixes.i)});
+	return (absDiff <= 1) ? {h: 'On time ' + suffixes.h, i: 'Ajallaan ' + suffixes.i, j: 'Enligt tidtabell ' + suffixes.j} : ((minuteDiff < 0) ? {h: absDiffString + (' min early ' + suffixes.h), i: absDiffString + (' min ajoissa ' + suffixes.i), j: absDiffString + (' min i förtid ' + suffixes.j)} : {h: absDiffString + (' min late ' + suffixes.h), i: absDiffString + (' min myöhässä ' + suffixes.i), j: absDiffString + (' min sen ' + suffixes.j)});
 };
 var $author$project$Translations$timeDifferenceTranslationSetNonStopping = function (_v0) {
-	var minuteDiff = _v0.Y;
-	var prevStationName = _v0.cN;
-	var nextStationName = _v0.cz;
+	var minuteDiff = _v0.at;
+	var prevStationName = _v0.dv;
+	var nextStationName = _v0.dh;
 	return $author$project$Translations$timeDifferenceTranslationSet(
 		{
-			Y: minuteDiff,
-			aW: {g: 'between ' + (prevStationName + (' and ' + nextStationName)), h: 'välillä ' + (prevStationName + ('–' + nextStationName)), i: 'mellan ' + (prevStationName + (' och ' + nextStationName))}
+			at: minuteDiff,
+			bh: {h: 'between ' + (prevStationName + (' and ' + nextStationName)), i: 'välillä ' + (prevStationName + ('–' + nextStationName)), j: 'mellan ' + (prevStationName + (' och ' + nextStationName))}
 		});
 };
 var $author$project$Translations$timeDifferenceTranslationSetStopping = function (_v0) {
-	var minuteDiff = _v0.Y;
-	var stationName = _v0.cU;
+	var minuteDiff = _v0.at;
+	var stationName = _v0.dF;
 	return $author$project$Translations$timeDifferenceTranslationSet(
 		{
-			Y: minuteDiff,
-			aW: {
-				g: 'in ' + stationName,
-				h: $author$project$Translations$finnishInessive(stationName),
-				i: 'i ' + stationName
+			at: minuteDiff,
+			bh: {
+				h: 'in ' + stationName,
+				i: $author$project$Translations$finnishInessive(stationName),
+				j: 'i ' + stationName
 			}
 		});
 };
 var $author$project$Translations$translationSetFor = function (translationKey) {
 	switch (translationKey.$) {
 		case 0:
-			return {g: 'Trains.today - Helsinki region commuter trains', h: 'Trains.today - Helsingin seudun lähijunat', i: 'Trains.today - Helsingfors regions närtåg'};
+			return {h: 'Trains.today - Helsinki region commuter trains', i: 'Trains.today - Helsingin seudun lähijunat', j: 'Trains.today - Helsingfors regions närtåg'};
 		case 1:
-			return {g: 'Select departure station', h: 'Valitse lähtöasema', i: 'Välj startstation'};
+			return {h: 'Select departure station', i: 'Valitse lähtöasema', j: 'Välj startstation'};
 		case 2:
-			return {g: 'Select destination - Trains.today', h: 'Valitse pääteasema - Trains.today', i: 'Välj slutstation - Trains.today'};
+			return {h: 'Select destination - Trains.today', i: 'Valitse pääteasema - Trains.today', j: 'Välj slutstation - Trains.today'};
 		case 3:
-			return {g: 'Select destination station', h: 'Valitse pääteasema', i: 'Välj slutstation'};
+			return {h: 'Select destination station', i: 'Valitse pääteasema', j: 'Välj slutstation'};
 		case 4:
-			return {g: 'No connection, trying again soon...', h: 'Ei yhteyttä, yritetään pian uudestaan...', i: 'Ingen anslutning, försöker pånytt snart...'};
+			return {h: 'No connection, trying again soon...', i: 'Ei yhteyttä, yritetään pian uudestaan...', j: 'Ingen anslutning, försöker pånytt snart...'};
 		case 5:
-			return {g: 'Network timed out', h: 'Vastaus aikakatkaistiin', i: 'Svaret tidsavbröts'};
+			return {h: 'Network timed out', i: 'Vastaus aikakatkaistiin', j: 'Svaret tidsavbröts'};
 		case 6:
-			return {g: 'It\'s not you, it\'s me. I have the server address wrong.', h: 'Vika on minussa. Palvelimen osoite on väärä.', i: 'Det är mitt fel. Serverns adress är felaktig.'};
+			return {h: 'It\'s not you, it\'s me. I have the server address wrong.', i: 'Vika on minussa. Palvelimen osoite on väärä.', j: 'Det är mitt fel. Serverns adress är felaktig.'};
 		case 7:
-			return {g: 'The server didn\'t like the request (bad status).', h: 'Palvelin ei tykännyt pyynnöstä (virheellinen status).', i: 'Servern tyckte inte om förfrågan (bad request).'};
+			return {h: 'The server didn\'t like the request (bad status).', i: 'Palvelin ei tykännyt pyynnöstä (virheellinen status).', j: 'Servern tyckte inte om förfrågan (bad request).'};
 		case 8:
-			return {g: 'Ouch, the server responded with strange contents.', h: 'Auts, palvelin vastasi oudolla sisällöllä.', i: 'Aj, servern svarade med något konstigt.'};
+			return {h: 'Ouch, the server responded with strange contents.', i: 'Auts, palvelin vastasi oudolla sisällöllä.', j: 'Aj, servern svarade med något konstigt.'};
 		case 9:
-			return {g: 'Loading', h: 'Ladataan', i: 'Laddar'};
+			return {h: 'Loading', i: 'Ladataan', j: 'Laddar'};
 		case 10:
-			var lineId = translationKey.a.an;
-			var time = translationKey.a.c$;
-			var endStationName = translationKey.a.ck;
+			var lineId = translationKey.a.aI;
+			var time = translationKey.a.dM;
+			var endStationName = translationKey.a.c_;
 			return {
-				g: lineId + ('-train (' + (time + (') will reach ' + (endStationName + ' earlier!')))),
-				h: lineId + ('-juna (' + (time + (') on aiemmin perillä ' + ($author$project$Translations$finnishInessive(endStationName) + '!')))),
-				i: lineId + ('-tåg (' + (time + (') anländer tidigare i ' + (endStationName + '!'))))
+				h: lineId + ('-train (' + (time + (') will reach ' + (endStationName + ' earlier!')))),
+				i: lineId + ('-juna (' + (time + (') on aiemmin perillä ' + ($author$project$Translations$finnishInessive(endStationName) + '!')))),
+				j: lineId + ('-tåg (' + (time + (') anländer tidigare i ' + (endStationName + '!'))))
 			};
 		case 11:
-			return {g: 'Departs in', h: 'Lähtöön', i: 'Avgår om'};
+			return {h: 'Departs in', i: 'Lähtöön', j: 'Avgår om'};
 		case 12:
-			return {g: 'Arriving in', h: 'Perillä', i: 'Anländar'};
+			return {h: 'Arriving in', i: 'Perillä', j: 'Anländar'};
 		case 13:
-			return {g: 'Arrived at', h: 'Saapui', i: 'Anlände'};
+			return {h: 'Arrived at', i: 'Saapui', j: 'Anlände'};
 		case 14:
 			var facts = translationKey.a;
 			return $author$project$Translations$timeDifferenceTranslationSetStopping(facts);
@@ -11528,24 +11809,24 @@ var $author$project$Translations$translationSetFor = function (translationKey) {
 			var facts = translationKey.a;
 			return $author$project$Translations$timeDifferenceTranslationSetNonStopping(facts);
 		case 16:
-			return {g: 'Not moving', h: 'Ei vielä liikkeellä', i: 'Stillastående'};
+			return {h: 'Not moving', i: 'Ei vielä liikkeellä', j: 'Stillastående'};
 		case 17:
-			return {g: 'Cancelled', h: 'Peruttu', i: 'Inhiberat'};
+			return {h: 'Cancelled', i: 'Peruttu', j: 'Inhiberat'};
 		case 18:
-			return {g: 'Only direct trains departing in 2 hours are displayed.', h: 'Vain suorat 2 tunnin kuluessa lähtevät junat näytetään.', i: 'Bara direkta tåg som avgår inom 2 timmar visas.'};
+			return {h: 'Only direct trains departing in 2 hours are displayed.', i: 'Vain suorat 2 tunnin kuluessa lähtevät junat näytetään.', j: 'Bara direkta tåg som avgår inom 2 timmar visas.'};
 		case 19:
-			var lineId = translationKey.a.an;
-			return {g: lineId + ' train', h: lineId + '-juna', i: lineId + '-tåg'};
+			var lineId = translationKey.a.aI;
+			return {h: lineId + ' train', i: lineId + '-juna', j: lineId + '-tåg'};
 		case 20:
-			return {g: 'Settings', h: 'Asetukset', i: 'Inställningar'};
+			return {h: 'Settings', i: 'Asetukset', j: 'Inställningar'};
 		case 21:
-			return {g: 'Settings', h: 'Asetukset', i: 'Inställningar'};
+			return {h: 'Settings', i: 'Asetukset', j: 'Inställningar'};
 		case 22:
-			return {g: 'Select language', h: 'Valitse kieli', i: 'Välj språk'};
+			return {h: 'Select language', i: 'Valitse kieli', j: 'Välj språk'};
 		case 23:
-			return {g: 'Show trains going via the Airport', h: 'Näytä Lentoaseman kautta kulkevat junat', i: 'Se tåg som går via Flygplatsen'};
+			return {h: 'Show trains going via the Airport', i: 'Näytä Lentoaseman kautta kulkevat junat', j: 'Se tåg som går via Flygplatsen'};
 		default:
-			return {g: 'Yes', h: 'Kyllä', i: 'Ja'};
+			return {h: 'Yes', i: 'Kyllä', j: 'Ja'};
 	}
 };
 var $author$project$Translations$translate = F2(
@@ -11553,16 +11834,16 @@ var $author$project$Translations$translate = F2(
 		var translationSet = $author$project$Translations$translationSetFor(translationKey);
 		switch (language) {
 			case 0:
-				return translationSet.h;
-			case 1:
-				return translationSet.g;
-			default:
 				return translationSet.i;
+			case 1:
+				return translationSet.h;
+			default:
+				return translationSet.j;
 		}
 	});
 var $author$project$View$view = function (model) {
-	var t = $author$project$Translations$translate(model.aE);
-	var _v0 = model.aK;
+	var t = $author$project$Translations$translate(model.a$);
+	var _v0 = model.a5;
 	switch (_v0.$) {
 		case 0:
 			return A2($author$project$View$selectDepPage, t, model);
@@ -11590,7 +11871,7 @@ var $author$project$View$view = function (model) {
 	}
 };
 var $author$project$Main$main = $elm$browser$Browser$application(
-	{ct: $author$project$Main$init, cI: $author$project$View$UrlChange, cJ: $author$project$View$LinkClicked, cY: $author$project$Main$subscriptions, c7: $author$project$Main$update, c8: $author$project$View$view});
+	{c8: $author$project$Main$init, dq: $author$project$View$UrlChange, dr: $author$project$View$LinkClicked, dJ: $author$project$Main$subscriptions, dV: $author$project$Main$update, dW: $author$project$View$view});
 _Platform_export({'Main':{'init':$author$project$Main$main(
 	A2(
 		$elm$json$Json$Decode$andThen,
@@ -11599,7 +11880,7 @@ _Platform_export({'Main':{'init':$author$project$Main$main(
 				$elm$json$Json$Decode$andThen,
 				function (storedState) {
 					return $elm$json$Json$Decode$succeed(
-						{aV: storedState, aZ: timestamp});
+						{bg: storedState, bk: timestamp});
 				},
 				A2($elm$json$Json$Decode$field, 'storedState', $elm$json$Json$Decode$string));
 		},
