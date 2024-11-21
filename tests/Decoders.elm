@@ -64,19 +64,19 @@ suite =
                                         Expect.equalLists [ "U", "A", "E", "A", "U" ]
                                             (List.map .lineId [ trainU1, trainA1, trainE, trainA2, trainU2 ])
                                 , test "First train (U) is moving" <|
-                                    \_ -> Expect.true "is not moving" trainU1.runningCurrently
+                                    \_ -> Expect.equal True trainU1.runningCurrently
                                 , test "First train (U) is late" <|
                                     \_ -> Expect.equal (Just 4) trainU1.homeStationDeparture.differenceInMinutes
                                 , test "Second train (A) is not moving" <|
-                                    \_ -> Expect.false "is moving" trainA1.runningCurrently
+                                    \_ -> Expect.equal False trainA1.runningCurrently
                                 , test "Second train (A) is cancelled" <|
-                                    \_ -> Expect.true "is not cancelled" trainA1.cancelled
+                                    \_ -> Expect.equal True trainA1.cancelled
                                 , test "Third train (E) is not moving" <|
-                                    \_ -> Expect.false "is moving" trainE.runningCurrently
+                                    \_ -> Expect.equal False trainE.runningCurrently
                                 , test "Third train (E) is late" <|
                                     \_ -> Expect.equal (Just 2) trainE.homeStationDeparture.differenceInMinutes
                                 , test "Fifth train (U) is moving" <|
-                                    \_ -> Expect.true "is not moving" trainU2.runningCurrently
+                                    \_ -> Expect.equal True trainU2.runningCurrently
                                 , test "Fifth train (U) is on time" <|
                                     \_ -> Expect.equal (Just 0) trainU2.homeStationDeparture.differenceInMinutes
                                 ]
@@ -88,14 +88,14 @@ suite =
 
 
 expectAllTrains : Result Json.Decode.Error Model.Trains -> String -> (Model.Train -> Bool) -> () -> Expectation
-expectAllTrains decodedTrains expString trainFn =
+expectAllTrains decodedTrains _ trainFn =
     expectResult
         decodedTrains
         (\trains ->
             trains
                 |> Dict.values
                 |> List.all trainFn
-                |> Expect.true ("All trains: " ++ expString)
+                |> Expect.equal True
         )
 
 
@@ -107,7 +107,7 @@ expectTrains =
 expectResult : Result e a -> (a -> Expectation) -> () -> Expectation
 expectResult result exp _ =
     case result of
-        Err err ->
+        Err _ ->
             Expect.fail "Not an Ok result"
 
         Ok value ->
